@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { Fragment } from "react";
@@ -8,6 +10,8 @@ import {
   PopoverPanel,
   Transition,
 } from "@headlessui/react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const features = [
   {
@@ -28,6 +32,22 @@ const features = [
 ];
 
 export function Header() {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <header className="py-6 sticky top-2 z-50 antialiased">
       <div className="container mx-auto max-w-7xl px-4">
@@ -99,18 +119,37 @@ export function Header() {
             </nav>
 
             <div className="flex items-center gap-4">
-              <Link
-                href="/login"
-                className="text-sm hover:text-gray-300 transition-colors"
-              >
-                Log in
-              </Link>
-              <Link
-                href="/signup"
-                className="text-sm px-4 py-2 bg-white text-black rounded-full hover:bg-gray-200 transition-colors"
-              >
-                Sign Up
-              </Link>
+              {user ? (
+                <div className="flex items-center gap-4">
+                  <Link
+                    href="/dashboard"
+                    className="text-sm hover:text-gray-300 transition-colors"
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={() => supabase.auth.signOut()}
+                    className="text-sm px-4 py-2 bg-accent-1/50 border border-accent-2 rounded-full hover:bg-accent-1 transition-colors"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <Link
+                    href="/login"
+                    className="text-sm hover:text-gray-300 transition-colors"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="text-sm px-4 py-2 bg-white text-black rounded-full hover:bg-gray-200 transition-colors"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
