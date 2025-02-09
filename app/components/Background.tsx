@@ -149,11 +149,15 @@ export function Background() {
     window.addEventListener("resize", handleResize);
 
     return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("resize", handleResize);
+      renderer.dispose();
+      particleTexture.dispose();
+      particlesGeometry.dispose();
+      particlesMaterial.dispose();
       if (containerRef.current) {
         containerRef.current.removeChild(renderer.domElement);
       }
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("resize", handleResize);
     };
   }, []);
 

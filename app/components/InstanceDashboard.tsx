@@ -1,4 +1,4 @@
-import { Brain, Search, Filter, Plus, MoreHorizontal } from "lucide-react";
+import { Search, Filter, Plus } from "lucide-react";
 
 const ideas = [
   {

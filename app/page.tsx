@@ -1,12 +1,4 @@
-import {
-  ArrowRight,
-  Brain,
-  LineChart,
-  Target,
-  Sparkles,
-  BookOpen,
-  RefreshCcw,
-} from "lucide-react";
+import { ArrowRight, Brain, LineChart, Target, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -35,7 +27,7 @@ export default function Home() {
               <h1 className="text-6xl md:text-8xl font-normal mb-8 leading-tight tracking-tight">
                 Break Free from the
                 <span className="gradient-text block mt-2">
-                  Innovator's Dilemma
+                  Innovator&apos;s Dilemma
                 </span>
               </h1>
               <p className="text-xl md:text-2xl text-gray-400 max-w-2xl mb-12 leading-relaxed">
