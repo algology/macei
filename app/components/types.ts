@@ -1,3 +1,19 @@
+export interface Resource {
+  id: number;
+  name: string;
+  created_at: string;
+}
+
+export interface ResourceConfig {
+  resourceName: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tableName: string;
+  foreignKey?: {
+    name: string;
+    value: string;
+  };
+}
+
 export type Organization = {
   id: number;
   name: string;

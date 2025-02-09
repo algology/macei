@@ -24,6 +24,7 @@ import { IdeaSelector } from "./IdeaSelector";
 import { MissionCards } from "./MissionCards";
 import { IdeaCards } from "./IdeaCards";
 import { OrganizationCards } from "./OrganizationCards";
+import { SidebarNavigation } from "./SidebarNavigation";
 
 type BreadcrumbItem = {
   id: string;
@@ -223,33 +224,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="flex h-[calc(100vh-4rem)]">
-        {/* Sidebar */}
-        <aside className="w-64 border-r border-accent-2 p-4">
-          <nav className="space-y-1">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-accent-1 rounded-md"
-            >
-              <LayoutGrid className="w-4 h-4" />
-              Dashboard
-            </Link>
-            <Link
-              href="/dashboard/data"
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-accent-1 rounded-md"
-            >
-              <Database className="w-4 h-4" />
-              Data
-            </Link>
-            <Link
-              href="/dashboard/settings"
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-accent-1 rounded-md"
-            >
-              <Settings className="w-4 h-4" />
-              Settings
-            </Link>
-          </nav>
-        </aside>
-
+        <SidebarNavigation />
+        
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
           <main className="container mx-auto px-6 py-8">
