@@ -18,6 +18,7 @@ export type Organization = {
   id: number;
   name: string;
   created_at: string;
+  missions?: Mission[];
 };
 
 export type Mission = {

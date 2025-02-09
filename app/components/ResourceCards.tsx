@@ -8,14 +8,22 @@ import {
   Building2,
   Target,
   Lightbulb,
+  Plus,
+  X,
 } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import type { Resource, ResourceConfig } from "./types";
+import type { Resource, ResourceConfig, Organization, Mission } from "./types";
 import { useRouter } from "next/navigation";
+import * as Dialog from "@radix-ui/react-dialog";
+import { CreateMissionDialog } from "./CreateMissionDialog";
 
 interface Props<T extends Resource> {
   config: ResourceConfig;
   onSelect?: (resource: T) => void;
+}
+
+function isOrganization(resource: Resource): resource is Organization {
+  return "missions" in resource;
 }
 
 export function ResourceCards<T extends Resource>({
@@ -24,6 +32,9 @@ export function ResourceCards<T extends Resource>({
 }: Props<T>) {
   const [resources, setResources] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newResourceName, setNewResourceName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -33,21 +44,20 @@ export function ResourceCards<T extends Resource>({
   async function fetchResources() {
     let query = supabase.from(config.tableName).select();
 
-    if (config.tableName === "missions") {
+    if (config.tableName === "organizations") {
       query = supabase
         .from(config.tableName)
-        .select("*, organization:organization_id(*)");
-    } else if (config.tableName === "ideas") {
+        .select(`*, missions (*)`)
+        .order("created_at", { ascending: false });
+    } else if (config.tableName === "missions") {
       query = supabase
         .from(config.tableName)
-        .select("*, mission:mission_id(*, organization:organization_id(*))");
+        .select("*, organization:organization_id(*)")
+        .eq("organization_id", config.foreignKey?.value)
+        .order("created_at", { ascending: false });
     }
 
-    if (config.foreignKey) {
-      query = query.eq(config.foreignKey.name, config.foreignKey.value);
-    }
-
-    const { data } = await query.order("created_at", { ascending: false });
+    const { data } = await query;
     setResources(data || []);
     setLoading(false);
   }
@@ -130,10 +140,86 @@ export function ResourceCards<T extends Resource>({
     }
   };
 
+  const handleCreateResource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreating(true);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData.session;
+
+      if (!session) {
+        throw new Error("You must be authenticated to create resources");
+      }
+
+      const newResource = {
+        name: newResourceName,
+        ...(config.tableName === "organizations" && {
+          user_id: session.user.id,
+        }),
+        ...(config.foreignKey && {
+          [config.foreignKey.name]: config.foreignKey.value,
+        }),
+      };
+
+      const { data, error } = await supabase
+        .from(config.tableName)
+        .insert([newResource])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setResources([data, ...resources]);
+      setNewResourceName("");
+      setIsDialogOpen(false);
+
+      if (onSelect) {
+        onSelect(data);
+      }
+
+      // Navigate to the new resource if it's an organization
+      if (config.tableName === "organizations") {
+        router.push(`/dashboard/org/${data.id}`);
+      }
+    } catch (error) {
+      console.error("Error creating resource:", error);
+      alert("Failed to create resource. Please try again.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleMissionCreated = (mission: Mission) => {
+    if (config.tableName === "missions") {
+      setResources((prev) => [mission as unknown as T, ...prev]);
+      if (onSelect) {
+        onSelect(mission as unknown as T);
+      }
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">{config.resourceName}</h1>
+        {config.tableName === "missions" ? (
+          <button
+            onClick={() => setIsDialogOpen(true)}
+            className="px-4 py-2 bg-green-500/20 text-green-400 text-sm flex items-center gap-2 border border-green-900 hover:bg-green-500/30 rounded-md"
+          >
+            <Plus className="w-4 h-4" />
+            New Mission
+          </button>
+        ) : (
+          <button
+            onClick={() => setIsDialogOpen(true)}
+            className="px-4 py-2 bg-green-500/20 text-green-400 text-sm flex items-center gap-2 border border-green-900 hover:bg-green-500/30 rounded-md"
+          >
+            <Plus className="w-4 h-4" />
+            New Organization
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -181,10 +267,95 @@ export function ResourceCards<T extends Resource>({
                   </DropdownMenu.Portal>
                 </DropdownMenu.Root>
               </div>
+
+              {config.tableName === "organizations" &&
+                isOrganization(resource) &&
+                resource.missions &&
+                resource.missions.length > 0 && (
+                  <div className="mt-4 pl-4 border-l border-accent-2">
+                    {resource.missions.map((mission) => (
+                      <div
+                        key={mission.id}
+                        className="flex items-center gap-2 py-1"
+                      >
+                        <Target className="w-3 h-3 text-gray-400" />
+                        <span className="text-sm text-gray-400">
+                          {mission.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
             </div>
           </div>
         ))}
       </div>
+
+      {config.tableName === "missions" && config.foreignKey && (
+        <CreateMissionDialog
+          organizationId={config.foreignKey.value}
+          isOpen={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onMissionCreated={handleMissionCreated}
+        />
+      )}
+
+      {config.tableName === "organizations" && (
+        <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] bg-background border border-accent-2 rounded-lg shadow-lg p-4">
+              <div className="flex justify-between items-center mb-4">
+                <Dialog.Title className="text-lg font-medium">
+                  Create {config.resourceName.slice(0, -1)}
+                </Dialog.Title>
+                <Dialog.Close className="text-gray-400 hover:text-gray-300">
+                  <X className="w-4 h-4" />
+                </Dialog.Close>
+              </div>
+
+              <Dialog.Description className="text-sm text-gray-400 mb-4">
+                Create a new {config.resourceName.toLowerCase().slice(0, -1)} to
+                organize your work.
+              </Dialog.Description>
+
+              <form onSubmit={handleCreateResource}>
+                <div className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="name"
+                      className="block text-sm font-medium text-gray-300 mb-1"
+                    >
+                      Name
+                    </label>
+                    <input
+                      id="name"
+                      type="text"
+                      value={newResourceName}
+                      onChange={(e) => setNewResourceName(e.target.value)}
+                      className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                      autoComplete="off"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isCreating}
+                      className="px-4 py-2 bg-green-500 text-black rounded-md hover:bg-green-400 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isCreating
+                        ? "Creating..."
+                        : `Create ${config.resourceName.slice(0, -1)}`}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      )}
     </div>
   );
 }
