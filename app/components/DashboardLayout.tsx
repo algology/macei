@@ -199,7 +199,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       {/* Top Navigation */}
       <header className="h-16 border-b border-accent-2">
-        <div className="h-full px-6 flex items-center justify-between">
+        <div className="h-full px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Link
               href="/dashboard"
@@ -210,7 +210,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               }}
             >
               <Image
-                src="/favicon.svg"
+                src="/logo_small.svg"
                 alt="Logo"
                 width={40}
                 height={40}

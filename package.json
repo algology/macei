@@ -13,6 +13,7 @@
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-dropdown-menu": "^2.1.6",
     "@radix-ui/react-popover": "^1.1.6",
+    "@radix-ui/react-tooltip": "^1.1.8",
     "@react-three/drei": "^9.97.6",
     "@react-three/fiber": "^8.15.16",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
