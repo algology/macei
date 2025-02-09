@@ -44,8 +44,11 @@ export function IdeaSelector({ missionId, onSelect, selectedIdea }: Props) {
 
       <Popover.Portal>
         <Popover.Content
-          className="w-[300px] bg-background border border-accent-2 rounded-lg shadow-lg p-2 animate-in fade-in-0 zoom-in-95"
-          sideOffset={5}
+          className="w-64 bg-background border border-accent-2 rounded-lg shadow-lg p-1 animate-in fade-in-0 zoom-in-95"
+          sideOffset={8}
+          align="start"
+          alignOffset={0}
+          style={{ zIndex: 100 }}
         >
           <div className="space-y-1">
             {ideas.map((idea) => (

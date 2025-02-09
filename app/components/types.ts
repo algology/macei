@@ -6,7 +6,7 @@ export interface Resource {
 
 export interface ResourceConfig {
   resourceName: string;
-  icon: React.ComponentType<{ className?: string }>;
+  iconType: "organization" | "mission" | "idea";
   tableName: string;
   foreignKey?: {
     name: string;

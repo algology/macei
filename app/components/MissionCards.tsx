@@ -10,7 +10,7 @@ interface Props {
 export function MissionCards({ organizationId, onSelect }: Props) {
   const config = {
     resourceName: "Missions",
-    icon: Target,
+    iconType: "mission" as const,
     tableName: "missions",
     foreignKey: {
       name: "organization_id",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -44,11 +44,18 @@ type Profile = {
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [selectedItems, setSelectedItems] = useState<BreadcrumbItem[]>([]);
+  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("sidebarCollapsed");
+      return saved ? JSON.parse(saved) : false;
+    }
+    return false;
+  });
 
   useEffect(() => {
     async function fetchUserAndProfile() {
@@ -120,6 +127,55 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     };
   }, [router, user?.id]);
 
+  useEffect(() => {
+    async function updateBreadcrumbs() {
+      const paths = pathname.split("/").filter(Boolean);
+      if (paths[0] !== "dashboard") return;
+
+      const newBreadcrumbs: BreadcrumbItem[] = [];
+
+      if (paths[2]) {
+        // orgId exists
+        const { data: org } = await supabase
+          .from("organizations")
+          .select("*")
+          .eq("id", paths[2])
+          .single();
+
+        if (org) {
+          newBreadcrumbs.push({
+            id: String(org.id),
+            name: org.name,
+            icon: <Building2 className="w-[22px] h-[22px]" />,
+            type: "organization",
+          });
+        }
+      }
+
+      if (paths[4]) {
+        // missionId exists
+        const { data: mission } = await supabase
+          .from("missions")
+          .select("*")
+          .eq("id", paths[4])
+          .single();
+
+        if (mission) {
+          newBreadcrumbs.push({
+            id: String(mission.id),
+            name: mission.name,
+            icon: <Target className="w-[22px] h-[22px]" />,
+            type: "mission",
+          });
+        }
+      }
+
+      setBreadcrumbs(newBreadcrumbs);
+    }
+
+    updateBreadcrumbs();
+  }, [pathname]);
+
   // Only redirect if not loading and no user
   if (!loading && !user) {
     router.push("/login");
@@ -136,41 +192,19 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }
 
   const handleOrganizationSelect = (org: Organization) => {
-    setSelectedItems([
-      {
-        id: String(org.id),
-        name: org.name,
-        icon: <Building2 className="w-[22px] h-[22px]" />,
-        type: "organization",
-      },
-    ]);
+    router.push(`/dashboard/org/${org.id}`);
   };
 
   const handleMissionSelect = (mission: Mission) => {
-    const orgItem = selectedItems[0];
-    setSelectedItems([
-      orgItem,
-      {
-        id: String(mission.id),
-        name: mission.name,
-        icon: <Target className="w-[22px] h-[22px]" />,
-        type: "mission",
-      },
-    ]);
+    router.push(
+      `/dashboard/org/${mission.organization_id}/mission/${mission.id}`
+    );
   };
 
   const handleIdeaSelect = (idea: Idea) => {
-    const [orgItem, missionItem] = selectedItems;
-    setSelectedItems([
-      orgItem,
-      missionItem,
-      {
-        id: String(idea.id),
-        name: idea.name,
-        icon: <Lightbulb className="w-[22px] h-[22px]" />,
-        type: "idea",
-      },
-    ]);
+    router.push(
+      `/dashboard/org/${idea.mission_id}/mission/${idea.mission_id}/idea/${idea.id}`
+    );
   };
 
   const renderDashboardContent = () => {
@@ -178,30 +212,36 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       return children;
     }
 
-    if (selectedItems.length === 0) {
+    if (breadcrumbs.length === 0) {
       return <OrganizationCards onSelect={handleOrganizationSelect} />;
     }
 
-    if (selectedItems.length === 1) {
+    if (breadcrumbs.length === 1) {
       return (
         <MissionCards
-          organizationId={selectedItems[0].id}
+          organizationId={breadcrumbs[0].id}
           onSelect={handleMissionSelect}
         />
       );
     }
 
-    if (selectedItems.length === 2) {
-      return <IdeaCards missionId={selectedItems[1].id} />;
+    if (breadcrumbs.length === 2) {
+      return <IdeaCards missionId={breadcrumbs[1].id} />;
     }
 
     return children;
   };
 
+  const toggleSidebar = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    localStorage.setItem("sidebarCollapsed", JSON.stringify(newState));
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Top Navigation */}
-      <header className="h-16 border-b border-accent-2">
+      {/* Top Navigation - Full Width */}
+      <header className="h-16 border-b border-accent-2 fixed top-0 left-0 right-0 z-50 bg-background">
         <div className="h-full px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Link
@@ -209,7 +249,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               className="hover:opacity-90 pt-1"
               onClick={(e) => {
                 e.preventDefault();
-                setSelectedItems([]);
+                router.push("/dashboard");
               }}
             >
               <Image
@@ -239,11 +279,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <li className="flex items-center min-w-0">
                   <OrganizationSelector
                     onSelect={handleOrganizationSelect}
-                    selectedOrg={selectedItems[0]}
+                    selectedOrg={breadcrumbs[0]}
                   />
                 </li>
 
-                {selectedItems.length >= 1 && (
+                {breadcrumbs.length >= 1 && (
                   <>
                     <li className="mx-2">
                       <svg
@@ -260,15 +300,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     </li>
                     <li className="flex items-center min-w-0">
                       <MissionSelector
-                        organizationId={selectedItems[0].id}
+                        organizationId={breadcrumbs[0].id}
                         onSelect={handleMissionSelect}
-                        selectedMission={selectedItems[1]}
+                        selectedMission={breadcrumbs[1]}
                       />
                     </li>
                   </>
                 )}
 
-                {selectedItems.length >= 2 && (
+                {breadcrumbs.length >= 2 && (
                   <>
                     <li className="mx-2">
                       <svg
@@ -285,9 +325,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     </li>
                     <li className="flex items-center min-w-0">
                       <IdeaSelector
-                        missionId={selectedItems[1].id}
+                        missionId={breadcrumbs[1].id}
                         onSelect={handleIdeaSelect}
-                        selectedIdea={selectedItems[2]}
+                        selectedIdea={breadcrumbs[2]}
                       />
                     </li>
                   </>
@@ -325,9 +365,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <DropdownMenu.Portal>
                   <DropdownMenu.Content
                     className="w-48 bg-background border border-accent-2 rounded-lg shadow-lg p-1 animate-in fade-in-0 zoom-in-95"
-                    sideOffset={4}
+                    sideOffset={8}
                     align="end"
-                    alignOffset={-8}
+                    style={{ zIndex: 100 }}
                   >
                     <DropdownMenu.Item asChild>
                       <Link
@@ -356,17 +396,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-4rem)]">
-        <SidebarNavigation
-          expanded={isSidebarExpanded}
-          setExpanded={setIsSidebarExpanded}
-        />
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto">
-          <main className="container mx-auto px-6 py-8">
-            {renderDashboardContent()}
-          </main>
+      {/* Main Content Area - Below Header */}
+      <div className="pt-16 flex">
+        <SidebarNavigation isCollapsed={isCollapsed} onToggle={toggleSidebar} />
+        <main
+          className={`flex-1 ${
+            isCollapsed ? "ml-20" : "ml-64"
+          } transition-all duration-300 p-6`}
+        >
+          {renderDashboardContent()}
         </main>
       </div>
     </div>

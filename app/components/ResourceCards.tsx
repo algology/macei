@@ -1,8 +1,17 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  Trash2,
+  Building2,
+  Target,
+  Lightbulb,
+} from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { Resource, ResourceConfig } from "./types";
+import { useRouter } from "next/navigation";
 
 interface Props<T extends Resource> {
   config: ResourceConfig;
@@ -15,13 +24,24 @@ export function ResourceCards<T extends Resource>({
 }: Props<T>) {
   const [resources, setResources] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     fetchResources();
   }, [config]);
 
   async function fetchResources() {
-    let query = supabase.from(config.tableName).select("*");
+    let query = supabase.from(config.tableName).select();
+
+    if (config.tableName === "missions") {
+      query = supabase
+        .from(config.tableName)
+        .select("*, organization:organization_id(*)");
+    } else if (config.tableName === "ideas") {
+      query = supabase
+        .from(config.tableName)
+        .select("*, mission:mission_id(*, organization:organization_id(*))");
+    }
 
     if (config.foreignKey) {
       query = query.eq(config.foreignKey.name, config.foreignKey.value);
@@ -86,13 +106,29 @@ export function ResourceCards<T extends Resource>({
     }
   }
 
-  function formatDate(dateString: string) {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-    }).format(date);
-  }
+  const handleCardClick = (resource: T) => {
+    if (config.tableName === "organizations") {
+      router.push(`/dashboard/org/${resource.id}`);
+    } else if (config.tableName === "missions") {
+      router.push(
+        `/dashboard/org/${config.foreignKey?.value}/mission/${resource.id}`
+      );
+    }
+    if (onSelect) {
+      onSelect(resource);
+    }
+  };
+
+  const getIcon = () => {
+    switch (config.iconType) {
+      case "organization":
+        return <Building2 className="w-5 h-5 text-gray-400" />;
+      case "mission":
+        return <Target className="w-5 h-5 text-gray-400" />;
+      case "idea":
+        return <Lightbulb className="w-5 h-5 text-gray-400" />;
+    }
+  };
 
   if (loading) {
     return (
@@ -101,8 +137,6 @@ export function ResourceCards<T extends Resource>({
       </div>
     );
   }
-
-  const Icon = config.icon;
 
   return (
     <div>
@@ -114,21 +148,22 @@ export function ResourceCards<T extends Resource>({
         {resources.map((resource) => (
           <div
             key={resource.id}
+            onClick={() => handleCardClick(resource)}
             className="group flex flex-col justify-between bg-background/40 backdrop-blur-sm border border-accent-2 rounded-xl hover:border-accent-3 transition-all duration-200 cursor-pointer"
-            onClick={() => onSelect?.(resource)}
           >
             <div className="p-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-accent-1 rounded-lg border border-accent-2">
-                    <Icon className="w-5 h-5 text-gray-400" />
+                    {getIcon()}
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-100">
                       {resource.name}
                     </h3>
                     <p className="text-sm text-gray-400 mt-1">
-                      Created {formatDate(resource.created_at)}
+                      Created{" "}
+                      {new Date(resource.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>

@@ -1,10 +1,12 @@
 import * as Popover from "@radix-ui/react-popover";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Building2, Plus, ChevronDown, X } from "lucide-react";
+import { Building2, Plus, ChevronDown, X, Target } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Organization } from "./types";
 import type { BreadcrumbItem } from "./types";
+import type { Mission } from "./types";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 interface Props {
   onSelect: (org: Organization) => void;
@@ -13,31 +15,30 @@ interface Props {
 
 export function OrganizationSelector({ onSelect, selectedOrg }: Props) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [selectedOrgState, setSelectedOrgState] = useState<Organization | null>(
-    null
-  );
+  const [missions, setMissions] = useState<Mission[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedOrgState, setSelectedOrgState] = useState<Organization | null>(
+    null
+  );
 
   useEffect(() => {
-    fetchOrganizations();
-  }, []);
+    async function fetchData() {
+      const { data: orgs } = await supabase.from("organizations").select("*");
+      setOrganizations(orgs || []);
 
-  async function fetchOrganizations() {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData.session;
-
-    if (!session) return;
-
-    const { data } = await supabase
-      .from("organizations")
-      .select("*")
-      .eq("user_id", session.user.id);
-
-    setOrganizations(data || []);
-  }
+      if (selectedOrg) {
+        const { data: missionData } = await supabase
+          .from("missions")
+          .select("*")
+          .eq("organization_id", selectedOrg.id);
+        setMissions(missionData || []);
+      }
+    }
+    fetchData();
+  }, [selectedOrg]);
 
   async function handleCreateOrganization(e: React.FormEvent) {
     e.preventDefault();
@@ -94,23 +95,39 @@ export function OrganizationSelector({ onSelect, selectedOrg }: Props) {
 
         <Popover.Portal>
           <Popover.Content
-            className="w-[300px] bg-background border border-accent-2 rounded-lg shadow-lg p-2 animate-in fade-in-0 zoom-in-95"
-            sideOffset={5}
+            className="w-80 bg-background border border-accent-2 rounded-lg shadow-lg p-1 animate-in fade-in-0 zoom-in-95"
+            sideOffset={8}
+            align="start"
+            style={{ zIndex: 100 }}
           >
             <div className="space-y-1">
               {organizations.map((org) => (
-                <button
-                  key={org.id}
-                  className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-accent-1 text-left"
-                  onClick={() => handleSelectOrg(org)}
-                >
-                  <Building2 className="w-4 h-4" />
-                  <span className="text-sm flex-1">{org.name}</span>
-                </button>
+                <div key={org.id} className="space-y-1">
+                  <button
+                    className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-accent-1 text-left"
+                    onClick={() => handleSelectOrg(org)}
+                  >
+                    <Building2 className="w-4 h-4" />
+                    <span className="text-sm flex-1">{org.name}</span>
+                  </button>
+                  {String(selectedOrg?.id) === String(org.id) &&
+                    missions.length > 0 && (
+                      <div className="ml-4 pl-4 border-l border-accent-2">
+                        {missions.map((mission) => (
+                          <div key={mission.id} className="py-1">
+                            <Target className="w-3 h-3 inline mr-2 text-gray-400" />
+                            <span className="text-sm text-gray-400">
+                              {mission.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                </div>
               ))}
             </div>
 
-            <div className="mt-2 pt-2">
+            <div className="mt-2 pt-2 border-t border-accent-2">
               <button
                 onClick={() => setIsDialogOpen(true)}
                 className="w-full text-sm text-green-400 hover:text-green-300 flex items-center justify-center gap-2 p-2"
@@ -155,7 +172,6 @@ export function OrganizationSelector({ onSelect, selectedOrg }: Props) {
                     required
                   />
                 </div>
-
                 <div className="flex justify-end">
                   <button
                     type="submit"

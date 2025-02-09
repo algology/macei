@@ -11,7 +11,7 @@ interface Props {
 export function OrganizationCards({ onSelect }: Props) {
   const config = {
     resourceName: "Organizations",
-    icon: Building2,
+    iconType: "organization" as const,
     tableName: "organizations",
   };
 

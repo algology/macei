@@ -5,18 +5,19 @@ import {
   Settings,
   LogOut,
   PanelLeftClose,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import * as Tooltip from "@radix-ui/react-tooltip";
 
-export function SidebarNavigation({
-  expanded = true,
-  setExpanded,
-}: {
-  expanded?: boolean;
-  setExpanded: (expanded: boolean) => void;
-}) {
+interface Props {
+  isCollapsed: boolean;
+  onToggle: () => void;
+}
+
+export function SidebarNavigation({ isCollapsed, onToggle }: Props) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -39,25 +40,26 @@ export function SidebarNavigation({
           <Link
             href={href}
             className={`flex items-center h-10 text-sm text-gray-300 hover:bg-accent-1 rounded-md ${
-              !expanded ? "justify-center px-2" : ""
+              isCollapsed ? "justify-center px-2" : ""
             }`}
           >
             <div
               className={`${
-                expanded ? "w-16" : "w-12"
+                !isCollapsed ? "w-16" : "w-12"
               } flex items-center justify-center`}
             >
               {icon}
             </div>
-            {expanded && <span>{label}</span>}
+            {!isCollapsed && <span>{label}</span>}
           </Link>
         </Tooltip.Trigger>
-        {!expanded && (
+        {isCollapsed && (
           <Tooltip.Portal>
             <Tooltip.Content
               className="px-3 py-1.5 text-sm bg-accent-1 border border-accent-2 rounded-md"
               side="right"
-              sideOffset={8}
+              sideOffset={16}
+              align="center"
             >
               {label}
               <Tooltip.Arrow className="fill-accent-1" />
@@ -70,9 +72,9 @@ export function SidebarNavigation({
 
   return (
     <aside
-      className={`${
-        expanded ? "w-52" : "w-20"
-      } relative transition-all duration-200 border-r border-accent-2`}
+      className={`fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] bg-background border-r border-accent-2 transition-all duration-300 ${
+        isCollapsed ? "w-20" : "w-52"
+      }`}
     >
       <nav className="flex flex-col h-full p-4">
         <div className="space-y-1">
@@ -99,31 +101,28 @@ export function SidebarNavigation({
                 <Tooltip.Root>
                   <Tooltip.Trigger asChild>
                     <button
-                      onClick={() => setExpanded(!expanded)}
+                      onClick={onToggle}
                       className={`flex items-center w-full h-10 text-sm text-gray-300 hover:bg-accent-1 rounded-md ${
-                        !expanded ? "justify-center px-2" : ""
+                        isCollapsed ? "justify-center px-2" : ""
                       }`}
                     >
                       <div
                         className={`${
-                          expanded ? "w-16" : "w-12"
+                          !isCollapsed ? "w-16" : "w-12"
                         } flex items-center justify-center`}
                       >
-                        <PanelLeftClose
-                          className={`w-4 h-4 transition-transform duration-200 ${
-                            expanded ? "" : "rotate-180"
-                          }`}
-                        />
+                        {isCollapsed ? <ChevronRight /> : <ChevronLeft />}
                       </div>
-                      {expanded && <span>Collapse</span>}
+                      {!isCollapsed && <span>Collapse</span>}
                     </button>
                   </Tooltip.Trigger>
-                  {!expanded && (
+                  {isCollapsed && (
                     <Tooltip.Portal>
                       <Tooltip.Content
                         className="px-3 py-1.5 text-sm bg-accent-1 border border-accent-2 rounded-md"
                         side="right"
-                        sideOffset={8}
+                        sideOffset={16}
+                        align="center"
                       >
                         Expand
                         <Tooltip.Arrow className="fill-accent-1" />
@@ -139,25 +138,26 @@ export function SidebarNavigation({
                     <button
                       onClick={handleLogout}
                       className={`flex items-center w-full h-10 text-sm text-red-400 hover:text-red-300 hover:bg-accent-1 rounded-md ${
-                        !expanded ? "justify-center px-2" : ""
+                        isCollapsed ? "justify-center px-2" : ""
                       }`}
                     >
                       <div
                         className={`${
-                          expanded ? "w-16" : "w-12"
+                          !isCollapsed ? "w-16" : "w-12"
                         } flex items-center justify-center`}
                       >
                         <LogOut className="w-4 h-4" />
                       </div>
-                      {expanded && <span>Log Out</span>}
+                      {!isCollapsed && <span>Log Out</span>}
                     </button>
                   </Tooltip.Trigger>
-                  {!expanded && (
+                  {isCollapsed && (
                     <Tooltip.Portal>
                       <Tooltip.Content
                         className="px-3 py-1.5 text-sm bg-accent-1 border border-accent-2 rounded-md"
                         side="right"
-                        sideOffset={8}
+                        sideOffset={16}
+                        align="center"
                       >
                         Log Out
                         <Tooltip.Arrow className="fill-accent-1" />

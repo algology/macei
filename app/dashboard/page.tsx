@@ -1,10 +1,10 @@
-import { Dashboard } from "../components/Dashboard";
-import { DashboardLayout } from "../components/DashboardLayout";
+import { OrganizationCards } from "@/app/components/OrganizationCards";
+import { DashboardLayout } from "@/app/components/DashboardLayout";
 
 export default function DashboardPage() {
   return (
     <DashboardLayout>
-      <Dashboard />
+      <OrganizationCards />
     </DashboardLayout>
   );
 }
