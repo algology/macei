@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "MACEI - Market Analysis & Context Enhancement Intelligence",
   description:
     "AI-powered idea validation for businesses. Analyze market signals and validate your next big idea.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

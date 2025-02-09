@@ -9,7 +9,7 @@ const ideas = [
     signals: "23 Industry Reports, 5 Patents",
   },
   {
-    name: "Mining Operations AI",
+    name: "Mining Logistics AI",
     category: "Resources",
     impact: "High",
     status: "in review",
