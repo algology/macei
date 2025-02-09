@@ -23,6 +23,7 @@ import { MissionSelector } from "./MissionSelector";
 import { IdeaSelector } from "./IdeaSelector";
 import { MissionCards } from "./MissionCards";
 import { IdeaCards } from "./IdeaCards";
+import { OrganizationCards } from "./OrganizationCards";
 
 type BreadcrumbItem = {
   id: string;
@@ -95,11 +96,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   const renderDashboardContent = () => {
     if (selectedItems.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <p className="text-gray-400">Select an organization to get started</p>
-        </div>
-      );
+      return <OrganizationCards />;
     }
 
     if (selectedItems.length === 1) {
@@ -120,13 +117,33 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Top Navigation */}
       <header className="h-16 border-b border-accent-2">
         <div className="h-full px-6 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="hover:opacity-90">
-              <Image src="/logo.svg" alt="Logo" width={90} height={26} />
+          <div className="flex items-center gap-2">
+            <Link 
+              href="/dashboard" 
+              className="hover:opacity-90 pt-1"
+              onClick={(e) => {
+                e.preventDefault();
+                setSelectedItems([]);
+              }}
+            >
+              <Image src="/favicon.svg" alt="Logo" width={40} height={40} />
             </Link>
 
             <nav className="flex items-center">
               <ul className="flex items-center">
+                <li className="mx-2">
+                  <svg
+                    className="w-[22px] h-[22px] text-gray-400"
+                    viewBox="0 0 16 16"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M4.015 15.394l0.295-0.69l6-14l0.295-0.69l1.379 0.591l-0.295 0.69l-6 14l-0.295 0.69l-1.379-0.591z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </li>
                 <li className="flex items-center min-w-0">
                   <OrganizationSelector
                     onSelect={handleOrganizationSelect}
