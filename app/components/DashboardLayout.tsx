@@ -203,7 +203,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   };
 
   const renderDashboardContent = () => {
-    if (window.location.pathname === "/dashboard/settings") {
+    if (pathname === "/dashboard/settings") {
       return children;
     }
 
