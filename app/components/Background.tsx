@@ -79,10 +79,10 @@ export function Background() {
     );
 
     const particlesMaterial = new THREE.PointsMaterial({
-      size: 8,
+      size: 12,
       map: particleTexture,
       vertexColors: true,
-      opacity: 0.15,
+      opacity: 0.35,
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
@@ -163,7 +163,7 @@ export function Background() {
 
   return (
     <div className="fixed inset-0 -z-10 pointer-events-none">
-      <div className="absolute inset-0 grid-pattern opacity-[0.07]" />
+      <div className="absolute inset-0 grid-pattern opacity-[0.15]" />
       <div ref={containerRef} className="absolute inset-0" />
     </div>
   );
