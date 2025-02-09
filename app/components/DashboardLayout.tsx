@@ -27,6 +27,7 @@ import { OrganizationCards } from "./OrganizationCards";
 import { SidebarNavigation } from "./SidebarNavigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { LogOut } from "lucide-react";
+import { LoadingSpinner } from "./LoadingSpinner";
 
 type BreadcrumbItem = {
   id: string;
@@ -56,6 +57,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     }
     return false;
   });
+  const [isBreadcrumbsLoading, setIsBreadcrumbsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchUserAndProfile() {
@@ -129,6 +131,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function updateBreadcrumbs() {
+      setIsBreadcrumbsLoading(true);
       const paths = pathname.split("/").filter(Boolean);
       if (paths[0] !== "dashboard") return;
 
@@ -171,6 +174,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       }
 
       setBreadcrumbs(newBreadcrumbs);
+      setIsBreadcrumbsLoading(false);
     }
 
     updateBreadcrumbs();
@@ -180,15 +184,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   if (!loading && !user) {
     router.push("/login");
     return null;
-  }
-
-  // Show loading state directly without wrapping in DashboardLayout
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-gray-400">Loading...</div>
-      </div>
-    );
   }
 
   const handleOrganizationSelect = (org: Organization) => {
@@ -210,6 +205,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const renderDashboardContent = () => {
     if (window.location.pathname === "/dashboard/settings") {
       return children;
+    }
+
+    if (isBreadcrumbsLoading) {
+      return <LoadingSpinner />;
     }
 
     if (breadcrumbs.length === 0) {
