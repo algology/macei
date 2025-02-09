@@ -174,18 +174,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   };
 
   const renderDashboardContent = () => {
-    // If we're on the settings page, render the children directly
     if (window.location.pathname === "/dashboard/settings") {
       return children;
     }
 
-    // Otherwise, handle the existing organization/mission/idea flow
     if (selectedItems.length === 0) {
-      return <OrganizationCards />;
+      return <OrganizationCards onSelect={handleOrganizationSelect} />;
     }
 
     if (selectedItems.length === 1) {
-      return <MissionCards organizationId={selectedItems[0].id} />;
+      return (
+        <MissionCards
+          organizationId={selectedItems[0].id}
+          onSelect={handleMissionSelect}
+        />
+      );
     }
 
     if (selectedItems.length === 2) {

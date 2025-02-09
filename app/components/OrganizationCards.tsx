@@ -2,13 +2,18 @@
 
 import { Building2 } from "lucide-react";
 import { ResourceCards } from "./ResourceCards";
+import type { Organization } from "./types";
 
-export function OrganizationCards() {
+interface Props {
+  onSelect?: (org: Organization) => void;
+}
+
+export function OrganizationCards({ onSelect }: Props) {
   const config = {
     resourceName: "Organizations",
     icon: Building2,
-    tableName: "organizations"
+    tableName: "organizations",
   };
 
-  return <ResourceCards config={config} />;
-} 
+  return <ResourceCards<Organization> config={config} onSelect={onSelect} />;
+}

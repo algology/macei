@@ -1,20 +1,22 @@
 import { Target } from "lucide-react";
 import { ResourceCards } from "./ResourceCards";
+import type { Mission } from "./types";
 
 interface Props {
   organizationId: string;
+  onSelect?: (mission: Mission) => void;
 }
 
-export function MissionCards({ organizationId }: Props) {
+export function MissionCards({ organizationId, onSelect }: Props) {
   const config = {
     resourceName: "Missions",
     icon: Target,
     tableName: "missions",
     foreignKey: {
       name: "organization_id",
-      value: organizationId
-    }
+      value: organizationId,
+    },
   };
 
-  return <ResourceCards config={config} />;
+  return <ResourceCards<Mission> config={config} onSelect={onSelect} />;
 }
