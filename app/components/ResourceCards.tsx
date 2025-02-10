@@ -10,6 +10,7 @@ import {
   Lightbulb,
   Plus,
   X,
+  Pencil,
 } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { Resource, ResourceConfig, Organization, Mission } from "./types";
@@ -24,6 +25,10 @@ interface Props<T extends Resource> {
 
 function isOrganization(resource: Resource): resource is Organization {
   return "missions" in resource;
+}
+
+function isMission(resource: Resource): resource is Mission {
+  return "organization_id" in resource;
 }
 
 export function ResourceCards<T extends Resource>({
@@ -244,8 +249,14 @@ export function ResourceCards<T extends Resource>({
         {resources.map((resource) => (
           <div
             key={resource.id}
-            onClick={() => handleCardClick(resource)}
-            className="group flex flex-col justify-between bg-background/40 backdrop-blur-sm border border-accent-2 rounded-xl hover:border-accent-3 transition-all duration-200 cursor-pointer"
+            className="group relative bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-4 hover:bg-accent-1/70 transition-colors cursor-pointer"
+            onClick={(e) => {
+              const target = e.target as HTMLElement;
+              if (target.closest('[role="menuitem"]')) {
+                return;
+              }
+              handleCardClick(resource);
+            }}
           >
             <div className="p-4">
               <div className="flex items-start justify-between">
@@ -274,6 +285,22 @@ export function ResourceCards<T extends Resource>({
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Portal>
                     <DropdownMenu.Content className="w-48 bg-background border border-accent-2 rounded-lg shadow-lg p-1 animate-in fade-in-0 zoom-in-95">
+                      <DropdownMenu.Item
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          const path =
+                            config.tableName === "organizations"
+                              ? `/dashboard/org/${resource.id}/edit`
+                              : isMission(resource)
+                              ? `/dashboard/org/${resource.organization_id}/mission/${resource.id}/edit`
+                              : "#";
+                          router.push(path);
+                        }}
+                        className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-400 hover:text-gray-300 hover:bg-accent-1 rounded-md outline-none cursor-pointer"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        Edit
+                      </DropdownMenu.Item>
                       <DropdownMenu.Item
                         onSelect={() => handleDelete(resource.id)}
                         className="flex items-center gap-2 px-2 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-accent-1 rounded-md outline-none cursor-pointer"

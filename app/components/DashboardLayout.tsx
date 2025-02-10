@@ -225,11 +225,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   };
 
   const renderDashboardContent = () => {
-    if (pathname === "/dashboard/knowledge-graph") {
-      return children;
-    }
-
-    if (pathname === "/dashboard/settings") {
+    // Special routes that should always render children directly
+    if (
+      pathname === "/dashboard/knowledge-graph" ||
+      pathname === "/dashboard/settings" ||
+      pathname.includes("/edit")
+    ) {
       return children;
     }
 

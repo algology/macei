@@ -17,8 +17,12 @@ export interface ResourceConfig {
 export type Organization = {
   id: number;
   name: string;
-  user_id: string; // UUID from auth.users
+  user_id: string;
   created_at: string;
+  description?: string;
+  website_url?: string;
+  industry?: string;
+  target_market?: string;
   missions?: Mission[];
 };
 
