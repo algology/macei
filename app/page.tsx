@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { Background } from "./components/Background";
-import { InstanceDashboard } from "./components/InstanceDashboard";
+import { HeroInstanceDashboard } from "./components/HeroInstanceDashboard";
 
 export default function Home() {
   return (
@@ -96,7 +96,7 @@ export default function Home() {
                 </p>
               </div>
               <div className="relative w-full">
-                <InstanceDashboard />
+                <HeroInstanceDashboard />
                 <div className="absolute -inset-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 blur-3xl -z-10" />
               </div>
             </div>
