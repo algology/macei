@@ -207,6 +207,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   };
 
   const renderDashboardContent = () => {
+    if (pathname === "/dashboard/knowledge-graph") {
+      return children;
+    }
+
     if (pathname === "/dashboard/settings") {
       return children;
     }

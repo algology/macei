@@ -7,6 +7,7 @@ import {
   PanelLeftClose,
   ChevronRight,
   ChevronLeft,
+  Network,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -84,14 +85,14 @@ export function SidebarNavigation({ isCollapsed, onToggle }: Props) {
             label="Dashboard"
           />
           <NavLink
-            href="/dashboard/data"
-            icon={<Database className="w-4 h-4" />}
-            label="Knowledge"
-          />
-          <NavLink
             href="/dashboard/settings"
             icon={<Settings className="w-4 h-4" />}
             label="Settings"
+          />
+          <NavLink
+            href="/dashboard/knowledge-graph"
+            icon={<Network className="w-4 h-4" />}
+            label="Knowledge Graph"
           />
         </div>
         <div className="mt-auto">
