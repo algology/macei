@@ -60,6 +60,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isBreadcrumbsLoading, setIsBreadcrumbsLoading] = useState(true);
 
   useEffect(() => {
+    const saved = localStorage.getItem("sidebarCollapsed");
+    if (saved) {
+      setIsCollapsed(JSON.parse(saved));
+    }
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem("sidebarCollapsed", JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 
