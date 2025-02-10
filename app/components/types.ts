@@ -2,6 +2,12 @@ export interface Resource {
   id: number;
   name: string;
   created_at: string;
+  ideas?: Array<{ count: number }>;
+  organization_id?: number;
+  organization?: {
+    id: number;
+    name: string;
+  };
 }
 
 export interface ResourceConfig {
@@ -31,6 +37,7 @@ export type Mission = {
   name: string;
   organization_id: number;
   created_at: string;
+  ideas?: { count: number }[];
 };
 
 export type Idea = {

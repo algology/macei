@@ -380,7 +380,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
                 placeholder="Type a keyword and press enter..."
                 classNames={{
                   tags: "space-y-2",
-                  tagInput: "mt-2",
+                  tagInput: "mt-2 pt-2 border-t border-accent-2",
                   tag: "inline-flex items-center bg-green-500/20 text-green-400 border border-green-900 px-2 py-1 rounded-md mr-2",
                   remove:
                     "ml-2 text-green-400 hover:text-green-300 cursor-pointer",

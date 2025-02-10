@@ -28,7 +28,7 @@ function isOrganization(resource: Resource): resource is Organization {
 }
 
 function isMission(resource: Resource): resource is Mission {
-  return "organization_id" in resource;
+  return "organization_id" in resource && "ideas" in resource;
 }
 
 export function ResourceCards<T extends Resource>({
@@ -57,7 +57,7 @@ export function ResourceCards<T extends Resource>({
     } else if (config.tableName === "missions") {
       query = supabase
         .from(config.tableName)
-        .select("*, organization:organizations(*)")
+        .select("*, organization:organizations(*), ideas:ideas(count)")
         .eq("organization_id", config.foreignKey?.value)
         .order("created_at", { ascending: false });
     }
@@ -267,6 +267,11 @@ export function ResourceCards<T extends Resource>({
                   <div>
                     <h3 className="font-medium text-gray-100">
                       {resource.name}
+                      {config.tableName === "missions" && (
+                        <span className="ml-2 text-sm text-gray-400">
+                          {resource.ideas?.[0]?.count || 0} ideas
+                        </span>
+                      )}
                     </h3>
                     <p className="text-sm text-gray-400 mt-1">
                       Created{" "}
