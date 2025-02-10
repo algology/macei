@@ -34,7 +34,9 @@ export function IdeaSelector({ missionId, onSelect, selectedIdea }: Props) {
 
   const handleIdeaCreated = (idea: Idea) => {
     setIdeas([...ideas, idea]);
-    onSelect(idea);
+    // Don't call onSelect here since we're in the selector
+    // Just close the dialog and update the list
+    setIsDialogOpen(false);
   };
 
   return (

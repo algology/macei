@@ -86,7 +86,7 @@ export function SidebarNavigation({ isCollapsed, onToggle }: Props) {
           <NavLink
             href="/dashboard/data"
             icon={<Database className="w-4 h-4" />}
-            label="Data"
+            label="Knowledge"
           />
           <NavLink
             href="/dashboard/settings"
