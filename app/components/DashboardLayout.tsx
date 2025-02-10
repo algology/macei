@@ -424,7 +424,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         />
         <main
           className={`flex-1 ${
-            isCollapsed ? "ml-20" : "ml-64"
+            isCollapsed ? "ml-20" : "ml-52"
           } transition-all duration-300 p-6`}
         >
           {renderDashboardContent()}
