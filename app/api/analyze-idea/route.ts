@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       mission_description,
     } = body;
 
-    const prompt = `You are an AI business analyst. Provide a concise validation of this business idea:
+    const prompt = `You are an AI business analyst. Analyze this business idea and provide structured feedback in the following format:
 
 Organization: ${organization}
 Mission: ${mission}
@@ -32,23 +32,27 @@ Expected Impact: ${impact}
 Market Signals:
 ${signals}
 
-Please provide a brief analysis in markdown format with the following sections:
+Please provide your analysis in the following JSON structure:
 
-# Quick Analysis: ${name}
+{
+  "missionAlignment": {
+    "score": <number between 0-100>,
+    "analysis": "<one paragraph explanation>"
+  },
+  "feasibility": {
+    "score": <number between 0-100>,
+    "analysis": "<one paragraph explanation>"
+  },
+  "impact": {
+    "score": <number between 0-100>,
+    "analysis": "<one paragraph explanation>"
+  }
+}
 
-## Mission Fit
-[Brief assessment of alignment with organization's mission]
-
-## Market Validation
-[Key market insights and potential]
-
-## Next Steps
-[1-2 key recommendations]
-
-Remember to:
-- Be concise and direct
-- Highlight critical points in **bold**
-- Consider both mission alignment and market signals`;
+Consider:
+- Mission alignment: How well does this align with organizational goals
+- Feasibility: Technical, legal, and practical implementation challenges
+- Impact: Market size, potential revenue, and strategic value`;
 
     const completion = await groq.chat.completions.create({
       messages: [

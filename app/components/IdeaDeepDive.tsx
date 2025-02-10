@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { Check, Brain, RefreshCw, ChevronDown } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { AIAnalysisResult } from "./types";
 
 interface Props {
   ideaId: string;
@@ -149,8 +149,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
           organization: missionData?.organization?.name,
           mission: missionData?.name,
           mission_description: missionData?.description,
-          previous_analysis: editedIdea.ai_analysis,
-          last_analyzed: editedIdea.last_analyzed,
         }),
       });
 
@@ -164,25 +162,31 @@ export function IdeaDeepDive({ ideaId }: Props) {
         throw new Error(data.error);
       }
 
+      // Extract JSON from the markdown response if needed
+      let analysisJson = data.content;
+      if (data.content.includes("```json")) {
+        const jsonMatch = data.content.match(/```json\n([\s\S]*?)\n```/);
+        analysisJson = jsonMatch ? jsonMatch[1] : data.content;
+      }
+
+      // Parse the JSON to validate it
+      const parsedAnalysis = JSON.parse(analysisJson);
+
       const updatedIdea = {
-        id: editedIdea.id,
-        name: editedIdea.name,
-        mission_id: editedIdea.mission_id,
-        status: editedIdea.status,
-        category: editedIdea.category,
-        impact: editedIdea.impact,
-        signals: editedIdea.signals,
-        created_at: editedIdea.created_at,
-        ai_analysis: data.content,
+        ...editedIdea,
+        ai_analysis: JSON.stringify(parsedAnalysis),
         last_analyzed: new Date().toISOString(),
       };
 
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from("ideas")
-        .update(updatedIdea)
+        .update({
+          ai_analysis: updatedIdea.ai_analysis,
+          last_analyzed: updatedIdea.last_analyzed,
+        })
         .eq("id", editedIdea.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       setEditedIdea(updatedIdea);
       setIdea(updatedIdea);
@@ -323,7 +327,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
           </div>
 
           {editedIdea.ai_analysis ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <details className="bg-accent-1/30 rounded-lg border border-accent-2 p-3 text-sm">
                 <summary className="cursor-pointer text-gray-400 hover:text-gray-300">
                   View Analysis Input Data
@@ -375,9 +379,43 @@ export function IdeaDeepDive({ ideaId }: Props) {
                   </div>
                 </div>
               </details>
-              <div className="prose prose-invert max-w-none">
-                <ReactMarkdown>{editedIdea.ai_analysis}</ReactMarkdown>
+
+              <div className="grid grid-cols-1 gap-4">
+                {Object.entries(
+                  JSON.parse(editedIdea.ai_analysis) as AIAnalysisResult
+                ).map(([key, value]) => (
+                  <div
+                    key={key}
+                    className="bg-accent-1/30 rounded-lg border border-accent-2 p-4"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-medium capitalize">
+                        {key.replace(/([A-Z])/g, " $1").trim()}
+                      </h4>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-16 h-2 rounded-full bg-gradient-to-r"
+                          style={{
+                            backgroundImage: `linear-gradient(to right, 
+                                ${value.score >= 33 ? "#22c55e" : "#666"} 33%, 
+                                ${value.score >= 66 ? "#22c55e" : "#666"} 66%, 
+                                ${
+                                  value.score >= 100 ? "#22c55e" : "#666"
+                                } 100%)`,
+                          }}
+                        />
+                        <span className="text-sm text-gray-400">
+                          {value.score}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-accent-1/50 rounded p-3 text-sm text-gray-300">
+                      {value.analysis}
+                    </div>
+                  </div>
+                ))}
               </div>
+
               {editedIdea.last_analyzed && (
                 <div className="text-sm text-gray-400">
                   Last analyzed:{" "}

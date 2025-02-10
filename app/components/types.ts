@@ -58,3 +58,18 @@ export type BreadcrumbItem = {
   icon: React.ReactNode;
   type: "organization" | "mission" | "idea";
 };
+
+export interface AIAnalysisResult {
+  missionAlignment: {
+    score: number;
+    analysis: string;
+  };
+  feasibility: {
+    score: number;
+    analysis: string;
+  };
+  impact: {
+    score: number;
+    analysis: string;
+  };
+}
