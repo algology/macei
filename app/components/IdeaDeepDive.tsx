@@ -1,7 +1,19 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { Check, Brain, RefreshCw, ChevronDown } from "lucide-react";
+import {
+  Check,
+  Brain,
+  RefreshCw,
+  ChevronDown,
+  Target,
+  TrendingUp,
+  Users,
+  LineChart,
+  Lightbulb,
+  Boxes,
+  Gauge,
+} from "lucide-react";
 import { AIAnalysisResult } from "./types";
 
 interface Props {
@@ -383,37 +395,68 @@ export function IdeaDeepDive({ ideaId }: Props) {
               <div className="grid grid-cols-1 gap-4">
                 {Object.entries(
                   JSON.parse(editedIdea.ai_analysis) as AIAnalysisResult
-                ).map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="bg-accent-1/30 rounded-lg border border-accent-2 p-4"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-medium capitalize">
-                        {key.replace(/([A-Z])/g, " $1").trim()}
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-16 h-2 rounded-full bg-gradient-to-r"
-                          style={{
-                            backgroundImage: `linear-gradient(to right, 
-                                ${value.score >= 33 ? "#22c55e" : "#666"} 33%, 
-                                ${value.score >= 66 ? "#22c55e" : "#666"} 66%, 
-                                ${
-                                  value.score >= 100 ? "#22c55e" : "#666"
-                                } 100%)`,
-                          }}
-                        />
-                        <span className="text-sm text-gray-400">
-                          {value.score}%
-                        </span>
+                ).map(([key, value]) => {
+                  // Helper function to get the appropriate icon
+                  const getIcon = (key: string) => {
+                    switch (key) {
+                      case "marketPotential":
+                        return <TrendingUp className="w-4 h-4 text-gray-400" />;
+                      case "customerFit":
+                        return <Users className="w-4 h-4 text-gray-400" />;
+                      case "feasibility":
+                        return <Boxes className="w-4 h-4 text-gray-400" />;
+                      case "innovation":
+                        return <Lightbulb className="w-4 h-4 text-gray-400" />;
+                      case "scalability":
+                        return <LineChart className="w-4 h-4 text-gray-400" />;
+                      case "missionAlignment":
+                        return <Target className="w-4 h-4 text-gray-400" />;
+                      case "impact":
+                        return <Gauge className="w-4 h-4 text-gray-400" />;
+                      default:
+                        return <Brain className="w-4 h-4 text-gray-400" />;
+                    }
+                  };
+
+                  return (
+                    <div
+                      key={key}
+                      className="bg-accent-1/30 rounded-lg border border-accent-2 p-4"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {getIcon(key)}
+                          <h4 className="text-sm font-medium capitalize">
+                            {key.replace(/([A-Z])/g, " $1").trim()}
+                          </h4>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-16 h-2 rounded-full bg-gradient-to-r"
+                            style={{
+                              backgroundImage: `linear-gradient(to right, 
+                                  ${
+                                    value.score >= 33 ? "#22c55e" : "#666"
+                                  } 33%, 
+                                  ${
+                                    value.score >= 66 ? "#22c55e" : "#666"
+                                  } 66%, 
+                                  ${
+                                    value.score >= 100 ? "#22c55e" : "#666"
+                                  } 100%)`,
+                            }}
+                          />
+                          <span className="text-sm text-gray-400">
+                            {value.score}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="bg-accent-1/50 rounded p-3 text-sm text-gray-300">
+                        {value.analysis}
                       </div>
                     </div>
-                    <div className="bg-accent-1/50 rounded p-3 text-sm text-gray-300">
-                      {value.analysis}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {editedIdea.last_analyzed && (
