@@ -15,6 +15,7 @@ import {
   Gauge,
 } from "lucide-react";
 import { AIAnalysisResult } from "./types";
+import { WithContext as ReactTags, Tag } from "react-tag-input";
 
 interface Props {
   ideaId: string;
@@ -41,6 +42,13 @@ interface IdeaDetails {
   };
 }
 
+interface CustomTag {
+  id: string;
+  text: string;
+  className: string;
+  [key: string]: string;
+}
+
 const defaultIdea: IdeaDetails = {
   id: 0,
   name: "",
@@ -62,10 +70,47 @@ export function IdeaDeepDive({ ideaId }: Props) {
   const [analyzing, setAnalyzing] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [missionData, setMissionData] = useState<any | null>(null);
+  const [keywords, setKeywords] = useState<CustomTag[]>([]);
+
+  const KeyCodes = {
+    comma: 188,
+    enter: 13,
+  };
+
+  const delimiters = [KeyCodes.comma, KeyCodes.enter];
 
   useEffect(() => {
     fetchIdea();
   }, [ideaId]);
+
+  useEffect(() => {
+    if (editedIdea?.signals) {
+      try {
+        const parsedKeywords = JSON.parse(editedIdea.signals);
+        setKeywords(
+          parsedKeywords.map((keyword: string) => ({
+            id: keyword,
+            text: keyword,
+            className: "tag-class",
+          }))
+        );
+      } catch (e) {
+        if (editedIdea.signals) {
+          const words = editedIdea.signals
+            .split(",")
+            .map((word) => word.trim())
+            .filter(Boolean);
+          setKeywords(
+            words.map((word) => ({
+              id: word,
+              text: word,
+              className: "tag-class",
+            }))
+          );
+        }
+      }
+    }
+  }, [editedIdea?.signals]);
 
   async function fetchIdea() {
     try {
@@ -99,18 +144,13 @@ export function IdeaDeepDive({ ideaId }: Props) {
 
     try {
       setSaving(true);
-
-      // Only include fields that exist in the ideas table
       const ideaToUpdate = {
-        id: editedIdea.id,
         name: editedIdea.name,
-        mission_id: editedIdea.mission_id,
         status: editedIdea.status,
         category: editedIdea.category,
         impact: editedIdea.impact,
-        signals: editedIdea.signals,
-        ai_analysis: editedIdea.ai_analysis,
-        last_analyzed: editedIdea.last_analyzed,
+        signals: JSON.stringify(keywords.map((k) => k.text)),
+        mission_id: editedIdea.mission_id,
       };
 
       const { error } = await supabase
@@ -120,7 +160,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
 
       if (error) throw error;
 
-      setIdea({ ...editedIdea }); // Keep the mission data in the state
+      setIdea({ ...editedIdea, ...ideaToUpdate });
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 2000);
     } catch (error) {
@@ -307,16 +347,51 @@ export function IdeaDeepDive({ ideaId }: Props) {
 
           <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
             <label className="block text-sm text-gray-400 mb-1">
-              Market Signals
+              Market Signal Keywords
             </label>
-            <textarea
-              value={editedIdea.signals || ""}
-              onChange={(e) =>
-                setEditedIdea({ ...editedIdea, signals: e.target.value })
-              }
-              className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md min-h-[200px]"
-              placeholder="Enter market signals, research findings, and other relevant data points..."
-            />
+            <div className="bg-accent-1 border border-accent-2 rounded-md p-2">
+              <ReactTags
+                tags={keywords}
+                delimiters={delimiters}
+                handleDelete={(i) => {
+                  const newKeywords = keywords.filter(
+                    (_, index) => index !== i
+                  );
+                  setKeywords(newKeywords);
+                  setEditedIdea({
+                    ...editedIdea!,
+                    signals: JSON.stringify(newKeywords.map((k) => k.text)),
+                  });
+                }}
+                handleAddition={(tag: Tag) => {
+                  const newTag: CustomTag = {
+                    id: tag.id,
+                    text: tag.id,
+                    className: "tag-class",
+                  };
+                  const newKeywords = [...keywords, newTag];
+                  setKeywords(newKeywords);
+                  setEditedIdea({
+                    ...editedIdea!,
+                    signals: JSON.stringify(newKeywords.map((k) => k.text)),
+                  });
+                }}
+                inputFieldPosition="bottom"
+                placeholder="Type a keyword and press enter..."
+                classNames={{
+                  tags: "space-y-2",
+                  tagInput: "mt-2",
+                  tag: "inline-flex items-center bg-green-500/20 text-green-400 border border-green-900 px-2 py-1 rounded-md mr-2",
+                  remove:
+                    "ml-2 text-green-400 hover:text-green-300 cursor-pointer",
+                  suggestions: "hidden",
+                }}
+              />
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              Press enter or comma to add a keyword. These keywords will be used
+              to track market signals.
+            </p>
           </div>
         </div>
 

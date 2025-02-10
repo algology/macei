@@ -258,7 +258,7 @@ export function ResourceCards<T extends Resource>({
               handleCardClick(resource);
             }}
           >
-            <div className="p-4">
+            <div className="p-0">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-accent-1 rounded-lg border border-accent-2">
