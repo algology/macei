@@ -5,24 +5,27 @@ import { supabase } from "@/lib/supabase";
 import { Lightbulb, Plus } from "lucide-react";
 import type { Idea, Mission, Organization } from "./types";
 import { CreateIdeaDialog } from "./CreateIdeaDialog";
+import { useRouter } from "next/navigation";
 
 interface Props {
   missionId: string;
 }
 
-interface ExtendedIdea extends Idea {
+interface ExtendedIdea
+  extends Omit<Idea, "status" | "category" | "impact" | "signals"> {
   organization?: Organization;
   mission?: Mission;
-  category?: string;
-  impact?: "High" | "Medium" | "Low";
-  status?: "validated" | "in review" | "ideation";
-  signals?: string;
+  status: "validated" | "in review" | "ideation";
+  category: string;
+  impact: "High" | "Medium" | "Low";
+  signals: string;
 }
 
 export function IdeaCards({ missionId }: Props) {
   const [ideas, setIdeas] = useState<ExtendedIdea[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchIdeas() {
@@ -46,11 +49,11 @@ export function IdeaCards({ missionId }: Props) {
         ...idea,
         organization: missionData?.organization,
         mission: missionData,
-        // Default values for new fields
-        category: "Unspecified",
-        impact: "Medium" as const,
-        status: "ideation" as const,
-        signals: "No signals yet",
+        // Default values for required fields
+        category: idea.category || "Unspecified",
+        impact: idea.impact || "Medium",
+        status: idea.status || "ideation",
+        signals: idea.signals || "No signals yet",
       }));
 
       setIdeas(extendedIdeas);
@@ -119,7 +122,12 @@ export function IdeaCards({ missionId }: Props) {
         {ideas.map((idea) => (
           <div
             key={idea.id}
-            className="grid grid-cols-7 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30"
+            className="grid grid-cols-7 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30 cursor-pointer"
+            onClick={() =>
+              router.push(
+                `/dashboard/org/${idea.organization?.id}/mission/${idea.mission_id}/idea/${idea.id}`
+              )
+            }
           >
             <div className="p-2 md:p-3 border-r border-gray-800 text-gray-400">
               {idea.organization?.name}

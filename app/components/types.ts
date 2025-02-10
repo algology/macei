@@ -17,6 +17,7 @@ export interface ResourceConfig {
 export type Organization = {
   id: number;
   name: string;
+  user_id: string; // UUID from auth.users
   created_at: string;
   missions?: Mission[];
 };
@@ -32,7 +33,19 @@ export type Idea = {
   id: number;
   name: string;
   mission_id: number;
+  mission?: Mission;
+  status: "validated" | "in review" | "ideation";
+  category?: string;
+  impact?: "High" | "Medium" | "Low";
+  signals?: string;
   created_at: string;
+};
+
+export type Profile = {
+  id: string; // UUID
+  full_name?: string;
+  avatar_url?: string;
+  updated_at?: string;
 };
 
 export type BreadcrumbItem = {

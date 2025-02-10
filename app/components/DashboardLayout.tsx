@@ -177,6 +177,24 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         }
       }
 
+      if (paths[6]) {
+        // ideaId exists
+        const { data: idea } = await supabase
+          .from("ideas")
+          .select("*")
+          .eq("id", paths[6])
+          .single();
+
+        if (idea) {
+          newBreadcrumbs.push({
+            id: String(idea.id),
+            name: idea.name,
+            icon: <Lightbulb className="w-[22px] h-[22px]" />,
+            type: "idea",
+          });
+        }
+      }
+
       setBreadcrumbs(newBreadcrumbs);
       setIsBreadcrumbsLoading(false);
     }
@@ -202,7 +220,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   const handleIdeaSelect = (idea: Idea) => {
     router.push(
-      `/dashboard/org/${idea.mission_id}/mission/${idea.mission_id}/idea/${idea.id}`
+      `/dashboard/org/${idea.mission?.organization_id}/mission/${idea.mission_id}/idea/${idea.id}`
     );
   };
 

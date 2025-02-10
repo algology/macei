@@ -1,50 +1,50 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { Search, Filter, Plus } from "lucide-react";
-
-const ideas = [
-  {
-    name: "Defence Supply Chain Optimization",
-    category: "Defence",
-    impact: "High",
-    status: "validated",
-    signals: "23 Industry Reports, 5 Patents",
-  },
-  {
-    name: "Mining Logistics AI",
-    category: "Resources",
-    impact: "High",
-    status: "in review",
-    signals: "12 News Articles, 3 Research Papers",
-  },
-  {
-    name: "Healthcare Data Platform",
-    category: "Public Sector",
-    impact: "Medium",
-    status: "ideation",
-    signals: "8 Market Reports, 15 News Mentions",
-  },
-  {
-    name: "Quantum Computing Research",
-    category: "R&D",
-    impact: "High",
-    status: "validated",
-    signals: "7 Journal Papers, 4 Industry Trends",
-  },
-];
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "validated":
-      return "bg-green-500/20 text-green-400 border-green-900";
-    case "in review":
-      return "bg-yellow-500/20 text-yellow-400 border-yellow-900";
-    case "ideation":
-      return "bg-blue-500/20 text-blue-400 border-blue-900";
-    default:
-      return "bg-gray-500/20 text-gray-400 border-gray-900";
-  }
-};
-
+import { supabase } from "@/lib/supabase";
+import { Idea } from "./types";
 export const InstanceDashboard = () => {
+  const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchIdeas();
+  }, []);
+
+  async function fetchIdeas() {
+    try {
+      const { data, error } = await supabase
+        .from("ideas")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setIdeas(data || []);
+    } catch (error) {
+      console.error("Error fetching ideas:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "validated":
+        return "bg-green-500/20 text-green-400 border-green-900";
+      case "in review":
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-900";
+      case "ideation":
+        return "bg-blue-500/20 text-blue-400 border-blue-900";
+      default:
+        return "bg-gray-500/20 text-gray-400 border-gray-900";
+    }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="relative w-full aspect-[16/9] md:aspect-[4/3] bg-[#101618] rounded-xl border border-gray-800 overflow-hidden">
       {/* Background grid lines */}
@@ -78,11 +78,17 @@ export const InstanceDashboard = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <button className="p-1.5 md:p-2 rounded bg-gray-800/50 border border-gray-700 hidden sm:block">
-              <Search className="w-3 h-3 md:w-4 md:h-4 text-gray-400" />
-            </button>
-            <button className="p-1.5 md:p-2 rounded bg-gray-800/50 border border-gray-700 hidden sm:block">
-              <Filter className="w-3 h-3 md:w-4 md:h-4 text-gray-400" />
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search ideas..."
+                className="w-full pl-10 pr-4 py-2 bg-accent-1 border border-accent-2 rounded-md"
+              />
+            </div>
+            <button className="px-4 py-2 bg-accent-1 border border-accent-2 rounded-md text-sm flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              Filter
             </button>
             <button className="px-2 py-1 md:px-3 md:py-2 rounded bg-green-500/20 text-green-400 text-xs md:text-sm flex items-center gap-1 md:gap-2 border border-green-900">
               <Plus className="w-3 h-3 md:w-4 md:h-4" />
@@ -105,9 +111,9 @@ export const InstanceDashboard = () => {
             <div className="p-2 md:p-3 border-r border-gray-800">Status</div>
             <div className="p-2 md:p-3">Market Signals</div>
           </div>
-          {ideas.map((idea, index) => (
+          {ideas.map((idea) => (
             <div
-              key={index}
+              key={idea.id}
               className="grid grid-cols-3 md:grid-cols-5 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30"
             >
               <div className="p-2 md:p-3 border-r border-gray-800 text-gray-200">

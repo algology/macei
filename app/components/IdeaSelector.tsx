@@ -21,7 +21,15 @@ export function IdeaSelector({ missionId, onSelect, selectedIdea }: Props) {
     async function fetchIdeas() {
       const { data } = await supabase
         .from("ideas")
-        .select("*")
+        .select(
+          `
+          *,
+          mission:missions (
+            *,
+            organization_id
+          )
+        `
+        )
         .eq("mission_id", missionId);
 
       setIdeas(data || []);
