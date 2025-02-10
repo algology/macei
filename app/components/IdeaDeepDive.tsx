@@ -46,6 +46,7 @@ interface CustomTag {
   id: string;
   text: string;
   className: string;
+  category: string;
   [key: string]: string;
 }
 
@@ -71,6 +72,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
   const [showSaved, setShowSaved] = useState(false);
   const [missionData, setMissionData] = useState<any | null>(null);
   const [keywords, setKeywords] = useState<CustomTag[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
 
   const KeyCodes = {
     comma: 188,
@@ -87,14 +89,41 @@ export function IdeaDeepDive({ ideaId }: Props) {
     if (editedIdea?.signals) {
       try {
         const parsedKeywords = JSON.parse(editedIdea.signals);
-        setKeywords(
-          parsedKeywords.map((keyword: string) => ({
-            id: keyword,
-            text: keyword,
-            className: "tag-class",
-          }))
-        );
+        if (typeof parsedKeywords === "string") {
+          // Handle single string
+          setKeywords([
+            {
+              id: parsedKeywords,
+              text: parsedKeywords,
+              className: "tag-class",
+              category: selectedCategory,
+            },
+          ]);
+        } else if (Array.isArray(parsedKeywords)) {
+          // Handle array of strings
+          setKeywords(
+            parsedKeywords.map((keyword) => ({
+              id: keyword,
+              text: keyword,
+              className: "tag-class",
+              category: selectedCategory,
+            }))
+          );
+        } else {
+          // Handle object with categories
+          const allKeywords = Object.entries(parsedKeywords).flatMap(
+            ([category, words]) =>
+              (words as string[]).map((word) => ({
+                id: word,
+                text: word,
+                className: "tag-class",
+                category: category,
+              }))
+          );
+          setKeywords(allKeywords);
+        }
       } catch (e) {
+        // Handle plain text format
         if (editedIdea.signals) {
           const words = editedIdea.signals
             .split(",")
@@ -105,12 +134,13 @@ export function IdeaDeepDive({ ideaId }: Props) {
               id: word,
               text: word,
               className: "tag-class",
+              category: selectedCategory,
             }))
           );
         }
       }
     }
-  }, [editedIdea?.signals]);
+  }, [editedIdea?.signals, selectedCategory]);
 
   async function fetchIdea() {
     try {
@@ -368,6 +398,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
                     id: tag.id,
                     text: tag.id,
                     className: "tag-class",
+                    category: selectedCategory,
                   };
                   const newKeywords = [...keywords, newTag];
                   setKeywords(newKeywords);
