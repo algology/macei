@@ -395,7 +395,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
       </div>
 
       {showSaved && (
-        <div className="fixed bottom-4 right-4 bg-green-500/20 text-green-400 px-4 py-2 rounded-md border border-green-900 flex items-center gap-2">
+        <div className="fixed bottom-4 right-4 bg-green-900 text-green-400 px-4 py-2 rounded-md border border-green-900 flex items-center gap-2">
           <Check className="w-4 h-4" />
           Changes saved
         </div>
