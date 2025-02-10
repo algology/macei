@@ -60,6 +60,7 @@ export function Header() {
                 width={90}
                 height={26}
                 className="antialiased"
+                style={{ height: "auto" }}
               />
             </Link>
 

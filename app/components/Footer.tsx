@@ -53,6 +53,7 @@ export function Footer() {
                 width={90}
                 height={26}
                 className="antialiased"
+                style={{ height: "auto" }}
               />
             </Link>
             <p className="text-sm text-gray-400 mb-4">

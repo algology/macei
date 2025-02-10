@@ -52,6 +52,8 @@ export function Background() {
       ctx.fillRect(0, 0, 32, 32);
     }
     const particleTexture = new THREE.CanvasTexture(canvas);
+    particleTexture.needsUpdate = true;
+    particleTexture.generateMipmaps = false;
 
     for (let i = 0; i < particlesCount * 3; i += 3) {
       positions[i] = (Math.random() - 0.5) * window.innerWidth * 1.5;

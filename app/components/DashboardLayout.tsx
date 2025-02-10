@@ -60,6 +60,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isBreadcrumbsLoading, setIsBreadcrumbsLoading] = useState(true);
 
   useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", JSON.stringify(isCollapsed));
+  }, [isCollapsed]);
+
+  useEffect(() => {
     async function fetchUserAndProfile() {
       try {
         const {
@@ -231,12 +235,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     return children;
   };
 
-  const toggleSidebar = () => {
-    const newState = !isCollapsed;
-    setIsCollapsed(newState);
-    localStorage.setItem("sidebarCollapsed", JSON.stringify(newState));
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Top Navigation - Full Width */}
@@ -257,6 +255,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 width={40}
                 height={40}
                 className="invert"
+                style={{ height: "auto" }}
               />
             </Link>
 
@@ -397,7 +396,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area - Below Header */}
       <div className="pt-16 flex">
-        <SidebarNavigation isCollapsed={isCollapsed} onToggle={toggleSidebar} />
+        <SidebarNavigation
+          isCollapsed={isCollapsed}
+          onToggle={() => setIsCollapsed(!isCollapsed)}
+        />
         <main
           className={`flex-1 ${
             isCollapsed ? "ml-20" : "ml-64"

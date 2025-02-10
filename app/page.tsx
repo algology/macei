@@ -66,6 +66,7 @@ export default function Home() {
                   width={180}
                   height={60}
                   className="opacity-60 hover:opacity-100 hover:scale-105 transition-all duration-300 grayscale"
+                  style={{ height: "auto" }}
                 />
               </div>
             </div>

@@ -42,17 +42,17 @@ export function ResourceCards<T extends Resource>({
   }, [config]);
 
   async function fetchResources() {
-    let query = supabase.from(config.tableName).select();
+    let query = supabase.from(config.tableName).select("*");
 
     if (config.tableName === "organizations") {
       query = supabase
         .from(config.tableName)
-        .select(`*, missions (*)`)
+        .select("*, missions(*)")
         .order("created_at", { ascending: false });
     } else if (config.tableName === "missions") {
       query = supabase
         .from(config.tableName)
-        .select("*, organization:organization_id(*)")
+        .select("*, organization:organizations(*)")
         .eq("organization_id", config.foreignKey?.value)
         .order("created_at", { ascending: false });
     }
@@ -71,18 +71,8 @@ export function ResourceCards<T extends Resource>({
         throw new Error("You must be authenticated to delete resources");
       }
 
-      if (config.tableName === "organizations") {
-        // First delete all related missions
-        const { error: missionsError } = await supabase
-          .from("missions")
-          .delete()
-          .eq("organization_id", id);
-
-        if (missionsError) throw missionsError;
-      }
-
+      // First delete all related ideas if deleting a mission
       if (config.tableName === "missions") {
-        // First delete all related ideas
         const { error: ideasError } = await supabase
           .from("ideas")
           .delete()
@@ -91,7 +81,35 @@ export function ResourceCards<T extends Resource>({
         if (ideasError) throw ideasError;
       }
 
-      // Now delete the resource itself
+      // Then delete all related missions if deleting an organization
+      if (config.tableName === "organizations") {
+        // Get all missions for this organization
+        const { data: missions } = await supabase
+          .from("missions")
+          .select("id")
+          .eq("organization_id", id);
+
+        if (missions && missions.length > 0) {
+          // Delete ideas for all missions
+          const missionIds = missions.map((m) => m.id);
+          const { error: ideasError } = await supabase
+            .from("ideas")
+            .delete()
+            .in("mission_id", missionIds);
+
+          if (ideasError) throw ideasError;
+
+          // Then delete the missions
+          const { error: missionsError } = await supabase
+            .from("missions")
+            .delete()
+            .eq("organization_id", id);
+
+          if (missionsError) throw missionsError;
+        }
+      }
+
+      // Finally delete the resource itself
       const { error, data } = await supabase
         .from(config.tableName)
         .delete()
