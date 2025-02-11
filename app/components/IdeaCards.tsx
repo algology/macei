@@ -153,7 +153,64 @@ export function IdeaCards({ missionId }: Props) {
             <div className="p-2 md:p-3 border-r border-gray-800 text-gray-400">
               {idea.impact}
             </div>
-            <div className="p-2 md:p-3 text-gray-400">{idea.signals}</div>
+            <div className="p-2 md:p-3 text-gray-400">
+              {idea.signals ? (
+                <div className="flex flex-wrap gap-1">
+                  {(() => {
+                    try {
+                      const signals = JSON.parse(idea.signals);
+
+                      if (Array.isArray(signals)) {
+                        return signals.map((signal: unknown, index: number) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full"
+                          >
+                            {String(signal)}
+                          </span>
+                        ));
+                      } else if (
+                        typeof signals === "object" &&
+                        signals !== null
+                      ) {
+                        return Object.values(signals as Record<string, unknown>)
+                          .flat()
+                          .map((signal: unknown, index: number) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full"
+                            >
+                              {String(signal)}
+                            </span>
+                          ));
+                      } else if (typeof signals === "string") {
+                        return (
+                          <span className="inline-flex items-center bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full">
+                            {signals}
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="text-gray-500">Invalid format</span>
+                      );
+                    } catch (e) {
+                      return idea.signals
+                        .split(",")
+                        .map((signal: string, index: number) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full"
+                          >
+                            {signal.trim()}
+                          </span>
+                        ));
+                    }
+                  })()}
+                </div>
+              ) : (
+                <span className="text-gray-500">No signals</span>
+              )}
+            </div>
           </div>
         ))}
       </div>
