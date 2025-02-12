@@ -37,7 +37,7 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-6 items-center">
                 <a
-                  href="/demo"
+                  href="/login"
                   className="group px-8 py-4 bg-green-500 text-black rounded-full hover:bg-green-400 transition-colors duration-200 font-medium flex items-center gap-2 text-lg"
                 >
                   Let&apos;s go

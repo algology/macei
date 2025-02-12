@@ -22,7 +22,7 @@ import { Organization, Mission, Idea } from "./types";
 import { MissionSelector } from "./MissionSelector";
 import { IdeaSelector } from "./IdeaSelector";
 import { MissionCards } from "./MissionCards";
-import { IdeaCards } from "./IdeaCards";
+import { IdeaCards } from "./IdeaTable";
 import { OrganizationCards } from "./OrganizationCards";
 import { SidebarNavigation } from "./SidebarNavigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";

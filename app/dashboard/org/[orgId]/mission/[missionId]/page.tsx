@@ -1,6 +1,6 @@
 "use client";
 
-import { IdeaCards } from "@/app/components/IdeaCards";
+import { IdeaCards } from "@/app/components/IdeaTable";
 import { DashboardLayout } from "@/app/components/DashboardLayout";
 import { useParams } from "next/navigation";
 

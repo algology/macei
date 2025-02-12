@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Lightbulb, Plus } from "lucide-react";
+import { Lightbulb, Plus, MoreHorizontal, Trash2 } from "lucide-react";
 import type { Idea, Mission, Organization } from "./types";
 import { CreateIdeaDialog } from "./CreateIdeaDialog";
 import { useRouter } from "next/navigation";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 interface Props {
   missionId: string;
@@ -89,6 +90,22 @@ export function IdeaCards({ missionId }: Props) {
     }
   };
 
+  async function handleDelete(ideaId: number) {
+    try {
+      const { error } = await supabase
+        .from("ideas")
+        .delete()
+        .eq("id", ideaId);
+
+      if (error) throw error;
+
+      setIdeas(ideas.filter((idea) => idea.id !== ideaId));
+    } catch (error) {
+      console.error("Error deleting idea:", error);
+      alert("Failed to delete idea. Please try again.");
+    }
+  }
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -97,20 +114,11 @@ export function IdeaCards({ missionId }: Props) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Ideas</h1>
-        <button
-          onClick={() => setIsDialogOpen(true)}
-          className="px-4 py-2 bg-green-500/20 text-green-400 text-sm flex items-center gap-2 border border-green-900 hover:bg-green-500/30 rounded-md"
-        >
-          <Plus className="w-4 h-4" />
-          New Idea
-        </button>
       </div>
 
       <div className="w-full border border-gray-800 rounded-lg overflow-hidden bg-[#101618]">
         <div className="grid grid-cols-7 text-xs md:text-sm text-gray-400 bg-gray-900/50">
-          <div className="p-2 md:p-3 border-r border-gray-800">
-            Organization
-          </div>
+          <div className="p-2 md:p-3 border-r border-gray-800">Organization</div>
           <div className="p-2 md:p-3 border-r border-gray-800">Mission</div>
           <div className="p-2 md:p-3 border-r border-gray-800">Idea</div>
           <div className="p-2 md:p-3 border-r border-gray-800">Status</div>
@@ -122,7 +130,7 @@ export function IdeaCards({ missionId }: Props) {
         {ideas.map((idea) => (
           <div
             key={idea.id}
-            className="grid grid-cols-7 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30 cursor-pointer"
+            className="grid grid-cols-7 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30 cursor-pointer group"
             onClick={() =>
               router.push(
                 `/dashboard/org/${idea.organization?.id}/mission/${idea.mission_id}/idea/${idea.id}`
@@ -153,7 +161,7 @@ export function IdeaCards({ missionId }: Props) {
             <div className="p-2 md:p-3 border-r border-gray-800 text-gray-400">
               {idea.impact}
             </div>
-            <div className="p-2 md:p-3 text-gray-400">
+            <div className="p-2 md:p-3 text-gray-400 relative">
               {idea.signals ? (
                 <div className="flex flex-wrap gap-1">
                   {(() => {
@@ -210,9 +218,42 @@ export function IdeaCards({ missionId }: Props) {
               ) : (
                 <span className="text-gray-500">No signals</span>
               )}
+              
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-700/50 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content className="w-48 bg-background border border-accent-2 rounded-lg shadow-lg p-1 animate-in fade-in-0 zoom-in-95">
+                    <DropdownMenu.Item
+                      onSelect={() => handleDelete(idea.id)}
+                      className="flex items-center gap-2 px-2 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-accent-1 rounded-md outline-none cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
             </div>
           </div>
         ))}
+
+        <div 
+          className="grid grid-cols-7 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30 cursor-pointer group"
+          onClick={() => setIsDialogOpen(true)}
+        >
+          <div className="col-span-7 p-3 flex items-center justify-center">
+            <div className="p-2 rounded-full hover:bg-gray-700/50 transition-colors">
+              <Plus className="w-5 h-5 text-gray-400 group-hover:text-gray-200" />
+            </div>
+          </div>
+        </div>
       </div>
 
       <CreateIdeaDialog
