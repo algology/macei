@@ -17,6 +17,7 @@ import {
 import { AIAnalysisResult } from "./types";
 import { WithContext as ReactTags, Tag } from "react-tag-input";
 import { IdeaKnowledgeBase } from "./IdeaKnowledgeBase";
+import { NewsSection } from "./NewsSection";
 
 interface Props {
   ideaId: string;
@@ -430,6 +431,10 @@ export function IdeaDeepDive({ ideaId }: Props) {
               Press enter or comma to add a keyword. These keywords will be used
               to track market signals.
             </p>
+          </div>
+
+          <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+            <NewsSection ideaDetails={editedIdea} missionData={missionData} />
           </div>
         </div>
 

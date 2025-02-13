@@ -87,3 +87,19 @@ export type Document = {
   url: string;
   created_at: string;
 };
+
+export interface NewsArticle {
+  title: string;
+  description: string;
+  url: string;
+  urlToImage: string;
+  publishedAt: string;
+  source: {
+    name: string;
+  };
+}
+
+export interface NewsResponse {
+  status: string;
+  articles: NewsArticle[];
+}

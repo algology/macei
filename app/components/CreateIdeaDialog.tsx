@@ -248,6 +248,17 @@ export function CreateIdeaDialog({
                   </div>
                 </div>
               </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => handleCreate()}
+                  disabled={!name}
+                  className="px-4 py-2 bg-green-500/20 text-green-400 border border-green-900 rounded-lg hover:bg-green-500/30 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Idea
+                </button>
+              </div>
             </>
           ) : (
             <div className="space-y-4">
