@@ -80,3 +80,10 @@ export interface AIAnalysisResult {
     analysis: string;
   };
 }
+
+export type Document = {
+  id: number;
+  name: string;
+  url: string;
+  created_at: string;
+};

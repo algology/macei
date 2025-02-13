@@ -385,14 +385,18 @@ export function IdeaDeepDive({ ideaId }: Props) {
                 tags={keywords}
                 delimiters={delimiters}
                 handleDelete={(i) => {
-                  const newKeywords = keywords.filter(
-                    (_, index) => index !== i
-                  );
-                  setKeywords(newKeywords);
-                  setEditedIdea({
-                    ...editedIdea!,
-                    signals: JSON.stringify(newKeywords.map((k) => k.text)),
-                  });
+                  try {
+                    const newKeywords = keywords.filter(
+                      (_, index) => index !== i
+                    );
+                    setKeywords(newKeywords);
+                    setEditedIdea({
+                      ...editedIdea!,
+                      signals: JSON.stringify(newKeywords.map((k) => k.text)),
+                    });
+                  } catch (error) {
+                    console.error("Error deleting keyword:", error);
+                  }
                 }}
                 handleAddition={(tag: Tag) => {
                   const newTag: CustomTag = {
@@ -410,6 +414,8 @@ export function IdeaDeepDive({ ideaId }: Props) {
                 }}
                 inputFieldPosition="bottom"
                 placeholder="Type a keyword and press enter..."
+                autofocus={false}
+                allowUnique={true}
                 classNames={{
                   tags: "space-y-2",
                   tagInput: "mt-2 pt-2 border-t border-accent-2",
@@ -429,9 +435,9 @@ export function IdeaDeepDive({ ideaId }: Props) {
 
         <div className="space-y-6">
           <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-6">
-            <IdeaKnowledgeBase 
-              ideaId={parseInt(ideaId, 10)} 
-              onDocumentAdded={fetchIdea} 
+            <IdeaKnowledgeBase
+              ideaId={parseInt(ideaId, 10)}
+              onDocumentAdded={fetchIdea}
             />
           </div>
 
@@ -502,7 +508,9 @@ export function IdeaDeepDive({ ideaId }: Props) {
                         )}
                       </div>
                       <div className="border-t border-accent-2 pt-2 mt-2">
-                        <div className="text-gray-500 mb-1">Market Signals:</div>
+                        <div className="text-gray-500 mb-1">
+                          Market Signals:
+                        </div>
                         <div className="whitespace-pre-wrap">
                           {editedIdea.signals || (
                             <em className="text-gray-600">Not provided</em>
@@ -520,15 +528,21 @@ export function IdeaDeepDive({ ideaId }: Props) {
                       const getIcon = (key: string) => {
                         switch (key) {
                           case "marketPotential":
-                            return <TrendingUp className="w-4 h-4 text-gray-400" />;
+                            return (
+                              <TrendingUp className="w-4 h-4 text-gray-400" />
+                            );
                           case "customerFit":
                             return <Users className="w-4 h-4 text-gray-400" />;
                           case "feasibility":
                             return <Boxes className="w-4 h-4 text-gray-400" />;
                           case "innovation":
-                            return <Lightbulb className="w-4 h-4 text-gray-400" />;
+                            return (
+                              <Lightbulb className="w-4 h-4 text-gray-400" />
+                            );
                           case "scalability":
-                            return <LineChart className="w-4 h-4 text-gray-400" />;
+                            return (
+                              <LineChart className="w-4 h-4 text-gray-400" />
+                            );
                           case "missionAlignment":
                             return <Target className="w-4 h-4 text-gray-400" />;
                           case "impact":
