@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Wand2, Plus } from "lucide-react";
+import { X, Wand2, Plus, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Idea } from "./types";
@@ -232,19 +232,22 @@ export function CreateIdeaDialog({
                     >
                       Impact
                     </label>
-                    <select
-                      id="impact"
-                      value={impact}
-                      onChange={(e) =>
-                        setImpact(e.target.value as "High" | "Medium" | "Low")
-                      }
-                      className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500/20"
-                      required
-                    >
-                      <option value="High">High</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Low">Low</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        id="impact"
+                        value={impact}
+                        onChange={(e) =>
+                          setImpact(e.target.value as "High" | "Medium" | "Low")
+                        }
+                        className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500/20 appearance-none"
+                        required
+                      >
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
                   </div>
                 </div>
               </div>

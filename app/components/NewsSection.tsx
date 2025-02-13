@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { NewsArticle } from "./types";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { Newspaper, RefreshCw } from "lucide-react";
@@ -10,7 +10,7 @@ interface Props {
 
 export function NewsSection({ ideaDetails, missionData }: Props) {
   const [news, setNews] = useState<NewsArticle[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   async function fetchNews() {
@@ -39,12 +39,6 @@ export function NewsSection({ ideaDetails, missionData }: Props) {
     }
   }
 
-  useEffect(() => {
-    fetchNews();
-  }, [ideaDetails, missionData]);
-
-  if (loading) return <LoadingSpinner />;
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
@@ -71,7 +65,9 @@ export function NewsSection({ ideaDetails, missionData }: Props) {
         </button>
       </div>
 
-      {news.length > 0 ? (
+      {loading ? (
+        <LoadingSpinner />
+      ) : news.length > 0 ? (
         <div className="space-y-4">
           {news.map((article, index) => (
             <a

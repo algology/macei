@@ -64,16 +64,29 @@ export function IdeaCards({ missionId }: Props) {
     fetchIdeas();
   }, [missionId]);
 
-  const handleIdeaCreated = (idea: Idea) => {
+  const handleIdeaCreated = async (idea: Idea) => {
+    // Fetch the mission data with organization
+    const { data: missionData } = await supabase
+      .from("missions")
+      .select(
+        `
+        *,
+        organization:organizations(*)
+      `
+      )
+      .eq("id", idea.mission_id)
+      .single();
+
     const extendedIdea: ExtendedIdea = {
       ...idea,
-      organization: ideas[0]?.organization,
-      mission: ideas[0]?.mission,
-      category: "Unspecified",
-      impact: "Medium",
-      status: "ideation",
-      signals: "No signals yet",
+      organization: missionData?.organization,
+      mission: missionData,
+      category: idea.category || "Unspecified",
+      impact: idea.impact || "Medium",
+      status: idea.status || "ideation",
+      signals: idea.signals || "No signals yet",
     };
+
     setIdeas([...ideas, extendedIdea]);
   };
 
@@ -92,10 +105,7 @@ export function IdeaCards({ missionId }: Props) {
 
   async function handleDelete(ideaId: number) {
     try {
-      const { error } = await supabase
-        .from("ideas")
-        .delete()
-        .eq("id", ideaId);
+      const { error } = await supabase.from("ideas").delete().eq("id", ideaId);
 
       if (error) throw error;
 
@@ -118,7 +128,9 @@ export function IdeaCards({ missionId }: Props) {
 
       <div className="w-full border border-gray-800 rounded-lg overflow-hidden bg-[#101618]">
         <div className="grid grid-cols-7 text-xs md:text-sm text-gray-400 bg-gray-900/50">
-          <div className="p-2 md:p-3 border-r border-gray-800">Organization</div>
+          <div className="p-2 md:p-3 border-r border-gray-800">
+            Organization
+          </div>
           <div className="p-2 md:p-3 border-r border-gray-800">Mission</div>
           <div className="p-2 md:p-3 border-r border-gray-800">Idea</div>
           <div className="p-2 md:p-3 border-r border-gray-800">Status</div>
@@ -218,7 +230,7 @@ export function IdeaCards({ missionId }: Props) {
               ) : (
                 <span className="text-gray-500">No signals</span>
               )}
-              
+
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
                   <button
@@ -244,7 +256,7 @@ export function IdeaCards({ missionId }: Props) {
           </div>
         ))}
 
-        <div 
+        <div
           className="grid grid-cols-7 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30 cursor-pointer group"
           onClick={() => setIsDialogOpen(true)}
         >
