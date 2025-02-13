@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
-import { useState } from "react";
+import { X, Wand2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Idea } from "./types";
 
@@ -11,41 +11,99 @@ interface Props {
   onIdeaCreated: (idea: Idea) => void;
 }
 
-export function CreateIdeaDialog({
-  missionId,
-  isOpen,
-  onOpenChange,
-  onIdeaCreated,
-}: Props) {
-  const [newIdeaName, setNewIdeaName] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
+export function CreateIdeaDialog({ missionId, isOpen, onOpenChange, onIdeaCreated }: Props) {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [impact, setImpact] = useState<"High" | "Medium" | "Low">("Medium");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
 
-  async function handleCreateIdea(e: React.FormEvent) {
-    e.preventDefault();
-    setIsCreating(true);
+  // Reset all states when dialog opens/closes
+  useEffect(() => {
+    setName("");
+    setCategory("");
+    setImpact("Medium");
+    setAiSuggestions([]);
+    setIsGenerating(false);
+  }, [isOpen]);
 
+  async function generateIdeas() {
     try {
+      setIsGenerating(true);
+
+      const { data: missionData } = await supabase
+        .from("missions")
+        .select(`
+          *,
+          organization:organizations(*)
+        `)
+        .eq("id", missionId)
+        .single();
+
+      const response = await fetch("/api/generate-ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organization: missionData?.organization?.name,
+          mission: missionData?.name,
+          mission_description: missionData?.description,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Ensure we're working with a stable JSON structure
+      const parsedContent = typeof data.content === 'string' 
+        ? JSON.parse(data.content)
+        : data.content;
+
+      setAiSuggestions(parsedContent.ideas || []);
+    } catch (error) {
+      console.error("Error generating ideas:", error);
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  async function handleCreate(ideaData: any = null) {
+    try {
+      const ideaToCreate = ideaData ? {
+        name: ideaData.name,
+        category: ideaData.category || "Unspecified",
+        impact: ideaData.impact || "Medium",
+        mission_id: parseInt(missionId, 10),
+        status: "ideation",
+        signals: ideaData.signals || "",
+        description: ideaData.description || "",
+      } : {
+        name,
+        category,
+        impact,
+        mission_id: parseInt(missionId, 10),
+        status: "ideation",
+        signals: "",
+        description: "",
+      };
+
       const { data, error } = await supabase
         .from("ideas")
-        .insert([
-          {
-            name: newIdeaName,
-            mission_id: missionId,
-          },
-        ])
+        .insert([ideaToCreate])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error creating idea:", error);
+        return;
+      }
 
-      setNewIdeaName("");
-      onOpenChange(false);
       onIdeaCreated(data);
+      onOpenChange(false);
     } catch (error) {
-      console.error("Error creating idea:", error);
-      alert("Failed to create idea. Please try again.");
-    } finally {
-      setIsCreating(false);
+      console.error("Error in handleCreate:", error);
     }
   }
 
@@ -53,51 +111,109 @@ export function CreateIdeaDialog({
     <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] bg-background border border-accent-2 rounded-lg shadow-lg p-4">
-          <div className="flex justify-between items-center mb-4">
-            <Dialog.Title className="text-lg font-medium">
-              Create Idea
-            </Dialog.Title>
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-background border border-accent-2 rounded-xl p-6">
+          <div className="flex justify-between items-center mb-6">
+            <Dialog.Title className="text-xl font-semibold">Create New Idea</Dialog.Title>
             <Dialog.Close className="text-gray-400 hover:text-gray-300">
               <X className="w-4 h-4" />
             </Dialog.Close>
           </div>
 
-          <Dialog.Description className="text-sm text-gray-400 mb-4">
-            Create a new idea to track and validate.
-          </Dialog.Description>
-
-          <form onSubmit={handleCreateIdea}>
-            <div className="space-y-4">
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-300 mb-1"
-                >
-                  Idea Name
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={newIdeaName}
-                  onChange={(e) => setNewIdeaName(e.target.value)}
-                  className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500/20"
-                  autoComplete="off"
-                  required
-                />
-              </div>
-
-              <div className="flex justify-end">
+          {aiSuggestions.length === 0 ? (
+            <>
+              <div className="space-y-4 mb-6">
                 <button
-                  type="submit"
-                  disabled={isCreating}
-                  className="px-4 py-2 bg-green-500 text-black rounded-md hover:bg-green-400 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={generateIdeas}
+                  disabled={isGenerating}
+                  className="w-full px-4 py-3 bg-accent-1/50 border border-accent-2 rounded-lg hover:bg-accent-1 transition-colors flex items-center justify-center gap-2"
                 >
-                  {isCreating ? "Creating..." : "Create Idea"}
+                  <Wand2 className="w-4 h-4" />
+                  {isGenerating ? "Generating ideas..." : "Generate AI Suggestions"}
                 </button>
+
+                <div className="text-center text-sm text-gray-400 my-4">or create manually</div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="name"
+                      className="block text-sm font-medium text-gray-300 mb-1"
+                    >
+                      Idea Name
+                    </label>
+                    <input
+                      id="name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                      autoComplete="off"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="category"
+                      className="block text-sm font-medium text-gray-300 mb-1"
+                    >
+                      Category
+                    </label>
+                    <input
+                      id="category"
+                      type="text"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                      autoComplete="off"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="impact"
+                      className="block text-sm font-medium text-gray-300 mb-1"
+                    >
+                      Impact
+                    </label>
+                    <select
+                      id="impact"
+                      value={impact}
+                      onChange={(e) => setImpact(e.target.value as "High" | "Medium" | "Low")}
+                      className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                      required
+                    >
+                      <option value="High">High</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Low">Low</option>
+                    </select>
+                  </div>
+                </div>
               </div>
+            </>
+          ) : (
+            <div className="space-y-4">
+              {aiSuggestions.map((idea, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-accent-1/50 border border-accent-2 rounded-lg hover:border-green-500/50 transition-colors cursor-pointer"
+                  onClick={() => handleCreate(idea)}
+                >
+                  <h3 className="font-medium mb-2">{idea.name}</h3>
+                  <p className="text-sm text-gray-400 mb-2">{idea.description}</p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="px-2 py-1 bg-accent-1 rounded-md text-gray-400">
+                      {idea.category}
+                    </span>
+                    <span className="px-2 py-1 bg-accent-1 rounded-md text-gray-400">
+                      {idea.impact} Impact
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-          </form>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
