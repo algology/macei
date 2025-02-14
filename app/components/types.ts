@@ -103,3 +103,22 @@ export interface NewsResponse {
   status: string;
   articles: NewsArticle[];
 }
+
+export interface MarketSignal {
+  title: string;
+  description: string;
+  url: string;
+  source: string;
+  date: string;
+  type: "news" | "academic" | "patent";
+  patentNumber?: string;
+  status?: string;
+}
+
+export interface MarketSignalsResponse {
+  signals: {
+    news: MarketSignal[];
+    academic: MarketSignal[];
+    patents: MarketSignal[];
+  };
+}
