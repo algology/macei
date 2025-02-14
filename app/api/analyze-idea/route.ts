@@ -32,7 +32,10 @@ Expected Impact: ${impact}
 Market Signals:
 ${signals}
 
-Please provide your analysis in the following JSON structure:
+Knowledge Base Documents:
+${body.documents}
+
+Please provide your analysis in the following JSON structure, taking into account both the market signals and the knowledge base documents:
 
 {
   "missionAlignment": {
@@ -52,7 +55,8 @@ Please provide your analysis in the following JSON structure:
 Consider:
 - Mission alignment: How well does this align with organizational goals
 - Feasibility: Technical, legal, and practical implementation challenges
-- Impact: Market size, potential revenue, and strategic value`;
+- Impact: Market size, potential revenue, and strategic value
+- Knowledge base documents: Use the provided documents to support or challenge the idea's viability`;
 
     const completion = await groq.chat.completions.create({
       messages: [

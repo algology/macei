@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Upload, File, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Document } from "./types";
+import { DocumentPreview } from "./DocumentPreview";
 
 interface Props {
   ideaId: number;
@@ -134,12 +135,19 @@ export function IdeaKnowledgeBase({ ideaId, onDocumentAdded }: Props) {
                 {doc.name}
               </a>
             </div>
-            <button
-              onClick={() => handleDelete(doc.id, doc.url)}
-              className="text-gray-400 hover:text-red-400 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <DocumentPreview
+                url={doc.url}
+                name={doc.name}
+                type={doc.url.split(".").pop() || ""}
+              />
+              <button
+                onClick={() => handleDelete(doc.id, doc.url)}
+                className="text-gray-400 hover:text-red-400 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         ))}
       </div>

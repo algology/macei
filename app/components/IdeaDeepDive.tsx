@@ -75,6 +75,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
   const [missionData, setMissionData] = useState<any | null>(null);
   const [keywords, setKeywords] = useState<CustomTag[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [documents, setDocuments] = useState<any[]>([]);
 
   const KeyCodes = {
     comma: 188,
@@ -164,6 +165,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
       setIdea(data);
       setEditedIdea(data);
       setMissionData(data.mission);
+      setDocuments(data.documents || []);
     } catch (error) {
       console.error("Error fetching idea:", error);
     } finally {
@@ -203,6 +205,27 @@ export function IdeaDeepDive({ ideaId }: Props) {
     }
   }
 
+  async function downloadAndParseDocument(url: string) {
+    try {
+      // Extract the file path from the URL
+      const filePath = url.split("idea-documents/")[1];
+
+      // Download the file using Supabase storage
+      const { data, error } = await supabase.storage
+        .from("idea-documents")
+        .download(filePath);
+
+      if (error) throw error;
+
+      // Convert the blob to text
+      const text = await data.text();
+      return text;
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      return null;
+    }
+  }
+
   async function triggerAIAnalysis() {
     if (!editedIdea) return;
 
@@ -221,6 +244,37 @@ export function IdeaDeepDive({ ideaId }: Props) {
         .eq("id", editedIdea.mission_id)
         .single();
 
+      // Fetch documents for this idea
+      const { data: documents } = await supabase
+        .from("idea_documents")
+        .select("*")
+        .eq("idea_id", editedIdea.id);
+
+      setDocuments(documents || []);
+
+      // Download and parse document contents
+      const documentContents = await Promise.all(
+        (documents || []).map(async (doc) => {
+          const content = await downloadAndParseDocument(doc.url);
+          return {
+            name: doc.name,
+            type: doc.url.split(".").pop(),
+            content: content || "Failed to load document content",
+          };
+        })
+      );
+
+      // Prepare document context string with actual content
+      const documentContext =
+        documentContents.length > 0
+          ? documentContents
+              .map(
+                (doc) =>
+                  `Document: ${doc.name}\nType: ${doc.type}\nContent:\n${doc.content}\n---`
+              )
+              .join("\n\n")
+          : "No documents available";
+
       const response = await fetch("/api/analyze-idea", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -233,6 +287,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
           organization: missionData?.organization?.name,
           mission: missionData?.name,
           mission_description: missionData?.description,
+          documents: documentContext,
         }),
       });
 
@@ -275,6 +330,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
       setEditedIdea(updatedIdea);
       setIdea(updatedIdea);
       setMissionData(missionData);
+      setDocuments(documents || []);
     } catch (error) {
       console.error("Error analyzing idea:", error);
       alert("Failed to analyze idea. Please try again.");
@@ -291,7 +347,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">Idea Details</h2>
+        <h2 className="text-2xl font-semibold">Idea Deep Dive</h2>
         <button
           onClick={handleSave}
           disabled={!hasChanges || saving}
@@ -519,6 +575,24 @@ export function IdeaDeepDive({ ideaId }: Props) {
                         <div className="whitespace-pre-wrap">
                           {editedIdea.signals || (
                             <em className="text-gray-600">Not provided</em>
+                          )}
+                        </div>
+                      </div>
+                      <div className="border-t border-accent-2 pt-2 mt-2">
+                        <div className="text-gray-500 mb-1">
+                          Knowledge Base Documents:
+                        </div>
+                        <div className="whitespace-pre-wrap">
+                          {documents?.length > 0 ? (
+                            documents.map((doc) => (
+                              <div key={doc.id}>
+                                • {doc.name} ({doc.url.split(".").pop()})
+                              </div>
+                            ))
+                          ) : (
+                            <em className="text-gray-600">
+                              No documents available
+                            </em>
                           )}
                         </div>
                       </div>
