@@ -122,3 +122,39 @@ export interface MarketSignalsResponse {
     patents: MarketSignal[];
   };
 }
+
+export interface IdeaAttribute {
+  name: string;
+  importance: number;
+  current_assessment: string;
+  risks: string;
+  opportunities: string;
+  evidence: string;
+}
+
+export interface DeepAnalysisResult {
+  attributes: IdeaAttribute[];
+  summary: string;
+}
+
+export interface IdeaDetails {
+  id: number;
+  name: string;
+  status: "validated" | "in review" | "ideation";
+  category: string;
+  impact: "High" | "Medium" | "Low";
+  signals: string;
+  created_at: string;
+  ai_analysis?: string;
+  last_analyzed?: string;
+  detailed_analysis?: string;
+  mission_id: string;
+  mission?: {
+    id: number;
+    name: string;
+    organization?: {
+      id: number;
+      name: string;
+    };
+  };
+}

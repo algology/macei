@@ -43,16 +43,10 @@ export function SidebarNavigation({ isCollapsed, onToggle }: Props) {
           <Link
             href={href}
             className={`flex items-center h-10 text-sm text-gray-300 hover:bg-accent-1 rounded-md ${
-              isCollapsed ? "justify-center px-2" : ""
+              isCollapsed ? "justify-center px-2" : "px-2"
             }`}
           >
-            <div
-              className={`${
-                !isCollapsed ? "w-16" : "w-12"
-              } flex items-center justify-center`}
-            >
-              {icon}
-            </div>
+            <div className="w-12 flex items-center justify-center">{icon}</div>
             {!isCollapsed && <span>{label}</span>}
           </Link>
         </Tooltip.Trigger>
