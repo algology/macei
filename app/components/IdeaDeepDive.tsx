@@ -19,6 +19,7 @@ import { AIAnalysisResult, DeepAnalysisResult, IdeaAttribute } from "./types";
 import { WithContext as ReactTags, Tag } from "react-tag-input";
 import { IdeaKnowledgeBase } from "./IdeaKnowledgeBase";
 import { NewsSection } from "./NewsSection";
+import { KnowledgeBaseChat } from "./KnowledgeBaseChat";
 
 interface Props {
   ideaId: string;
@@ -82,6 +83,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
   const [deepAnalysis, setDeepAnalysis] = useState<DeepAnalysisResult | null>(
     null
   );
+  const [documentContext, setDocumentContext] = useState<string>("");
 
   const KeyCodes = {
     comma: 188,
@@ -168,10 +170,44 @@ export function IdeaDeepDive({ ideaId }: Props) {
         .single();
 
       if (error) throw error;
+
+      // Fetch documents for this idea
+      const { data: docs } = await supabase
+        .from("idea_documents")
+        .select("*")
+        .eq("idea_id", ideaId);
+
+      // Download and parse document contents
+      const documentContents = await Promise.all(
+        (docs || []).map(
+          async (doc: { id: number; name: string; url: string }) => {
+            const content = await downloadAndParseDocument(doc.url);
+            return {
+              ...doc,
+              content: content || "Failed to load document content",
+            };
+          }
+        )
+      );
+
+      // Prepare document context string
+      const documentContext =
+        documentContents.length > 0
+          ? documentContents
+              .map(
+                (doc) =>
+                  `Document: ${doc.name}\nType: ${doc.url
+                    .split(".")
+                    .pop()}\nContent:\n${doc.content}\n---`
+              )
+              .join("\n\n")
+          : "No documents available";
+
       setIdea(data);
       setEditedIdea(data);
       setMissionData(data.mission);
-      setDocuments(data.documents || []);
+      setDocuments(documentContents);
+      setDocumentContext(documentContext);
     } catch (error) {
       console.error("Error fetching idea:", error);
     } finally {
@@ -482,6 +518,18 @@ export function IdeaDeepDive({ ideaId }: Props) {
           </button>
         </div>
 
+        <div className="mb-6">
+          <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Knowledge Base Chat</h3>
+            </div>
+            <KnowledgeBaseChat
+              ideaDetails={editedIdea}
+              documents={documentContext}
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="space-y-6">
             <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6 space-y-4 transition-all duration-200 hover:bg-accent-1/60 hover:shadow-lg hover:shadow-accent-1/20">
@@ -623,7 +671,9 @@ export function IdeaDeepDive({ ideaId }: Props) {
             <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-6">
               <IdeaKnowledgeBase
                 ideaId={parseInt(ideaId, 10)}
-                onDocumentAdded={fetchIdea}
+                onDocumentAdded={() => {
+                  fetchIdea();
+                }}
               />
             </div>
 
