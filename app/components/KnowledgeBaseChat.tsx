@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { IdeaDetails } from "./types";
+import ReactMarkdown from "react-markdown";
 
 interface Props {
   ideaDetails: IdeaDetails;
@@ -75,9 +76,9 @@ export function KnowledgeBaseChat({ ideaDetails, documents }: Props) {
                   : "bg-accent-1 border border-accent-2"
               }`}
             >
-              <pre className="whitespace-pre-wrap font-sans">
-                {message.content}
-              </pre>
+              <div className="prose prose-invert prose-sm max-w-none">
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              </div>
             </div>
           </div>
         ))}
