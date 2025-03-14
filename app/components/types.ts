@@ -46,8 +46,7 @@ export type Idea = {
   mission_id: number;
   mission?: Mission;
   status: "validated" | "in review" | "ideation";
-  category?: string;
-  impact?: "High" | "Medium" | "Low";
+  summary?: string;
   signals?: string;
   created_at: string;
 };
