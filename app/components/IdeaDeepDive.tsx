@@ -674,6 +674,15 @@ export function IdeaDeepDive({ ideaId }: Props) {
                   <NewsSection
                     ideaDetails={editedIdea}
                     missionData={missionData}
+                    onInsightUpdate={() => {
+                      // Refresh the knowledge base when a signal is saved
+                      const knowledgeBase = document.querySelector(
+                        '[data-component="knowledge-base"]'
+                      );
+                      if (knowledgeBase) {
+                        (knowledgeBase as any).__fetchData?.();
+                      }
+                    }}
                   />
                 </div>
               </div>

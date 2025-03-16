@@ -30,10 +30,22 @@ export function IdeaKnowledgeBase({ ideaId, onDocumentAdded }: Props) {
     "all"
   );
 
+  // Combine fetch functions into one
+  const fetchData = async () => {
+    await Promise.all([fetchDocuments(), fetchMarketSignals()]);
+  };
+
   useEffect(() => {
-    fetchDocuments();
-    fetchMarketSignals();
+    fetchData();
   }, [ideaId]);
+
+  // Expose fetch method to parent components
+  useEffect(() => {
+    const element = document.querySelector('[data-component="knowledge-base"]');
+    if (element) {
+      (element as any).__fetchData = fetchData;
+    }
+  }, []);
 
   async function fetchDocuments() {
     try {
@@ -164,7 +176,7 @@ export function IdeaKnowledgeBase({ ideaId, onDocumentAdded }: Props) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-component="knowledge-base">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Knowledge Base</h3>
         <div className="flex items-center gap-4">
