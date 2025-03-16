@@ -1,7 +1,15 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { FileText, Plus, Calendar, AlertCircle, Trash2 } from "lucide-react";
+import {
+  FileText,
+  Plus,
+  Calendar,
+  AlertCircle,
+  Trash2,
+  ClipboardCopy,
+  Check,
+} from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
@@ -33,6 +41,7 @@ export function BriefingNotes({ ideaId, ideaName }: Props) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchBriefings();
@@ -136,6 +145,36 @@ export function BriefingNotes({ ideaId, ideaName }: Props) {
     }
   }
 
+  function copyToClipboard(briefing: Briefing) {
+    const content = `Environment Briefing Note
+Date Range: ${new Date(briefing.date_from).toLocaleDateString()} - ${new Date(
+      briefing.date_to
+    ).toLocaleDateString()}
+Created: ${new Date(briefing.created_at).toLocaleDateString()}
+
+Impact on Idea Conviction:
+${briefing.impact_analysis}
+
+Summary:
+${briefing.summary}
+
+Details:
+${briefing.details
+  .map(
+    (detail) => `${detail.country} - ${detail.summary}
+Source: ${detail.url}`
+  )
+  .join("\n\n")}
+
+Key Attributes:
+${briefing.key_attributes.join(", ")}`;
+
+    navigator.clipboard.writeText(content).then(() => {
+      setCopiedId(briefing.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -192,18 +231,31 @@ export function BriefingNotes({ ideaId, ideaName }: Props) {
                     <Calendar className="w-4 h-4" />
                     {new Date(briefing.created_at).toLocaleDateString()}
                   </div>
-                  <button
-                    onClick={() => deleteBriefing(briefing.id)}
-                    disabled={deleting === briefing.id}
-                    className="p-2 text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
-                    title="Delete briefing"
-                  >
-                    {deleting === briefing.id ? (
-                      <LoadingSpinner className="w-4 h-4" />
-                    ) : (
-                      <Trash2 className="w-4 h-4" />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => copyToClipboard(briefing)}
+                      className="p-2 text-blue-400 hover:text-blue-300 transition-colors"
+                      title="Copy to clipboard"
+                    >
+                      {copiedId === briefing.id ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <ClipboardCopy className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => deleteBriefing(briefing.id)}
+                      disabled={deleting === briefing.id}
+                      className="p-2 text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                      title="Delete briefing"
+                    >
+                      {deleting === briefing.id ? (
+                        <LoadingSpinner className="w-4 h-4" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
 

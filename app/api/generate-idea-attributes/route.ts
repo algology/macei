@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const prompt = `You are an AI business analyst tasked with identifying highly specific and unique attributes for a business idea.
+    const prompt = `You are an AI business analyst tasked with identifying key market signals to monitor for a business idea.
 
 Context:
 Organization: ${organization}
@@ -25,34 +25,34 @@ Idea Name: ${name}
 Idea Summary: ${summary}
 
 Instructions:
-1. First, think through the analysis process, considering what makes this specific idea unique and different from similar ideas. Prefix your thinking with <think> and end with </think>.
+1. First, think through what market developments would most impact this idea's success or failure. Prefix your thinking with <think> and end with </think>.
 
-2. Then, identify 3-5 key attributes that will determine this idea's success or failure. Each attribute MUST be:
-   - HIGHLY SPECIFIC to this exact idea (not generic terms like "market size" or "competition")
-   - Unique to this industry and use case
-   - Measurable and actionable
-   - Focused on critical success factors for THIS specific idea
-   - Detailed enough that they wouldn't apply to most other ideas
+2. Then, identify 3-5 key market signals that should be monitored. Each signal MUST be:
+   - Specific enough to be meaningful for this idea
+   - Broad enough to regularly find news and developments about
+   - Focused on external market developments rather than internal metrics
+   - Likely to appear in news articles, research papers, or patents
+   - A mix of technology trends, market movements, and industry developments
 
-Examples of BAD (too generic) attributes:
-- "Market Size" (too generic)
-- "Customer Demand" (applies to any business)
-- "Technical Feasibility" (too vague)
-- "Cost Structure" (too general)
+Examples of BAD signals:
+- "Internal Process Efficiency" (not externally monitorable)
+- "Customer Satisfaction" (too internal)
+- "Market Size" (too vague)
+- "Revenue Growth" (not a market signal)
 
-Examples of GOOD (specific) attributes:
-- "Rural Solar Grid Integration Capacity"
-- "Last-Mile Fiber Optic Coverage"
-- "Enterprise Client Migration Speed"
-- "AI Model Training Cost per Hour"
-- "Cross-Border Data Transfer Latency"
+Examples of GOOD signals:
+- "AI Chip Manufacturing Advances"
+- "Renewable Energy Storage Innovations"
+- "Supply Chain Digitalization Trends"
+- "Healthcare Data Privacy Regulations"
+- "Space Launch Cost Developments"
 
-After your thinking process, provide your final attributes in this exact JSON format without any markdown formatting or code blocks:
+After your thinking process, provide your final signals in this exact JSON format without any markdown formatting or code blocks:
 {
   "attributes": [
-    "Attribute 1",
-    "Attribute 2",
-    "Attribute 3"
+    "Signal 1",
+    "Signal 2",
+    "Signal 3"
   ]
 }`;
 

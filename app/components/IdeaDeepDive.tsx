@@ -18,6 +18,7 @@ import {
   FileText,
   Sparkles,
   ListTodo,
+  Plus,
 } from "lucide-react";
 import { AIAnalysisResult, DeepAnalysisResult, IdeaAttribute } from "./types";
 import { WithContext as ReactTags, Tag } from "react-tag-input";
@@ -90,6 +91,9 @@ export function IdeaDeepDive({ ideaId }: Props) {
   );
   const [documentContext, setDocumentContext] = useState<string>("");
   const [activeTab, setActiveTab] = useState("home");
+  const [suggestingAttributes, setSuggestingAttributes] = useState(false);
+  const [suggestedAttributes, setSuggestedAttributes] = useState<string[]>([]);
+  const [attributeThinking, setAttributeThinking] = useState<string>("");
 
   const KeyCodes = {
     comma: 188,
@@ -1033,60 +1037,167 @@ export function IdeaDeepDive({ ideaId }: Props) {
           </Tabs.Content>
 
           <Tabs.Content value="attributes" className="outline-none">
-            <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-              <label className="block text-sm text-gray-400 mb-1">
-                Idea Attributes
-              </label>
-              <div className="bg-accent-1 border border-accent-2 rounded-md p-2">
-                <ReactTags
-                  tags={keywords}
-                  delimiters={delimiters}
-                  handleDelete={(i) => {
-                    try {
-                      const newKeywords = keywords.filter(
-                        (_, index) => index !== i
-                      );
+            <div className="space-y-6">
+              <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="block text-sm text-gray-400">
+                    Idea Attributes
+                  </label>
+                  <button
+                    onClick={async () => {
+                      try {
+                        setSuggestingAttributes(true);
+                        setSuggestedAttributes([]);
+                        setAttributeThinking("");
+
+                        const response = await fetch(
+                          "/api/generate-idea-attributes",
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              name: editedIdea.name,
+                              summary: editedIdea.summary,
+                              mission: missionData?.name,
+                              organization: missionData?.organization?.name,
+                            }),
+                          }
+                        );
+
+                        const data = await response.json();
+                        if (data.error) throw new Error(data.error);
+
+                        setSuggestedAttributes(data.content.attributes);
+                        setAttributeThinking(data.thinking);
+                      } catch (error) {
+                        console.error("Error suggesting attributes:", error);
+                        alert(
+                          "Failed to suggest attributes. Please try again."
+                        );
+                      } finally {
+                        setSuggestingAttributes(false);
+                      }
+                    }}
+                    disabled={suggestingAttributes || !editedIdea.summary}
+                    className="px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-900 rounded-lg hover:bg-purple-500/30 transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {suggestingAttributes ? (
+                      <>
+                        <LoadingSpinner className="w-4 h-4 animate-spin" />
+                        Suggesting...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Suggest Attributes
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="bg-accent-1 border border-accent-2 rounded-md p-2">
+                  <ReactTags
+                    tags={keywords}
+                    delimiters={delimiters}
+                    handleDelete={(i) => {
+                      try {
+                        const newKeywords = keywords.filter(
+                          (_, index) => index !== i
+                        );
+                        setKeywords(newKeywords);
+                        setEditedIdea({
+                          ...editedIdea!,
+                          signals: JSON.stringify(
+                            newKeywords.map((k) => k.text)
+                          ),
+                        });
+                      } catch (error) {
+                        console.error("Error deleting keyword:", error);
+                      }
+                    }}
+                    handleAddition={(tag: Tag) => {
+                      const newTag: CustomTag = {
+                        id: tag.id,
+                        text: tag.id,
+                        className: "tag-class",
+                        category: selectedCategory,
+                      };
+                      const newKeywords = [...keywords, newTag];
                       setKeywords(newKeywords);
                       setEditedIdea({
                         ...editedIdea!,
                         signals: JSON.stringify(newKeywords.map((k) => k.text)),
                       });
-                    } catch (error) {
-                      console.error("Error deleting keyword:", error);
-                    }
-                  }}
-                  handleAddition={(tag: Tag) => {
-                    const newTag: CustomTag = {
-                      id: tag.id,
-                      text: tag.id,
-                      className: "tag-class",
-                      category: selectedCategory,
-                    };
-                    const newKeywords = [...keywords, newTag];
-                    setKeywords(newKeywords);
-                    setEditedIdea({
-                      ...editedIdea!,
-                      signals: JSON.stringify(newKeywords.map((k) => k.text)),
-                    });
-                  }}
-                  inputFieldPosition="bottom"
-                  placeholder="Type an attribute and press enter..."
-                  autofocus={false}
-                  allowUnique={true}
-                  classNames={{
-                    tags: "space-y-2",
-                    tagInput: "mt-2 pt-2 border-t border-accent-2",
-                    tag: "inline-flex items-center bg-green-500/20 text-green-400 border border-green-900 px-2 py-1 rounded-md mr-2",
-                    remove:
-                      "ml-2 text-green-400 hover:text-green-300 cursor-pointer",
-                    suggestions: "hidden",
-                  }}
-                />
+                    }}
+                    inputFieldPosition="bottom"
+                    placeholder="Type an attribute and press enter..."
+                    autofocus={false}
+                    allowUnique={true}
+                    classNames={{
+                      tags: "space-y-2",
+                      tagInput: "mt-2 pt-2 border-t border-accent-2",
+                      tag: "inline-flex items-center bg-green-500/20 text-green-400 border border-green-900 px-2 py-1 rounded-md mr-2",
+                      remove:
+                        "ml-2 text-green-400 hover:text-green-300 cursor-pointer",
+                      suggestions: "hidden",
+                    }}
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  Press enter or comma to add an attribute. These attributes
+                  will be used to track the idea.
+                </p>
+
+                {(suggestedAttributes.length > 0 || attributeThinking) && (
+                  <div className="mt-6 space-y-4">
+                    {attributeThinking && (
+                      <div className="bg-accent-1/30 rounded-lg border border-accent-2 p-4">
+                        <h4 className="text-sm font-medium mb-2 text-gray-400">
+                          Analysis Process
+                        </h4>
+                        <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                          {attributeThinking}
+                        </p>
+                      </div>
+                    )}
+
+                    {suggestedAttributes.length > 0 && (
+                      <div className="bg-accent-1/30 rounded-lg border border-accent-2 p-4">
+                        <h4 className="text-sm font-medium mb-3 text-gray-400">
+                          Suggested Attributes
+                        </h4>
+                        <div className="space-y-2">
+                          {suggestedAttributes.map((attr, index) => (
+                            <button
+                              key={index}
+                              onClick={() => {
+                                const newTag: CustomTag = {
+                                  id: attr,
+                                  text: attr,
+                                  className: "tag-class",
+                                  category: selectedCategory,
+                                };
+                                const newKeywords = [...keywords, newTag];
+                                setKeywords(newKeywords);
+                                setEditedIdea({
+                                  ...editedIdea!,
+                                  signals: JSON.stringify(
+                                    newKeywords.map((k) => k.text)
+                                  ),
+                                });
+                              }}
+                              className="w-full text-left px-3 py-2 bg-purple-500/10 text-purple-400 border border-purple-900 rounded hover:bg-purple-500/20 transition-colors flex items-center justify-between group"
+                            >
+                              <span>{attr}</span>
+                              <Plus className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Press enter or comma to add an attribute. These attributes will
-                be used to track the idea.
-              </p>
             </div>
           </Tabs.Content>
         </Tabs.Root>

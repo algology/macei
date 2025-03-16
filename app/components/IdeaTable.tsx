@@ -12,8 +12,7 @@ interface Props {
   missionId: string;
 }
 
-interface ExtendedIdea
-  extends Omit<Idea, "status" | "signals"> {
+interface ExtendedIdea extends Omit<Idea, "status" | "signals"> {
   organization?: Organization;
   mission?: Mission;
   status: "validated" | "in review" | "ideation";
@@ -99,6 +98,15 @@ export function IdeaCards({ missionId }: Props) {
 
   async function handleDelete(ideaId: number) {
     try {
+      // First delete all briefings associated with this idea
+      const { error: briefingsError } = await supabase
+        .from("briefings")
+        .delete()
+        .eq("idea_id", ideaId);
+
+      if (briefingsError) throw briefingsError;
+
+      // Then delete the idea
       const { error } = await supabase.from("ideas").delete().eq("id", ideaId);
 
       if (error) throw error;
@@ -160,7 +168,9 @@ export function IdeaCards({ missionId }: Props) {
               </span>
             </div>
             <div className="p-2 md:p-3 text-gray-400 relative">
-              <div className="line-clamp-2">{idea.summary || "No summary provided"}</div>
+              <div className="line-clamp-2">
+                {idea.summary || "No summary provided"}
+              </div>
 
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>

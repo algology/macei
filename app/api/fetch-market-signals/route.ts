@@ -13,27 +13,75 @@ export async function POST(request: Request) {
     if (signals) {
       try {
         const parsedSignals = JSON.parse(signals);
+        let signalTerms: string[] = [];
+
         if (Array.isArray(parsedSignals)) {
-          searchTerms = parsedSignals.join(" ");
+          // Process each signal phrase to extract key terms
+          signalTerms = parsedSignals.flatMap((signal: string) => {
+            // Split into words and filter out common words
+            const words = signal.toLowerCase().split(/\s+/);
+            const keyTerms = words.filter(
+              (word: string) =>
+                !["in", "for", "of", "the", "and", "to", "a", "on"].includes(
+                  word
+                )
+            );
+            // Group related terms with OR
+            return [keyTerms.join(" OR ")];
+          });
         } else if (
           typeof parsedSignals === "object" &&
           parsedSignals !== null
         ) {
-          searchTerms = Object.values(parsedSignals).flat().join(" ");
+          signalTerms = Object.values(parsedSignals)
+            .flat()
+            .flatMap((signal: unknown) => {
+              if (typeof signal !== "string") return [];
+              const words = signal.toLowerCase().split(/\s+/);
+              const keyTerms = words.filter(
+                (word: string) =>
+                  !["in", "for", "of", "the", "and", "to", "a", "on"].includes(
+                    word
+                  )
+              );
+              return [keyTerms.join(" OR ")];
+            });
         } else if (typeof parsedSignals === "string") {
-          searchTerms = parsedSignals;
+          const words = parsedSignals.toLowerCase().split(/\s+/);
+          const keyTerms = words.filter(
+            (word: string) =>
+              !["in", "for", "of", "the", "and", "to", "a", "on"].includes(word)
+          );
+          signalTerms = [keyTerms.join(" OR ")];
+        }
+
+        // Combine different signal phrases with AND
+        searchTerms = signalTerms.join(") AND (");
+        if (signalTerms.length > 0) {
+          searchTerms = `(${searchTerms})`;
         }
       } catch (e) {
-        searchTerms = signals
-          .split(",")
-          .map((s: string) => s.trim())
-          .join(" ");
+        // Handle plain text format
+        const words = signals
+          .toLowerCase()
+          .split(/\s+/)
+          .filter(
+            (word: string) =>
+              !["in", "for", "of", "the", "and", "to", "a", "on"].includes(word)
+          );
+        searchTerms = words.join(" OR ");
       }
     }
 
     if (!searchTerms) {
       return Response.json({ signals: [] });
     }
+
+    // Increase pageSize for more results
+    const newsApiUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+      searchTerms
+    )}&sortBy=relevancy&pageSize=5&language=en`;
+    console.log("News API Query:", newsApiUrl); // For debugging
 
     // Fetch from multiple sources in parallel
     const [newsResults, scholarResults, patentsResults] = await Promise.all([
