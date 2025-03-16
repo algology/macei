@@ -19,6 +19,7 @@ import {
   Sparkles,
   ListTodo,
   Plus,
+  X,
 } from "lucide-react";
 import { AIAnalysisResult, DeepAnalysisResult, IdeaAttribute } from "./types";
 import { WithContext as ReactTags, Tag } from "react-tag-input";
@@ -94,6 +95,10 @@ export function IdeaDeepDive({ ideaId }: Props) {
   const [suggestingAttributes, setSuggestingAttributes] = useState(false);
   const [suggestedAttributes, setSuggestedAttributes] = useState<string[]>([]);
   const [attributeThinking, setAttributeThinking] = useState<string>("");
+  const [insights, setInsights] = useState<any[]>([]);
+  const [newInsight, setNewInsight] = useState("");
+  const [loadingInsights, setLoadingInsights] = useState(false);
+  const [savingInsight, setSavingInsight] = useState(false);
 
   const KeyCodes = {
     comma: 188,
@@ -162,6 +167,12 @@ export function IdeaDeepDive({ ideaId }: Props) {
       }
     }
   }, [editedIdea?.signals, selectedCategory]);
+
+  useEffect(() => {
+    if (ideaId) {
+      fetchInsights();
+    }
+  }, [ideaId]);
 
   async function fetchIdea() {
     try {
@@ -469,6 +480,73 @@ export function IdeaDeepDive({ ideaId }: Props) {
     }
   }
 
+  async function fetchInsights() {
+    try {
+      setLoadingInsights(true);
+      const { data, error } = await supabase
+        .from("ideas")
+        .select("insights")
+        .eq("id", ideaId)
+        .single();
+
+      if (error) throw error;
+      setInsights(data?.insights || []);
+    } catch (error) {
+      console.error("Error fetching insights:", error);
+    } finally {
+      setLoadingInsights(false);
+    }
+  }
+
+  async function addInsight() {
+    if (!newInsight.trim()) return;
+
+    try {
+      setSavingInsight(true);
+      const newInsightObj = {
+        id: crypto.randomUUID(),
+        content: newInsight.trim(),
+        created_at: new Date().toISOString(),
+      };
+
+      const updatedInsights = [...insights, newInsightObj];
+
+      const { error } = await supabase
+        .from("ideas")
+        .update({ insights: updatedInsights })
+        .eq("id", ideaId);
+
+      if (error) throw error;
+
+      setNewInsight("");
+      setInsights(updatedInsights);
+    } catch (error) {
+      console.error("Error adding insight:", error);
+      alert("Failed to add insight. Please try again.");
+    } finally {
+      setSavingInsight(false);
+    }
+  }
+
+  async function deleteInsight(insightId: string) {
+    try {
+      const updatedInsights = insights.filter(
+        (insight) => insight.id !== insightId
+      );
+
+      const { error } = await supabase
+        .from("ideas")
+        .update({ insights: updatedInsights })
+        .eq("id", ideaId);
+
+      if (error) throw error;
+      setInsights(updatedInsights);
+    } catch (error) {
+      console.error("Error deleting insight:", error);
+      alert("Failed to delete insight. Please try again.");
+    }
+  }
+
   const hasChanges = JSON.stringify(idea) !== JSON.stringify(editedIdea);
 
   if (loading)
@@ -726,50 +804,111 @@ export function IdeaDeepDive({ ideaId }: Props) {
               <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">AI Analysis</h3>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={triggerDeepAnalysis}
-                        disabled={deepAnalyzing}
-                        className="px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-900 rounded-lg hover:bg-purple-500/30 transition-colors flex items-center gap-2 disabled:opacity-50"
-                      >
-                        {deepAnalyzing ? (
-                          <>
-                            <LoadingSpinner className="w-4 h-4 animate-spin" />
-                            Deep Research...
-                          </>
-                        ) : (
-                          <>
-                            <Microscope className="w-4 h-4" />
-                            Deep Research
-                          </>
-                        )}
-                      </button>
-                      <button
-                        onClick={triggerAIAnalysis}
-                        disabled={analyzing}
-                        className="px-4 py-2 bg-accent-1/50 border border-accent-2 rounded-lg hover:bg-accent-1/80 transition-colors flex items-center gap-2 disabled:opacity-50"
-                      >
-                        {analyzing ? (
-                          <>
-                            <LoadingSpinner className="w-4 h-4 animate-spin" />
-                            Analyzing...
-                          </>
-                        ) : (
-                          <>
-                            <Brain className="w-4 h-4" />
-                            Analyze
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    <h3 className="text-lg font-semibold">Insights</h3>
                   </div>
 
-                  {editedIdea.ai_analysis ? (
+                  <div className="space-y-4">
+                    <div className="bg-accent-1/30 border border-accent-2 rounded-lg p-4">
+                      <textarea
+                        value={newInsight}
+                        onChange={(e) => setNewInsight(e.target.value)}
+                        placeholder="Add a new insight..."
+                        rows={3}
+                        className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-2 focus:ring-green-500/20 transition-all duration-200 resize-none mb-3"
+                      />
+                      <div className="flex justify-end">
+                        <button
+                          onClick={addInsight}
+                          disabled={!newInsight.trim() || savingInsight}
+                          className="px-4 py-2 bg-green-500/20 text-green-400 border border-green-900 rounded-lg hover:bg-green-500/30 transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {savingInsight ? (
+                            <>
+                              <LoadingSpinner className="w-4 h-4" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              Add Insight
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {loadingInsights ? (
+                      <div className="text-center py-8">
+                        <LoadingSpinner className="w-6 h-6 mx-auto" />
+                        <p className="text-gray-400 mt-2">
+                          Loading insights...
+                        </p>
+                      </div>
+                    ) : insights.length > 0 ? (
+                      <div className="space-y-4">
+                        {insights.map((insight) => (
+                          <div
+                            key={insight.id}
+                            className="bg-accent-1/30 rounded-lg border border-accent-2 p-4 group"
+                          >
+                            <div className="flex justify-between items-start gap-4">
+                              <p className="text-gray-300 whitespace-pre-wrap flex-grow">
+                                {insight.content}
+                              </p>
+                              <button
+                                onClick={() => deleteInsight(insight.id)}
+                                className="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div className="mt-2 text-sm text-gray-500">
+                              {new Date(
+                                insight.created_at
+                              ).toLocaleDateString()}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-400">
+                        No insights added yet. Add your first insight above.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">
+                      Deep Research Analysis
+                    </h3>
+                    <button
+                      onClick={triggerDeepAnalysis}
+                      disabled={deepAnalyzing}
+                      className="px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-900 rounded-lg hover:bg-purple-500/30 transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {deepAnalyzing ? (
+                        <>
+                          <LoadingSpinner className="w-4 h-4 animate-spin" />
+                          Deep Research...
+                        </>
+                      ) : (
+                        <>
+                          <Microscope className="w-4 h-4" />
+                          Deep Research
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {editedIdea.detailed_analysis ? (
                     <div className="space-y-6">
                       <details className="bg-accent-1/30 rounded-lg border border-accent-2 p-3 text-sm">
                         <summary className="cursor-pointer text-gray-400 hover:text-gray-300">
-                          View Analysis Input Data
+                          View Deep Analysis Input Data
                         </summary>
                         <div className="mt-2 space-y-2 text-gray-400">
                           <div>
@@ -802,6 +941,41 @@ export function IdeaDeepDive({ ideaId }: Props) {
                           </div>
                           <div className="border-t border-accent-2 pt-2 mt-2">
                             <div className="text-gray-500 mb-1">
+                              Mission Context:
+                            </div>
+                            <div className="whitespace-pre-wrap">
+                              <div>
+                                <span className="text-gray-500">
+                                  Organization:
+                                </span>{" "}
+                                {missionData?.organization?.name || (
+                                  <em className="text-gray-600">
+                                    Not provided
+                                  </em>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Mission:</span>{" "}
+                                {missionData?.name || (
+                                  <em className="text-gray-600">
+                                    Not provided
+                                  </em>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-gray-500">
+                                  Description:
+                                </span>{" "}
+                                {missionData?.description || (
+                                  <em className="text-gray-600">
+                                    Not provided
+                                  </em>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="border-t border-accent-2 pt-2 mt-2">
+                            <div className="text-gray-500 mb-1">
                               Knowledge Base Documents:
                             </div>
                             <div className="whitespace-pre-wrap">
@@ -821,132 +995,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
                         </div>
                       </details>
 
-                      <div className="grid grid-cols-1 gap-4">
-                        {Object.entries(
-                          JSON.parse(editedIdea.ai_analysis) as AIAnalysisResult
-                        ).map(([key, value]) => {
-                          // Helper function to get the appropriate icon
-                          const getIcon = (key: string) => {
-                            switch (key) {
-                              case "marketPotential":
-                                return (
-                                  <TrendingUp className="w-4 h-4 text-gray-400" />
-                                );
-                              case "customerFit":
-                                return (
-                                  <Users className="w-4 h-4 text-gray-400" />
-                                );
-                              case "feasibility":
-                                return (
-                                  <Boxes className="w-4 h-4 text-gray-400" />
-                                );
-                              case "innovation":
-                                return (
-                                  <Lightbulb className="w-4 h-4 text-gray-400" />
-                                );
-                              case "scalability":
-                                return (
-                                  <LineChart className="w-4 h-4 text-gray-400" />
-                                );
-                              case "missionAlignment":
-                                return (
-                                  <Target className="w-4 h-4 text-gray-400" />
-                                );
-                              default:
-                                return (
-                                  <Brain className="w-4 h-4 text-gray-400" />
-                                );
-                            }
-                          };
-
-                          return (
-                            <div
-                              key={key}
-                              className="bg-accent-1/30 rounded-lg border border-accent-2 p-4"
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  {getIcon(key)}
-                                  <h4 className="text-sm font-medium capitalize">
-                                    {key.replace(/([A-Z])/g, " $1").trim()}
-                                  </h4>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className="w-16 h-2 rounded-full bg-gradient-to-r"
-                                    style={{
-                                      backgroundImage: `linear-gradient(to right, 
-                                        ${
-                                          value.score >= 33 ? "#22c55e" : "#666"
-                                        } 33%, 
-                                        ${
-                                          value.score >= 66 ? "#22c55e" : "#666"
-                                        } 66%, 
-                                        ${
-                                          value.score >= 100
-                                            ? "#22c55e"
-                                            : "#666"
-                                        } 100%)`,
-                                    }}
-                                  />
-                                  <span className="text-sm text-gray-400">
-                                    {value.score}%
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="bg-accent-1/50 rounded p-3 text-sm text-gray-300">
-                                {value.analysis}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {editedIdea.last_analyzed && (
-                        <div className="text-sm text-gray-400">
-                          Last analyzed:{" "}
-                          {new Date(
-                            editedIdea.last_analyzed
-                          ).toLocaleDateString()}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-gray-400 text-center py-12">
-                      Click analyze to get AI insights about this idea based on
-                      the provided information and market signals.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">
-                      Deep Research Analysis
-                    </h3>
-                    <button
-                      onClick={triggerDeepAnalysis}
-                      disabled={deepAnalyzing}
-                      className="px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-900 rounded-lg hover:bg-purple-500/30 transition-colors flex items-center gap-2 disabled:opacity-50"
-                    >
-                      {deepAnalyzing ? (
-                        <>
-                          <LoadingSpinner className="w-4 h-4 animate-spin" />
-                          Deep Research...
-                        </>
-                      ) : (
-                        <>
-                          <Microscope className="w-4 h-4" />
-                          Deep Research
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {editedIdea.detailed_analysis ? (
-                    <div className="space-y-6">
                       <div className="bg-accent-1/30 rounded-lg border border-accent-2 p-4">
                         <h4 className="text-sm font-medium mb-2">
                           Executive Summary
