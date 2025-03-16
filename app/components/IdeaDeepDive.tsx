@@ -25,6 +25,7 @@ import { IdeaKnowledgeBase } from "./IdeaKnowledgeBase";
 import { NewsSection } from "./NewsSection";
 import { KnowledgeBaseChat } from "./KnowledgeBaseChat";
 import * as Tabs from "@radix-ui/react-tabs";
+import { BriefingNotes } from "./BriefingNotes";
 
 interface Props {
   ideaId: string;
@@ -699,8 +700,11 @@ export function IdeaDeepDive({ ideaId }: Props) {
           </Tabs.Content>
 
           <Tabs.Content value="briefings" className="outline-none">
-            <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-              <NewsSection ideaDetails={editedIdea} missionData={missionData} />
+            <div className="space-y-6">
+              <BriefingNotes
+                ideaId={parseInt(ideaId, 10)}
+                ideaName={editedIdea.name}
+              />
             </div>
           </Tabs.Content>
 
