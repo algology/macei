@@ -4,28 +4,24 @@ const ideas = [
   {
     name: "Defence Supply Chain Optimization",
     category: "Defence",
-    impact: "High",
     status: "validated",
     signals: "23 Industry Reports, 5 Patents",
   },
   {
     name: "Mining Logistics AI",
     category: "Resources",
-    impact: "High",
     status: "in review",
     signals: "12 News Articles, 3 Research Papers",
   },
   {
     name: "Healthcare Data Platform",
     category: "Public Sector",
-    impact: "Medium",
     status: "ideation",
     signals: "8 Market Reports, 15 News Mentions",
   },
   {
     name: "Quantum Computing Research",
     category: "R&D",
-    impact: "High",
     status: "validated",
     signals: "7 Journal Papers, 4 Industry Trends",
   },
@@ -94,13 +90,10 @@ export const HeroInstanceDashboard = () => {
 
         {/* Table */}
         <div className="w-full border border-gray-800 rounded-lg overflow-hidden bg-[#101618]">
-          <div className="grid grid-cols-3 md:grid-cols-5 text-xs md:text-sm text-gray-400 bg-gray-900/50">
+          <div className="grid grid-cols-3 md:grid-cols-4 text-xs md:text-sm text-gray-400 bg-gray-900/50">
             <div className="p-2 md:p-3 border-r border-gray-800">Name</div>
             <div className="p-2 md:p-3 border-r border-gray-800 hidden md:block">
               Category
-            </div>
-            <div className="p-2 md:p-3 border-r border-gray-800 hidden md:block">
-              Impact
             </div>
             <div className="p-2 md:p-3 border-r border-gray-800">Status</div>
             <div className="p-2 md:p-3">Market Signals</div>
@@ -108,16 +101,13 @@ export const HeroInstanceDashboard = () => {
           {ideas.map((idea, index) => (
             <div
               key={index}
-              className="grid grid-cols-3 md:grid-cols-5 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30"
+              className="grid grid-cols-3 md:grid-cols-4 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30"
             >
               <div className="p-2 md:p-3 border-r border-gray-800 text-gray-200">
                 {idea.name}
               </div>
               <div className="p-2 md:p-3 border-r border-gray-800 text-gray-400 hidden md:block">
                 {idea.category}
-              </div>
-              <div className="p-2 md:p-3 border-r border-gray-800 text-gray-400 hidden md:block">
-                {idea.impact}
               </div>
               <div className="p-2 md:p-3 border-r border-gray-800">
                 <span

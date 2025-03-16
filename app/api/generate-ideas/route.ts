@@ -21,7 +21,6 @@ Return a valid JSON object with exactly this structure (no markdown, no addition
     {
       "name": "Idea name",
       "category": "Relevant category",
-      "impact": "High" | "Medium" | "Low",
       "description": "2-3 sentence description of the idea",
       "signals": "Comma-separated list of relevant market signals to track"
     }
@@ -55,15 +54,22 @@ Ensure:
       parsedContent = JSON.parse(content);
     } catch (e) {
       // If direct parsing fails, try to extract JSON from markdown
-      const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/\{[\s\S]*\}/);
-      parsedContent = jsonMatch ? JSON.parse(jsonMatch[1] || jsonMatch[0]) : { ideas: [] };
+      const jsonMatch =
+        content.match(/```json\n?([\s\S]*?)\n?```/) ||
+        content.match(/\{[\s\S]*\}/);
+      parsedContent = jsonMatch
+        ? JSON.parse(jsonMatch[1] || jsonMatch[0])
+        : { ideas: [] };
     }
 
     return Response.json({
-      content: JSON.stringify(parsedContent)
+      content: JSON.stringify(parsedContent),
     });
   } catch (error) {
     console.error("Error generating ideas:", error);
-    return Response.json({ error: "Failed to generate ideas" }, { status: 500 });
+    return Response.json(
+      { error: "Failed to generate ideas" },
+      { status: 500 }
+    );
   }
-} 
+}

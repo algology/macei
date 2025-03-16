@@ -30,7 +30,6 @@ interface IdeaDetails {
   name: string;
   status: "validated" | "in review" | "ideation";
   category: string;
-  impact: "High" | "Medium" | "Low";
   signals: string;
   created_at: string;
   ai_analysis?: string;
@@ -60,7 +59,6 @@ const defaultIdea: IdeaDetails = {
   name: "",
   status: "ideation",
   category: "",
-  impact: "Medium",
   signals: "",
   created_at: "",
   ai_analysis: "",
@@ -224,7 +222,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
         name: editedIdea.name,
         status: editedIdea.status,
         category: editedIdea.category,
-        impact: editedIdea.impact,
         signals: JSON.stringify(keywords.map((k) => k.text)),
         mission_id: editedIdea.mission_id,
       };
@@ -325,7 +322,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
           category: editedIdea.category,
           signals: editedIdea.signals,
           status: editedIdea.status,
-          impact: editedIdea.impact,
           organization: missionData?.organization?.name,
           mission: missionData?.name,
           mission_description: missionData?.description,
@@ -419,7 +415,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
           category: editedIdea.category,
           signals: editedIdea.signals,
           status: editedIdea.status,
-          impact: editedIdea.impact,
           organization: missionData?.organization?.name,
           mission: missionData?.name,
           mission_description: missionData?.description,
@@ -581,29 +576,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
                   className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">
-                  Impact
-                </label>
-                <div className="relative">
-                  <select
-                    value={editedIdea.impact || "Medium"}
-                    onChange={(e) =>
-                      setEditedIdea({
-                        ...editedIdea,
-                        impact: e.target.value as IdeaDetails["impact"],
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md appearance-none"
-                  >
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
             </div>
 
             <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
@@ -744,24 +716,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
                             <em className="text-gray-600">Not provided</em>
                           )}
                         </div>
-                        <div>
-                          <span className="text-gray-500">Impact:</span>{" "}
-                          {editedIdea.impact || (
-                            <em className="text-gray-600">Not provided</em>
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Organization:</span>{" "}
-                          {missionData?.organization?.name || (
-                            <em className="text-gray-600">Not provided</em>
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Mission:</span>{" "}
-                          {missionData?.name || (
-                            <em className="text-gray-600">Not provided</em>
-                          )}
-                        </div>
                         <div className="border-t border-accent-2 pt-2 mt-2">
                           <div className="text-gray-500 mb-1">
                             Market Signals:
@@ -823,10 +777,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
                             case "missionAlignment":
                               return (
                                 <Target className="w-4 h-4 text-gray-400" />
-                              );
-                            case "impact":
-                              return (
-                                <Gauge className="w-4 h-4 text-gray-400" />
                               );
                             default:
                               return (

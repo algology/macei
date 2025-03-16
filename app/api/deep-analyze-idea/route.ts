@@ -13,14 +13,12 @@ export async function POST(request: Request) {
       category,
       signals,
       status,
-      impact,
       organization,
       mission,
       mission_description,
-      documents,
     } = body;
 
-    const prompt = `You are an expert business analyst and industry specialist. Your task is to identify the most critical and unique attributes that will determine the success or failure of this business idea. Think deeply about the specific industry context and unique challenges.
+    const prompt = `You are an AI business analyst. Based on the following information, provide a deep analysis of this business idea:
 
 Organization: ${organization}
 Mission: ${mission}
@@ -29,13 +27,12 @@ Mission Description: ${mission_description || "No description provided"}
 Idea Name: ${name}
 Category: ${category}
 Current Status: ${status}
-Expected Impact: ${impact}
 
 Market Signals:
 ${signals}
 
 Knowledge Base Documents:
-${documents}
+${body.documents}
 
 Please identify the 3-5 most critical attributes specific to this idea and provide a detailed analysis in the following JSON structure:
 

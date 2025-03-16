@@ -12,7 +12,6 @@ export async function POST(request: Request) {
       category,
       signals,
       status,
-      impact,
       organization,
       mission,
       mission_description,
@@ -27,7 +26,6 @@ Mission Description: ${mission_description || "No description provided"}
 Idea Name: ${name}
 Category: ${category}
 Current Status: ${status}
-Expected Impact: ${impact}
 
 Market Signals:
 ${signals}
@@ -45,17 +43,12 @@ Please provide your analysis in the following JSON structure, taking into accoun
   "feasibility": {
     "score": <number between 0-100>,
     "analysis": "<one paragraph explanation>"
-  },
-  "impact": {
-    "score": <number between 0-100>,
-    "analysis": "<one paragraph explanation>"
   }
 }
 
 Consider:
 - Mission alignment: How well does this align with organizational goals
 - Feasibility: Technical, legal, and practical implementation challenges
-- Impact: Market size, potential revenue, and strategic value
 - Knowledge base documents: Use the provided documents to support or challenge the idea's viability`;
 
     const completion = await groq.chat.completions.create({

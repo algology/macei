@@ -18,7 +18,6 @@ Mission Description: ${ideaDetails.mission?.description || "Not specified"}
 Idea Name: ${ideaDetails.name}
 Category: ${ideaDetails.category}
 Current Status: ${ideaDetails.status}
-Expected Impact: ${ideaDetails.impact}
 
 Market Signals:
 ${ideaDetails.signals}

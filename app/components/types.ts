@@ -74,10 +74,6 @@ export interface AIAnalysisResult {
     score: number;
     analysis: string;
   };
-  impact: {
-    score: number;
-    analysis: string;
-  };
 }
 
 export type Document = {
@@ -141,7 +137,6 @@ export interface IdeaDetails {
   name: string;
   status: "validated" | "in review" | "ideation";
   category: string;
-  impact: "High" | "Medium" | "Low";
   signals: string;
   created_at: string;
   ai_analysis?: string;
