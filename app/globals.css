@@ -86,3 +86,31 @@ body {
   color: white;
   outline: none;
 }
+
+/* Custom styles for text selection */
+.selectable-text {
+  position: relative;
+  cursor: text;
+}
+
+.selectable-text::selection,
+.selectable-text *::selection {
+  background-color: rgba(0, 207, 138, 0.3);
+  color: #ffffff;
+}
+
+/* Tooltip styles */
+.selection-tooltip {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* Insight source badge */
+.insight-source-badge {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background-color: rgba(0, 207, 138, 0.2);
+  color: #00cf8a;
+  border: 1px solid rgba(0, 207, 138, 0.4);
+  margin-left: 0.5rem;
+}

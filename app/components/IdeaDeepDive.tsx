@@ -171,6 +171,30 @@ export function IdeaDeepDive({ ideaId }: Props) {
   useEffect(() => {
     if (ideaId) {
       fetchInsights();
+
+      // Set up a real-time subscription to insights changes
+      const insightsSubscription = supabase
+        .channel(`idea-insights-${ideaId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "ideas",
+            filter: `id=eq.${ideaId}`,
+          },
+          (payload) => {
+            // When the idea is updated, check if insights have changed
+            if (payload.new && payload.new.insights) {
+              setInsights(payload.new.insights);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        insightsSubscription.unsubscribe();
+      };
     }
   }, [ideaId]);
 
@@ -795,6 +819,8 @@ export function IdeaDeepDive({ ideaId }: Props) {
               <BriefingNotes
                 ideaId={parseInt(ideaId, 10)}
                 ideaName={editedIdea.name}
+                onInsightAdded={fetchInsights}
+                onSwitchToInsights={() => setActiveTab("insights")}
               />
             </div>
           </Tabs.Content>
@@ -862,10 +888,18 @@ export function IdeaDeepDive({ ideaId }: Props) {
                                 <X className="w-4 h-4" />
                               </button>
                             </div>
-                            <div className="mt-2 text-sm text-gray-500">
-                              {new Date(
-                                insight.created_at
-                              ).toLocaleDateString()}
+                            <div className="mt-2 text-sm text-gray-500 flex items-center">
+                              <span>
+                                {new Date(
+                                  insight.created_at
+                                ).toLocaleDateString()}
+                              </span>
+                              {insight.source === "briefing" && (
+                                <span className="insight-source-badge flex items-center gap-1">
+                                  <FileText className="w-3 h-3" />
+                                  Briefing
+                                </span>
+                              )}
                             </div>
                           </div>
                         ))}
