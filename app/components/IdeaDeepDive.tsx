@@ -559,7 +559,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
 
             <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
               <label className="block text-sm text-gray-400 mb-1">
-                Market Signal Keywords
+                Idea Attributes
               </label>
               <div className="bg-accent-1 border border-accent-2 rounded-md p-2">
                 <ReactTags
@@ -594,7 +594,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
                     });
                   }}
                   inputFieldPosition="bottom"
-                  placeholder="Type a keyword and press enter..."
+                  placeholder="Type an attribute and press enter..."
                   autofocus={false}
                   allowUnique={true}
                   classNames={{
@@ -608,8 +608,8 @@ export function IdeaDeepDive({ ideaId }: Props) {
                 />
               </div>
               <p className="text-sm text-gray-500 mt-2">
-                Press enter or comma to add a keyword. These keywords will be
-                used to track market signals.
+                Press enter or comma to add an attribute. These attributes will
+                be used to track the idea.
               </p>
             </div>
 
