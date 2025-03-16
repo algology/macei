@@ -16,6 +16,7 @@ Mission: ${ideaDetails.mission?.name || "Not specified"}
 Mission Description: ${ideaDetails.mission?.description || "Not specified"}
 
 Idea Name: ${ideaDetails.name}
+Idea Summary: ${ideaDetails.summary || "Not specified"}
 Category: ${ideaDetails.category}
 Current Status: ${ideaDetails.status}
 

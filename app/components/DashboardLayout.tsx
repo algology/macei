@@ -82,9 +82,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        setUser(session.user);
+        // Ensure profile exists
+        const { error: upsertError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: session.user.id,
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
 
-        // Fetch profile data including avatar
+        if (upsertError) {
+          console.error("Error upserting profile:", upsertError);
+        }
+
+        // Then fetch profile data including avatar
         const { data: profile } = await supabase
           .from("profiles")
           .select("avatar_url")
@@ -94,6 +106,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         if (profile?.avatar_url) {
           setAvatarUrl(profile.avatar_url);
         }
+
+        setUser(session.user);
       } catch (error) {
         console.error("Error fetching profile:", error);
       } finally {

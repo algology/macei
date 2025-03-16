@@ -44,6 +44,7 @@ interface IdeaDetails {
     };
   };
   detailed_analysis?: string;
+  summary?: string;
 }
 
 interface CustomTag {
@@ -542,38 +543,16 @@ export function IdeaDeepDive({ ideaId }: Props) {
 
               <div>
                 <label className="block text-sm text-gray-400 mb-1">
-                  Status
+                  Summary
                 </label>
-                <div className="relative group">
-                  <select
-                    value={editedIdea.status}
-                    onChange={(e) =>
-                      setEditedIdea({
-                        ...editedIdea,
-                        status: e.target.value as IdeaDetails["status"],
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md appearance-none transition-all duration-200 group-hover:border-accent-1"
-                  >
-                    <option value="ideation">Ideation</option>
-                    <option value="in review">In Review</option>
-                    <option value="validated">Validated</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none transition-transform group-hover:transform group-hover:-translate-y-1/2 group-hover:scale-110" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">
-                  Category
-                </label>
-                <input
-                  type="text"
-                  value={editedIdea.category || ""}
+                <textarea
+                  value={editedIdea.summary || ""}
                   onChange={(e) =>
-                    setEditedIdea({ ...editedIdea, category: e.target.value })
+                    setEditedIdea({ ...editedIdea, summary: e.target.value })
                   }
-                  className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md"
+                  rows={4}
+                  className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-2 focus:ring-green-500/20 transition-all duration-200 resize-none"
+                  placeholder="Describe your idea..."
                 />
               </div>
             </div>
