@@ -14,12 +14,17 @@ import {
   Boxes,
   Gauge,
   Microscope,
+  Home,
+  FileText,
+  Sparkles,
+  ListTodo,
 } from "lucide-react";
 import { AIAnalysisResult, DeepAnalysisResult, IdeaAttribute } from "./types";
 import { WithContext as ReactTags, Tag } from "react-tag-input";
 import { IdeaKnowledgeBase } from "./IdeaKnowledgeBase";
 import { NewsSection } from "./NewsSection";
 import { KnowledgeBaseChat } from "./KnowledgeBaseChat";
+import * as Tabs from "@radix-ui/react-tabs";
 
 interface Props {
   ideaId: string;
@@ -83,6 +88,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
     null
   );
   const [documentContext, setDocumentContext] = useState<string>("");
+  const [activeTab, setActiveTab] = useState("home");
 
   const KeyCodes = {
     comma: 188,
@@ -514,125 +520,395 @@ export function IdeaDeepDive({ ideaId }: Props) {
           </button>
         </div>
 
-        <div className="mb-6">
-          <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Knowledge Base Chat</h3>
-            </div>
-            <KnowledgeBaseChat
-              ideaDetails={editedIdea}
-              documents={documentContext}
-            />
-          </div>
-        </div>
+        <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+          <Tabs.List className="flex space-x-1 border-b border-accent-2 mb-6">
+            <Tabs.Trigger
+              value="home"
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors hover:text-white ${
+                activeTab === "home"
+                  ? "text-white border-b-2 border-green-500"
+                  : "text-gray-400"
+              }`}
+            >
+              <Home className="w-4 h-4" />
+              Idea Home
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="briefings"
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors hover:text-white ${
+                activeTab === "briefings"
+                  ? "text-white border-b-2 border-green-500"
+                  : "text-gray-400"
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              Briefings
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="insights"
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors hover:text-white ${
+                activeTab === "insights"
+                  ? "text-white border-b-2 border-green-500"
+                  : "text-gray-400"
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              Insights
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="attributes"
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors hover:text-white ${
+                activeTab === "attributes"
+                  ? "text-white border-b-2 border-green-500"
+                  : "text-gray-400"
+              }`}
+            >
+              <ListTodo className="w-4 h-4" />
+              Attributes
+            </Tabs.Trigger>
+          </Tabs.List>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="space-y-6">
-            <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6 space-y-4 transition-all duration-200 hover:bg-accent-1/60 hover:shadow-lg hover:shadow-accent-1/20">
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={editedIdea.name}
-                  onChange={(e) =>
-                    setEditedIdea({ ...editedIdea, name: e.target.value })
-                  }
-                  className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-2 focus:ring-green-500/20 transition-all duration-200"
-                />
+          <Tabs.Content value="home" className="outline-none">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <div className="space-y-6">
+                <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6 space-y-4 transition-all duration-200 hover:bg-accent-1/60 hover:shadow-lg hover:shadow-accent-1/20">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editedIdea.name}
+                      onChange={(e) =>
+                        setEditedIdea({ ...editedIdea, name: e.target.value })
+                      }
+                      className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-2 focus:ring-green-500/20 transition-all duration-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">
+                      Summary
+                    </label>
+                    <textarea
+                      value={editedIdea.summary || ""}
+                      onChange={(e) =>
+                        setEditedIdea({
+                          ...editedIdea,
+                          summary: e.target.value,
+                        })
+                      }
+                      rows={4}
+                      className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-2 focus:ring-green-500/20 transition-all duration-200 resize-none"
+                      placeholder="Describe your idea..."
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+                  <label className="block text-sm text-gray-400 mb-1">
+                    Idea Attributes
+                  </label>
+                  <div className="bg-accent-1 border border-accent-2 rounded-md p-2">
+                    <ReactTags
+                      tags={keywords}
+                      delimiters={delimiters}
+                      handleDelete={(i) => {
+                        try {
+                          const newKeywords = keywords.filter(
+                            (_, index) => index !== i
+                          );
+                          setKeywords(newKeywords);
+                          setEditedIdea({
+                            ...editedIdea!,
+                            signals: JSON.stringify(
+                              newKeywords.map((k) => k.text)
+                            ),
+                          });
+                        } catch (error) {
+                          console.error("Error deleting keyword:", error);
+                        }
+                      }}
+                      handleAddition={(tag: Tag) => {
+                        const newTag: CustomTag = {
+                          id: tag.id,
+                          text: tag.id,
+                          className: "tag-class",
+                          category: selectedCategory,
+                        };
+                        const newKeywords = [...keywords, newTag];
+                        setKeywords(newKeywords);
+                        setEditedIdea({
+                          ...editedIdea!,
+                          signals: JSON.stringify(
+                            newKeywords.map((k) => k.text)
+                          ),
+                        });
+                      }}
+                      inputFieldPosition="bottom"
+                      placeholder="Type an attribute and press enter..."
+                      autofocus={false}
+                      allowUnique={true}
+                      classNames={{
+                        tags: "space-y-2",
+                        tagInput: "mt-2 pt-2 border-t border-accent-2",
+                        tag: "inline-flex items-center bg-green-500/20 text-green-400 border border-green-900 px-2 py-1 rounded-md mr-2",
+                        remove:
+                          "ml-2 text-green-400 hover:text-green-300 cursor-pointer",
+                        suggestions: "hidden",
+                      }}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Press enter or comma to add an attribute. These attributes
+                    will be used to track the idea.
+                  </p>
+                </div>
+
+                <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+                  <NewsSection
+                    ideaDetails={editedIdea}
+                    missionData={missionData}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">
-                  Summary
-                </label>
-                <textarea
-                  value={editedIdea.summary || ""}
-                  onChange={(e) =>
-                    setEditedIdea({ ...editedIdea, summary: e.target.value })
-                  }
-                  rows={4}
-                  className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-2 focus:ring-green-500/20 transition-all duration-200 resize-none"
-                  placeholder="Describe your idea..."
-                />
+              <div className="space-y-6">
+                <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-6">
+                  <IdeaKnowledgeBase
+                    ideaId={parseInt(ideaId, 10)}
+                    onDocumentAdded={() => {
+                      fetchIdea();
+                    }}
+                  />
+                </div>
+
+                <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">
+                      Knowledge Base Chat
+                    </h3>
+                  </div>
+                  <KnowledgeBaseChat
+                    ideaDetails={editedIdea}
+                    documents={documentContext}
+                  />
+                </div>
               </div>
             </div>
+          </Tabs.Content>
 
-            <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-              <label className="block text-sm text-gray-400 mb-1">
-                Idea Attributes
-              </label>
-              <div className="bg-accent-1 border border-accent-2 rounded-md p-2">
-                <ReactTags
-                  tags={keywords}
-                  delimiters={delimiters}
-                  handleDelete={(i) => {
-                    try {
-                      const newKeywords = keywords.filter(
-                        (_, index) => index !== i
-                      );
-                      setKeywords(newKeywords);
-                      setEditedIdea({
-                        ...editedIdea!,
-                        signals: JSON.stringify(newKeywords.map((k) => k.text)),
-                      });
-                    } catch (error) {
-                      console.error("Error deleting keyword:", error);
-                    }
-                  }}
-                  handleAddition={(tag: Tag) => {
-                    const newTag: CustomTag = {
-                      id: tag.id,
-                      text: tag.id,
-                      className: "tag-class",
-                      category: selectedCategory,
-                    };
-                    const newKeywords = [...keywords, newTag];
-                    setKeywords(newKeywords);
-                    setEditedIdea({
-                      ...editedIdea!,
-                      signals: JSON.stringify(newKeywords.map((k) => k.text)),
-                    });
-                  }}
-                  inputFieldPosition="bottom"
-                  placeholder="Type an attribute and press enter..."
-                  autofocus={false}
-                  allowUnique={true}
-                  classNames={{
-                    tags: "space-y-2",
-                    tagInput: "mt-2 pt-2 border-t border-accent-2",
-                    tag: "inline-flex items-center bg-green-500/20 text-green-400 border border-green-900 px-2 py-1 rounded-md mr-2",
-                    remove:
-                      "ml-2 text-green-400 hover:text-green-300 cursor-pointer",
-                    suggestions: "hidden",
-                  }}
-                />
-              </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Press enter or comma to add an attribute. These attributes will
-                be used to track the idea.
-              </p>
-            </div>
-
+          <Tabs.Content value="briefings" className="outline-none">
             <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
               <NewsSection ideaDetails={editedIdea} missionData={missionData} />
             </div>
-          </div>
+          </Tabs.Content>
 
-          <div className="space-y-6">
-            <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-6">
-              <IdeaKnowledgeBase
-                ideaId={parseInt(ideaId, 10)}
-                onDocumentAdded={() => {
-                  fetchIdea();
-                }}
-              />
-            </div>
+          <Tabs.Content value="insights" className="outline-none">
+            <div className="space-y-6">
+              <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">AI Analysis</h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={triggerDeepAnalysis}
+                        disabled={deepAnalyzing}
+                        className="px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-900 rounded-lg hover:bg-purple-500/30 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {deepAnalyzing ? (
+                          <>
+                            <LoadingSpinner className="w-4 h-4 animate-spin" />
+                            Deep Research...
+                          </>
+                        ) : (
+                          <>
+                            <Microscope className="w-4 h-4" />
+                            Deep Research
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={triggerAIAnalysis}
+                        disabled={analyzing}
+                        className="px-4 py-2 bg-accent-1/50 border border-accent-2 rounded-lg hover:bg-accent-1/80 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {analyzing ? (
+                          <>
+                            <LoadingSpinner className="w-4 h-4 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Brain className="w-4 h-4" />
+                            Analyze
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
 
-            <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-              <div className="space-y-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">AI Analysis</h3>
-                  <div className="flex items-center gap-2">
+                  {editedIdea.ai_analysis ? (
+                    <div className="space-y-6">
+                      <details className="bg-accent-1/30 rounded-lg border border-accent-2 p-3 text-sm">
+                        <summary className="cursor-pointer text-gray-400 hover:text-gray-300">
+                          View Analysis Input Data
+                        </summary>
+                        <div className="mt-2 space-y-2 text-gray-400">
+                          <div>
+                            <span className="text-gray-500">Name:</span>{" "}
+                            {editedIdea.name || (
+                              <em className="text-gray-600">Not provided</em>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Category:</span>{" "}
+                            {editedIdea.category || (
+                              <em className="text-gray-600">Not provided</em>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Status:</span>{" "}
+                            {editedIdea.status || (
+                              <em className="text-gray-600">Not provided</em>
+                            )}
+                          </div>
+                          <div className="border-t border-accent-2 pt-2 mt-2">
+                            <div className="text-gray-500 mb-1">
+                              Market Signals:
+                            </div>
+                            <div className="whitespace-pre-wrap">
+                              {editedIdea.signals || (
+                                <em className="text-gray-600">Not provided</em>
+                              )}
+                            </div>
+                          </div>
+                          <div className="border-t border-accent-2 pt-2 mt-2">
+                            <div className="text-gray-500 mb-1">
+                              Knowledge Base Documents:
+                            </div>
+                            <div className="whitespace-pre-wrap">
+                              {documents?.length > 0 ? (
+                                documents.map((doc) => (
+                                  <div key={doc.id}>
+                                    • {doc.name} ({doc.url.split(".").pop()})
+                                  </div>
+                                ))
+                              ) : (
+                                <em className="text-gray-600">
+                                  No documents available
+                                </em>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </details>
+
+                      <div className="grid grid-cols-1 gap-4">
+                        {Object.entries(
+                          JSON.parse(editedIdea.ai_analysis) as AIAnalysisResult
+                        ).map(([key, value]) => {
+                          // Helper function to get the appropriate icon
+                          const getIcon = (key: string) => {
+                            switch (key) {
+                              case "marketPotential":
+                                return (
+                                  <TrendingUp className="w-4 h-4 text-gray-400" />
+                                );
+                              case "customerFit":
+                                return (
+                                  <Users className="w-4 h-4 text-gray-400" />
+                                );
+                              case "feasibility":
+                                return (
+                                  <Boxes className="w-4 h-4 text-gray-400" />
+                                );
+                              case "innovation":
+                                return (
+                                  <Lightbulb className="w-4 h-4 text-gray-400" />
+                                );
+                              case "scalability":
+                                return (
+                                  <LineChart className="w-4 h-4 text-gray-400" />
+                                );
+                              case "missionAlignment":
+                                return (
+                                  <Target className="w-4 h-4 text-gray-400" />
+                                );
+                              default:
+                                return (
+                                  <Brain className="w-4 h-4 text-gray-400" />
+                                );
+                            }
+                          };
+
+                          return (
+                            <div
+                              key={key}
+                              className="bg-accent-1/30 rounded-lg border border-accent-2 p-4"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  {getIcon(key)}
+                                  <h4 className="text-sm font-medium capitalize">
+                                    {key.replace(/([A-Z])/g, " $1").trim()}
+                                  </h4>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="w-16 h-2 rounded-full bg-gradient-to-r"
+                                    style={{
+                                      backgroundImage: `linear-gradient(to right, 
+                                        ${
+                                          value.score >= 33 ? "#22c55e" : "#666"
+                                        } 33%, 
+                                        ${
+                                          value.score >= 66 ? "#22c55e" : "#666"
+                                        } 66%, 
+                                        ${
+                                          value.score >= 100
+                                            ? "#22c55e"
+                                            : "#666"
+                                        } 100%)`,
+                                    }}
+                                  />
+                                  <span className="text-sm text-gray-400">
+                                    {value.score}%
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="bg-accent-1/50 rounded p-3 text-sm text-gray-300">
+                                {value.analysis}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {editedIdea.last_analyzed && (
+                        <div className="text-sm text-gray-400">
+                          Last analyzed:{" "}
+                          {new Date(
+                            editedIdea.last_analyzed
+                          ).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-gray-400 text-center py-12">
+                      Click analyze to get AI insights about this idea based on
+                      the provided information and market signals.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">
+                      Deep Research Analysis
+                    </h3>
                     <button
                       onClick={triggerDeepAnalysis}
                       disabled={deepAnalyzing}
@@ -650,220 +926,23 @@ export function IdeaDeepDive({ ideaId }: Props) {
                         </>
                       )}
                     </button>
-                    <button
-                      onClick={triggerAIAnalysis}
-                      disabled={analyzing}
-                      className="px-4 py-2 bg-accent-1/50 border border-accent-2 rounded-lg hover:bg-accent-1/80 transition-colors flex items-center gap-2 disabled:opacity-50"
-                    >
-                      {analyzing ? (
-                        <>
-                          <LoadingSpinner className="w-4 h-4 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Brain className="w-4 h-4" />
-                          Analyze
-                        </>
-                      )}
-                    </button>
                   </div>
-                </div>
 
-                {editedIdea.ai_analysis ? (
-                  <div className="space-y-6">
-                    <details className="bg-accent-1/30 rounded-lg border border-accent-2 p-3 text-sm">
-                      <summary className="cursor-pointer text-gray-400 hover:text-gray-300">
-                        View Analysis Input Data
-                      </summary>
-                      <div className="mt-2 space-y-2 text-gray-400">
-                        <div>
-                          <span className="text-gray-500">Name:</span>{" "}
-                          {editedIdea.name || (
-                            <em className="text-gray-600">Not provided</em>
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Category:</span>{" "}
-                          {editedIdea.category || (
-                            <em className="text-gray-600">Not provided</em>
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Status:</span>{" "}
-                          {editedIdea.status || (
-                            <em className="text-gray-600">Not provided</em>
-                          )}
-                        </div>
-                        <div className="border-t border-accent-2 pt-2 mt-2">
-                          <div className="text-gray-500 mb-1">
-                            Market Signals:
-                          </div>
-                          <div className="whitespace-pre-wrap">
-                            {editedIdea.signals || (
-                              <em className="text-gray-600">Not provided</em>
-                            )}
-                          </div>
-                        </div>
-                        <div className="border-t border-accent-2 pt-2 mt-2">
-                          <div className="text-gray-500 mb-1">
-                            Knowledge Base Documents:
-                          </div>
-                          <div className="whitespace-pre-wrap">
-                            {documents?.length > 0 ? (
-                              documents.map((doc) => (
-                                <div key={doc.id}>
-                                  • {doc.name} ({doc.url.split(".").pop()})
-                                </div>
-                              ))
-                            ) : (
-                              <em className="text-gray-600">
-                                No documents available
-                              </em>
-                            )}
-                          </div>
-                        </div>
+                  {editedIdea.detailed_analysis ? (
+                    <div className="space-y-6">
+                      <div className="bg-accent-1/30 rounded-lg border border-accent-2 p-4">
+                        <h4 className="text-sm font-medium mb-2">
+                          Executive Summary
+                        </h4>
+                        <p className="text-sm text-gray-300">
+                          {JSON.parse(editedIdea.detailed_analysis).summary}
+                        </p>
                       </div>
-                    </details>
 
-                    <div className="grid grid-cols-1 gap-4">
-                      {Object.entries(
-                        JSON.parse(editedIdea.ai_analysis) as AIAnalysisResult
-                      ).map(([key, value]) => {
-                        // Helper function to get the appropriate icon
-                        const getIcon = (key: string) => {
-                          switch (key) {
-                            case "marketPotential":
-                              return (
-                                <TrendingUp className="w-4 h-4 text-gray-400" />
-                              );
-                            case "customerFit":
-                              return (
-                                <Users className="w-4 h-4 text-gray-400" />
-                              );
-                            case "feasibility":
-                              return (
-                                <Boxes className="w-4 h-4 text-gray-400" />
-                              );
-                            case "innovation":
-                              return (
-                                <Lightbulb className="w-4 h-4 text-gray-400" />
-                              );
-                            case "scalability":
-                              return (
-                                <LineChart className="w-4 h-4 text-gray-400" />
-                              );
-                            case "missionAlignment":
-                              return (
-                                <Target className="w-4 h-4 text-gray-400" />
-                              );
-                            default:
-                              return (
-                                <Brain className="w-4 h-4 text-gray-400" />
-                              );
-                          }
-                        };
-
-                        return (
-                          <div
-                            key={key}
-                            className="bg-accent-1/30 rounded-lg border border-accent-2 p-4"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                {getIcon(key)}
-                                <h4 className="text-sm font-medium capitalize">
-                                  {key.replace(/([A-Z])/g, " $1").trim()}
-                                </h4>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-16 h-2 rounded-full bg-gradient-to-r"
-                                  style={{
-                                    backgroundImage: `linear-gradient(to right, 
-                                        ${
-                                          value.score >= 33 ? "#22c55e" : "#666"
-                                        } 33%, 
-                                        ${
-                                          value.score >= 66 ? "#22c55e" : "#666"
-                                        } 66%, 
-                                        ${
-                                          value.score >= 100
-                                            ? "#22c55e"
-                                            : "#666"
-                                        } 100%)`,
-                                  }}
-                                />
-                                <span className="text-sm text-gray-400">
-                                  {value.score}%
-                                </span>
-                              </div>
-                            </div>
-                            <div className="bg-accent-1/50 rounded p-3 text-sm text-gray-300">
-                              {value.analysis}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {editedIdea.last_analyzed && (
-                      <div className="text-sm text-gray-400">
-                        Last analyzed:{" "}
-                        {new Date(
-                          editedIdea.last_analyzed
-                        ).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-gray-400 text-center py-12">
-                    Click analyze to get AI insights about this idea based on
-                    the provided information and market signals.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-              <div className="space-y-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">
-                    Deep Research Analysis
-                  </h3>
-                  <button
-                    onClick={triggerDeepAnalysis}
-                    disabled={deepAnalyzing}
-                    className="px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-900 rounded-lg hover:bg-purple-500/30 transition-colors flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {deepAnalyzing ? (
-                      <>
-                        <LoadingSpinner className="w-4 h-4 animate-spin" />
-                        Deep Research...
-                      </>
-                    ) : (
-                      <>
-                        <Microscope className="w-4 h-4" />
-                        Deep Research
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {editedIdea.detailed_analysis ? (
-                  <div className="space-y-6">
-                    <div className="bg-accent-1/30 rounded-lg border border-accent-2 p-4">
-                      <h4 className="text-sm font-medium mb-2">
-                        Executive Summary
-                      </h4>
-                      <p className="text-sm text-gray-300">
-                        {JSON.parse(editedIdea.detailed_analysis).summary}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4">
-                      {JSON.parse(editedIdea.detailed_analysis).attributes.map(
-                        (attr: IdeaAttribute) => (
+                      <div className="grid grid-cols-1 gap-4">
+                        {JSON.parse(
+                          editedIdea.detailed_analysis
+                        ).attributes.map((attr: IdeaAttribute) => (
                           <div
                             key={attr.name}
                             className="bg-accent-1/30 rounded-lg border border-accent-2 p-4"
@@ -935,20 +1014,78 @@ export function IdeaDeepDive({ ideaId }: Props) {
                               </div>
                             </div>
                           </div>
-                        )
-                      )}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-gray-400 text-center py-12">
-                    Click Deep Research to get an in-depth analysis of the key
-                    attributes that will determine this idea's success.
-                  </div>
-                )}
+                  ) : (
+                    <div className="text-gray-400 text-center py-12">
+                      Click Deep Research to get an in-depth analysis of the key
+                      attributes that will determine this idea's success.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </Tabs.Content>
+
+          <Tabs.Content value="attributes" className="outline-none">
+            <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+              <label className="block text-sm text-gray-400 mb-1">
+                Idea Attributes
+              </label>
+              <div className="bg-accent-1 border border-accent-2 rounded-md p-2">
+                <ReactTags
+                  tags={keywords}
+                  delimiters={delimiters}
+                  handleDelete={(i) => {
+                    try {
+                      const newKeywords = keywords.filter(
+                        (_, index) => index !== i
+                      );
+                      setKeywords(newKeywords);
+                      setEditedIdea({
+                        ...editedIdea!,
+                        signals: JSON.stringify(newKeywords.map((k) => k.text)),
+                      });
+                    } catch (error) {
+                      console.error("Error deleting keyword:", error);
+                    }
+                  }}
+                  handleAddition={(tag: Tag) => {
+                    const newTag: CustomTag = {
+                      id: tag.id,
+                      text: tag.id,
+                      className: "tag-class",
+                      category: selectedCategory,
+                    };
+                    const newKeywords = [...keywords, newTag];
+                    setKeywords(newKeywords);
+                    setEditedIdea({
+                      ...editedIdea!,
+                      signals: JSON.stringify(newKeywords.map((k) => k.text)),
+                    });
+                  }}
+                  inputFieldPosition="bottom"
+                  placeholder="Type an attribute and press enter..."
+                  autofocus={false}
+                  allowUnique={true}
+                  classNames={{
+                    tags: "space-y-2",
+                    tagInput: "mt-2 pt-2 border-t border-accent-2",
+                    tag: "inline-flex items-center bg-green-500/20 text-green-400 border border-green-900 px-2 py-1 rounded-md mr-2",
+                    remove:
+                      "ml-2 text-green-400 hover:text-green-300 cursor-pointer",
+                    suggestions: "hidden",
+                  }}
+                />
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                Press enter or comma to add an attribute. These attributes will
+                be used to track the idea.
+              </p>
+            </div>
+          </Tabs.Content>
+        </Tabs.Root>
 
         {showSaved && (
           <div className="fixed bottom-4 right-4 bg-green-900 text-green-400 px-4 py-2 rounded-md border border-green-900 flex items-center gap-2">
