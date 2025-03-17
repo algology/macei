@@ -715,6 +715,34 @@ export function IdeaDeepDive({ ideaId }: Props) {
 
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">
+                      Status
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={editedIdea.status}
+                        onChange={(e) =>
+                          setEditedIdea({
+                            ...editedIdea,
+                            status: e.target.value as
+                              | "validated"
+                              | "in review"
+                              | "ideation",
+                          })
+                        }
+                        className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-2 focus:ring-green-500/20 transition-all duration-200 appearance-none"
+                      >
+                        <option value="ideation">Ideation</option>
+                        <option value="in review">In Review</option>
+                        <option value="validated">Validated</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">
                       Summary
                     </label>
                     <textarea
