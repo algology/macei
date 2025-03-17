@@ -20,6 +20,8 @@ import {
   ListTodo,
   Plus,
   X,
+  AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { AIAnalysisResult, DeepAnalysisResult, IdeaAttribute } from "./types";
 import { WithContext as ReactTags, Tag } from "react-tag-input";
@@ -28,6 +30,7 @@ import { NewsSection } from "./NewsSection";
 import { KnowledgeBaseChat } from "./KnowledgeBaseChat";
 import * as Tabs from "@radix-ui/react-tabs";
 import { BriefingNotes } from "./BriefingNotes";
+import { toast } from "sonner";
 
 interface Props {
   ideaId: string;
@@ -531,6 +534,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
         id: crypto.randomUUID(),
         content: newInsight.trim(),
         created_at: new Date().toISOString(),
+        source: "manual",
       };
 
       const updatedInsights = [...insights, newInsightObj];
@@ -544,9 +548,17 @@ export function IdeaDeepDive({ ideaId }: Props) {
 
       setNewInsight("");
       setInsights(updatedInsights);
+
+      toast.success("Insight added", {
+        description: "Your insight has been saved.",
+        icon: <Lightbulb className="w-4 h-4" />,
+      });
     } catch (error) {
       console.error("Error adding insight:", error);
-      alert("Failed to add insight. Please try again.");
+      toast.error("Failed to add insight", {
+        description: "Please try again.",
+        icon: <AlertCircle className="w-4 h-4" />,
+      });
     } finally {
       setSavingInsight(false);
     }
@@ -565,9 +577,17 @@ export function IdeaDeepDive({ ideaId }: Props) {
 
       if (error) throw error;
       setInsights(updatedInsights);
+
+      toast.success("Insight deleted", {
+        description: "The insight has been removed.",
+        icon: <Trash2 className="w-4 h-4" />,
+      });
     } catch (error) {
       console.error("Error deleting insight:", error);
-      alert("Failed to delete insight. Please try again.");
+      toast.error("Failed to delete insight", {
+        description: "Please try again.",
+        icon: <AlertCircle className="w-4 h-4" />,
+      });
     }
   }
 
@@ -884,8 +904,9 @@ export function IdeaDeepDive({ ideaId }: Props) {
                               <button
                                 onClick={() => deleteInsight(insight.id)}
                                 className="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Delete insight"
                               >
-                                <X className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                             <div className="mt-2 text-sm text-gray-500 flex items-center">
@@ -895,9 +916,15 @@ export function IdeaDeepDive({ ideaId }: Props) {
                                 ).toLocaleDateString()}
                               </span>
                               {insight.source === "briefing" && (
-                                <span className="insight-source-badge flex items-center gap-1">
+                                <span className="insight-source-badge briefing flex items-center gap-1">
                                   <FileText className="w-3 h-3" />
                                   Briefing
+                                </span>
+                              )}
+                              {insight.source === "manual" && (
+                                <span className="insight-source-badge manual flex items-center gap-1">
+                                  <Lightbulb className="w-3 h-3" />
+                                  Manual
                                 </span>
                               )}
                             </div>
