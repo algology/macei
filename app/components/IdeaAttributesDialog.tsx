@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Plus, Trash2 } from "lucide-react";
+import { X, Plus, Trash2, ChevronDown, Search } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Idea } from "./types";
@@ -28,6 +28,18 @@ export function IdeaAttributesDialog({
   const [fullThinking, setFullThinking] = useState<string>("");
   const [isThinkingComplete, setIsThinkingComplete] = useState(false);
   const thinkingRef = useRef<HTMLDivElement>(null);
+  const [expandedThinking, setExpandedThinking] = useState(true);
+  const [showProcessing, setShowProcessing] = useState(false);
+  const [thinkingPhases] = useState<string[]>([
+    "Creating Idea",
+    "Creating Attributes",
+    "Setting up Knowledge Base",
+  ]);
+  const [readingItems] = useState<{ name: string; domain: string }[]>([
+    { name: "Idea Summary", domain: "idea.com" },
+    { name: "Mission", domain: "mission.io" },
+    { name: "Organization", domain: "organization.co" },
+  ]);
 
   useEffect(() => {
     // Auto-scroll the thinking div to the bottom when new content is added
@@ -43,6 +55,13 @@ export function IdeaAttributesDialog({
       setShowAttributes(false);
       setAttributes([]);
       setIsThinkingComplete(false);
+      setShowProcessing(false);
+
+      // Show processing section after a delay
+      setTimeout(() => {
+        setShowProcessing(true);
+      }, 800); // 800ms delay
+
       generateAttributes();
     }
   }, [isOpen]);
@@ -187,9 +206,9 @@ export function IdeaAttributesDialog({
           </div>
 
           <Dialog.Description className="text-sm text-gray-400 mb-4">
-            {loading || thinking
-              ? "Hold tight while our AI dives deep into your idea... it's like finding needles in a haystack, but the needles are made of gold!"
-              : "Here are the key attributes we've identified for your idea. Feel free to tweak them until they're just right."}
+            {showAttributes
+              ? "Here are the key attributes we've identified for your idea. Feel free to tweak them until they're just right."
+              : "Analyzing your idea to identify key attributes..."}
           </Dialog.Description>
 
           {error && (
@@ -199,20 +218,140 @@ export function IdeaAttributesDialog({
           )}
 
           <div className="space-y-4">
-            {loading && !thinking && (
-              <div className="flex items-center justify-center py-8">
-                <LoadingSpinner className="w-6 h-6" />
-              </div>
-            )}
+            <div className="dark:border-borderMainDark pb-0.5 border-b border-gray-700/50">
+              <div className="group/goal research-goal" role="listitem">
+                <button
+                  type="button"
+                  aria-expanded={expandedThinking}
+                  onClick={() => setExpandedThinking(!expandedThinking)}
+                  className="px-3 relative flex w-full items-stretch rounded-md text-left transition-all duration-200 ease-out focus-visible:outline-none hover:bg-accent-1 cursor-pointer"
+                >
+                  <span className="flex grow gap-[10px]">
+                    <span className="relative flex w-4 shrink-0 flex-col items-center">
+                      <span className="w-px border-l border-gray-600/50 h-[13px] opacity-0"></span>
+                      <div>
+                        <div className="relative">
+                          <div
+                            className="shrink-0 rounded-full border bg-gray-400/35 flex border-transparent"
+                            style={{ width: "7px", height: "7px" }}
+                          ></div>
+                        </div>
+                      </div>
+                      <span className="w-px border-l border-gray-600/50 grow"></span>
+                    </span>
+                    <span className="select-none py-[6px] flex grow">
+                      <div
+                        className="overflow-hidden"
+                        style={{
+                          height: expandedThinking ? "auto" : "1.25rem",
+                          maxHeight: expandedThinking ? "none" : "1.25rem",
+                        }}
+                      >
+                        <div>
+                          <span className="pr-3 text-pretty block text-sm text-gray-300">
+                            <div>Analyzing your idea: {idea.name}</div>
+                          </span>
+                        </div>
+                      </div>
+                    </span>
+                  </span>
+                  <span className="mt-1 flex size-6 shrink-0 items-center justify-center">
+                    <div
+                      className="text-gray-400/60"
+                      style={{
+                        transform: expandedThinking
+                          ? "rotate(-180deg)"
+                          : "none",
+                      }}
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </div>
+                  </span>
+                </button>
 
-            {thinking && (
-              <div
-                ref={thinkingRef}
-                className="bg-accent-1/30 border border-accent-2 rounded-md p-3 h-32 overflow-y-auto mb-4 transition-all duration-500"
-              >
-                <p className="text-sm text-gray-400 italic whitespace-pre-wrap">
-                  {thinking}
-                </p>
+                {expandedThinking && (
+                  <div className="group-only/goal:mb-3 group-last/goal:mb-1">
+                    <div className="mr-6 w-full overflow-hidden">
+                      <div className="gap-[10px] px-3 flex">
+                        <div className="relative flex w-4 shrink-0 flex-col items-center">
+                          <span className="w-px border-l border-gray-600/50 grow"></span>
+                        </div>
+                        <div className="pb-4 gap-y-2 flex flex-col group-last/goal:pb-0 group-only/goal:pb-0">
+                          <div>
+                            <div className="gap-y-1 mt-1.5">
+                              <div className="mb-1 text-xs text-gray-400">
+                                <span>Reading</span>
+                              </div>
+                              <div className="gap-2 flex flex-wrap">
+                                <div className="gap-2 flex flex-wrap items-center">
+                                  {readingItems.map((item, i) => (
+                                    <div key={i} className="inline-flex">
+                                      <div className="py-1 rounded-lg pl-1.5 pr-2.5 border-gray-600/50 transition duration-300 bg-accent-1 hover:bg-accent-2">
+                                        <div className="flex items-center gap-x-1.5 border-gray-600/50 bg-transparent">
+                                          <div className="line-clamp-1 break-all transition-all duration-300 !text-[0.7rem] font-mono text-xs text-gray-300">
+                                            {item.name}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {showProcessing && (
+                            <div className="animate-fadeIn">
+                              <div className="gap-y-1 mt-1.5">
+                                <div className="mb-1 text-xs text-gray-400">
+                                  <span>Processing</span>
+                                </div>
+                                <div className="gap-2 flex flex-wrap">
+                                  <div className="gap-2 flex flex-wrap items-center">
+                                    {thinkingPhases.map((phase, i) => (
+                                      <div key={i} className="inline-flex">
+                                        <div className="py-1 rounded-lg px-2.5 pl-2 border-gray-600/50 bg-accent-1">
+                                          <div className="gap-x-2 flex !text-[0.68rem] leading-4 font-mono text-xs text-gray-300">
+                                            <div className="h-4 pt-px">
+                                              <Search className="w-3.5 h-3.5" />
+                                            </div>
+                                            <p>{phase}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {thinking && (
+                            <div className="mt-4 animate-fadeIn">
+                              <div className="gap-y-1">
+                                <div className="mb-1 text-xs text-gray-400">
+                                  <span>Thinking</span>
+                                </div>
+                                <div
+                                  ref={thinkingRef}
+                                  className="whitespace-pre-wrap max-h-[300px] overflow-y-auto bg-accent-1/30 border border-accent-2 rounded-md p-3 text-sm text-gray-400"
+                                >
+                                  {thinking}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {loading && !thinking && (
+              <div className="flex items-center justify-center py-4">
+                <LoadingSpinner className="w-6 h-6" />
               </div>
             )}
 
