@@ -1,7 +1,32 @@
 import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
   try {
+    // Get the auth token from the request headers
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return Response.json(
+        { error: "Unauthorized - missing or invalid token" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.split("Bearer ")[1];
+
+    // Create a new supabase client with the user's token
+    const supabaseWithAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    );
+
     const body = await request.json();
     const { signal, ideaId } = body;
 
@@ -13,7 +38,7 @@ export async function POST(request: Request) {
     }
 
     // Check for duplicates based on URL and idea_id
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseWithAuth
       .from("knowledge_base")
       .select("id")
       .eq("idea_id", ideaId)
@@ -39,7 +64,7 @@ export async function POST(request: Request) {
     }
 
     // Save to knowledge base
-    const { data, error } = await supabase
+    const { data, error } = await supabaseWithAuth
       .from("knowledge_base")
       .insert([
         {
@@ -64,19 +89,19 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
-    // Fetch the updated idea insights to return
-    const { data: insights, error: insightsError } = await supabase
-      .from("idea_insights")
-      .select("*")
-      .eq("idea_id", ideaId)
+    // Fetch the updated idea insights
+    const { data: ideaData, error: ideaError } = await supabaseWithAuth
+      .from("ideas")
+      .select("insights")
+      .eq("id", ideaId)
       .single();
 
-    if (insightsError) throw insightsError;
+    if (ideaError) throw ideaError;
 
     return Response.json({
       success: true,
       document: data,
-      insights,
+      insights: ideaData?.insights || [],
     });
   } catch (error) {
     console.error("Error saving to knowledge base:", error);

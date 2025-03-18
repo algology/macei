@@ -72,9 +72,16 @@ export function NewsSection({
     try {
       setSavingSignals((prev) => ({ ...prev, [signalKey]: true }));
 
+      // Get the current session for auth token
+      const { data: sessionData } = await supabase.auth.getSession();
+      const authToken = sessionData?.session?.access_token;
+
       const response = await fetch("/api/save-to-knowledge-base", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
         body: JSON.stringify({
           signal,
           ideaId: ideaDetails.id,
