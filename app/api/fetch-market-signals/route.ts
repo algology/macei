@@ -1,4 +1,8 @@
-import { NewsResponse, MarketSignalsResponse } from "@/app/components/types";
+import {
+  NewsResponse,
+  MarketSignalsResponse,
+  MarketSignal,
+} from "@/app/components/types";
 import Groq from "groq-sdk";
 
 const groq = new Groq({
@@ -7,6 +11,12 @@ const groq = new Groq({
 
 export async function POST(request: Request) {
   try {
+    console.log("API Keys available:", {
+      NEWS_API: !!process.env.NEWS_API_KEY,
+      SERP_API: !!process.env.SERP_API_KEY,
+      GROQ_API: !!process.env.GROQ_API_KEY,
+    });
+
     const body = await request.json();
     const {
       ideaName,
@@ -17,12 +27,24 @@ export async function POST(request: Request) {
       aiAnalysis,
     } = body;
 
+    console.log("Received request with:", {
+      ideaName,
+      category,
+      signalsLength: signals
+        ? typeof signals === "string"
+          ? signals.length
+          : "not a string"
+        : "undefined",
+      missionName,
+      organizationName,
+    });
+
     const NEWS_API_KEY = process.env.NEWS_API_KEY;
     const SERP_API_KEY = process.env.SERP_API_KEY;
 
     // Generate optimized search queries using Groq/Gemma
     const searchPrompt = `
-    I need to find relevant market information for a business idea. Help me generate the best search queries for news articles, academic papers, and patents based on the following information:
+    I need to find comprehensive market information for a business idea. Help me generate optimal search queries for multiple types of market signals based on the following information:
     
     Idea Name: ${ideaName || ""}
     Category: ${category || ""}
@@ -31,16 +53,18 @@ export async function POST(request: Request) {
     Market Signals: ${signals || ""}
     AI Analysis: ${aiAnalysis || ""}
     
-    For each type of search (news, academic, patents), provide:
-    1. A specific search query that will yield highly relevant results
-    2. 3-5 key phrases that capture the core concepts
+    For each type of search, provide a specific search query that will yield highly relevant results:
     
     Format your response in JSON like this:
     {
-      "newsQuery": "main search query for news",
-      "academicQuery": "main search query for academic papers",
-      "patentQuery": "main search query for patents",
-      "keyPhrases": ["phrase1", "phrase2", "phrase3"]
+      "newsQuery": "search query for news articles",
+      "academicQuery": "search query for academic papers",
+      "patentQuery": "search query for patents",
+      "trendQuery": "search query for market trends",
+      "competitorQuery": "search query for competitor information",
+      "industryQuery": "search query for industry reports",
+      "fundingQuery": "search query for funding/investment news",
+      "keyPhrases": ["phrase1", "phrase2", "phrase3", "phrase4", "phrase5"]
     }`;
 
     // Call Groq API to generate optimized search queries
@@ -356,7 +380,15 @@ export async function POST(request: Request) {
     }
 
     // Collect all raw results
-    const rawMarketSignals = {
+    const rawMarketSignals: {
+      news: MarketSignal[];
+      academic: MarketSignal[];
+      patents: MarketSignal[];
+      trends: MarketSignal[];
+      competitors: MarketSignal[];
+      industry: MarketSignal[];
+      funding: MarketSignal[];
+    } = {
       news: (() => {
         // Final safety check - if we still have no news, create hardcoded fallbacks
         if (!newsArticles || newsArticles.length === 0) {
@@ -535,6 +567,11 @@ export async function POST(request: Request) {
           };
         });
       })(),
+
+      trends: [],
+      competitors: [],
+      industry: [],
+      funding: [],
     };
 
     // If we have too few results, return them without filtering
@@ -542,6 +579,130 @@ export async function POST(request: Request) {
       rawMarketSignals.news.length +
       rawMarketSignals.academic.length +
       rawMarketSignals.patents.length;
+
+    // Generate additional market signals using AI
+    if (rawMarketSignals.news.length > 0) {
+      try {
+        console.log("Generating additional market signals using AI");
+
+        // Enhanced market signals prompt
+        const enhancedSignalsPrompt = `
+        I need to generate additional market signals to provide comprehensive market intelligence for a business idea.
+        
+        Idea Name: ${ideaName || ""}
+        Category: ${category || ""}
+        Organization: ${organizationName || ""}
+        Mission: ${missionName || ""}
+        Key Phrases: ${
+          searchQueries.keyPhrases
+            ? JSON.stringify(searchQueries.keyPhrases)
+            : ""
+        }
+        
+        Based on these existing signals:
+        ${JSON.stringify(rawMarketSignals).slice(0, 2000)}
+        
+        Generate the following additional market signals:
+        
+        1. Market Trends: 3-4 current market trends related to this business area
+        2. Competitors: 2-3 key competitors or similar businesses in this space
+        3. Industry Analysis: 2-3 insights about the overall industry
+        4. Funding/Investment: 2-3 recent funding or investment activities in this sector
+        
+        Each signal should include:
+        - title: Brief descriptive title
+        - description: 1-2 sentence explanation
+        - source: A plausible source name
+        - date: A recent date in ISO format
+        - url: A placeholder URL
+        - type: One of "trend", "competitor", "industry", or "funding"
+        - timeframe: "recent" (last 3 months), "mid-term" (3-12 months), or "long-term" (1+ years)
+        - sentiment: "positive", "negative", or "neutral"
+        - trendDirection (for trends): "up", "down", or "stable"
+        - category: A relevant category label
+        - impactLevel: "high", "medium", or "low"
+        
+        Format as JSON with these keys:
+        {
+          "trends": [...trend signals...],
+          "competitors": [...competitor signals...],
+          "industry": [...industry signals...],
+          "funding": [...funding signals...]
+        }`;
+
+        // Call Groq to generate enhanced signals
+        const enhancedSignalsResponse = await groq.chat.completions.create({
+          messages: [
+            {
+              role: "user",
+              content: enhancedSignalsPrompt,
+            },
+          ],
+          model: "gemma2-9b-it",
+          temperature: 0.7,
+          max_tokens: 2048,
+          response_format: { type: "json_object" },
+        });
+
+        // Parse the enhanced signals
+        try {
+          const enhancedSignals = JSON.parse(
+            enhancedSignalsResponse.choices[0]?.message?.content || "{}"
+          );
+
+          // Add the enhanced signals to raw signals
+          if (enhancedSignals.trends && Array.isArray(enhancedSignals.trends)) {
+            rawMarketSignals.trends = enhancedSignals.trends as MarketSignal[];
+          }
+
+          if (
+            enhancedSignals.competitors &&
+            Array.isArray(enhancedSignals.competitors)
+          ) {
+            rawMarketSignals.competitors =
+              enhancedSignals.competitors as MarketSignal[];
+          }
+
+          if (
+            enhancedSignals.industry &&
+            Array.isArray(enhancedSignals.industry)
+          ) {
+            rawMarketSignals.industry =
+              enhancedSignals.industry as MarketSignal[];
+          }
+
+          if (
+            enhancedSignals.funding &&
+            Array.isArray(enhancedSignals.funding)
+          ) {
+            rawMarketSignals.funding =
+              enhancedSignals.funding as MarketSignal[];
+          }
+
+          console.log("Successfully added enhanced market signals");
+        } catch (error) {
+          console.error("Error parsing enhanced signals:", error);
+          // Initialize empty arrays for new signal types if parsing fails
+          rawMarketSignals.trends = [];
+          rawMarketSignals.competitors = [];
+          rawMarketSignals.industry = [];
+          rawMarketSignals.funding = [];
+        }
+      } catch (error) {
+        console.error("Error generating enhanced signals:", error);
+        // Initialize empty arrays for new signal types if generation fails
+        rawMarketSignals.trends = [];
+        rawMarketSignals.competitors = [];
+        rawMarketSignals.industry = [];
+        rawMarketSignals.funding = [];
+      }
+    } else {
+      // Initialize empty arrays for new signal types
+      rawMarketSignals.trends = [];
+      rawMarketSignals.competitors = [];
+      rawMarketSignals.industry = [];
+      rawMarketSignals.funding = [];
+    }
 
     if (totalResults <= 6) {
       return Response.json({ signals: rawMarketSignals });
@@ -564,67 +725,95 @@ export async function POST(request: Request) {
     For each type (news, academic, patents), select up to 3-4 items that are most directly relevant to the business idea.
     Remove any that seem irrelevant, off-topic, or only tangentially related.
     
-    Format your response in JSON like this:
+    Format your response STRICTLY as valid JSON like this:
     {
-      "news": [...filtered news signals...],
-      "academic": [...filtered academic signals...],
-      "patents": [...filtered patent signals...]
-    }`;
+      "news": [],
+      "academic": [],
+      "patents": [],
+      "trends": [],
+      "competitors": [],
+      "industry": [],
+      "funding": []
+    }
+    
+    IMPORTANT: Ensure your response is valid JSON that can be parsed. Check that all arrays have proper commas between elements and all objects have proper closing braces.`;
 
     // Call Groq API to filter results
-    const filteringCompletion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "user",
-          content: filteringPrompt,
-        },
-      ],
-      model: "gemma2-9b-it",
-      temperature: 0.1,
-      max_tokens: 2048,
-      response_format: { type: "json_object" },
-    });
-
-    // Parse the filtered results
+    console.log("About to call Groq API for filtering...");
     try {
-      const filteredSignals = JSON.parse(
-        filteringCompletion.choices[0]?.message?.content || "{}"
-      );
+      const filteringCompletion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "user",
+            content: filteringPrompt,
+          },
+        ],
+        model: "gemma2-9b-it",
+        temperature: 0.1,
+        max_tokens: 2048,
+        response_format: { type: "json_object" },
+      });
 
-      // Make sure we have all categories, even if empty
-      const marketSignals = {
-        news: Array.isArray(filteredSignals.news)
-          ? filteredSignals.news
-          : rawMarketSignals.news,
-        academic: Array.isArray(filteredSignals.academic)
-          ? filteredSignals.academic
-          : rawMarketSignals.academic,
-        patents: Array.isArray(filteredSignals.patents)
-          ? filteredSignals.patents
-          : rawMarketSignals.patents,
-      };
+      // Parse the filtered results
+      try {
+        const filteredSignals = JSON.parse(
+          filteringCompletion.choices[0]?.message?.content || "{}"
+        );
 
-      // If any category is empty after filtering, use the raw results for that category
-      if (marketSignals.news.length === 0 && rawMarketSignals.news.length > 0) {
-        marketSignals.news = rawMarketSignals.news.slice(0, 3);
-      }
-      if (
-        marketSignals.academic.length === 0 &&
-        rawMarketSignals.academic.length > 0
-      ) {
-        marketSignals.academic = rawMarketSignals.academic.slice(0, 3);
-      }
-      if (
-        marketSignals.patents.length === 0 &&
-        rawMarketSignals.patents.length > 0
-      ) {
-        marketSignals.patents = rawMarketSignals.patents.slice(0, 3);
-      }
+        // Make sure we have all categories, even if empty
+        const marketSignals = {
+          news: Array.isArray(filteredSignals.news)
+            ? filteredSignals.news
+            : rawMarketSignals.news,
+          academic: Array.isArray(filteredSignals.academic)
+            ? filteredSignals.academic
+            : rawMarketSignals.academic,
+          patents: Array.isArray(filteredSignals.patents)
+            ? filteredSignals.patents
+            : rawMarketSignals.patents,
+          trends: Array.isArray(filteredSignals.trends)
+            ? filteredSignals.trends
+            : rawMarketSignals.trends,
+          competitors: Array.isArray(filteredSignals.competitors)
+            ? filteredSignals.competitors
+            : rawMarketSignals.competitors,
+          industry: Array.isArray(filteredSignals.industry)
+            ? filteredSignals.industry
+            : rawMarketSignals.industry,
+          funding: Array.isArray(filteredSignals.funding)
+            ? filteredSignals.funding
+            : rawMarketSignals.funding,
+        };
 
-      return Response.json({ signals: marketSignals });
+        // If any category is empty after filtering, use the raw results for that category
+        if (
+          marketSignals.news.length === 0 &&
+          rawMarketSignals.news.length > 0
+        ) {
+          marketSignals.news = rawMarketSignals.news.slice(0, 3);
+        }
+        if (
+          marketSignals.academic.length === 0 &&
+          rawMarketSignals.academic.length > 0
+        ) {
+          marketSignals.academic = rawMarketSignals.academic.slice(0, 3);
+        }
+        if (
+          marketSignals.patents.length === 0 &&
+          rawMarketSignals.patents.length > 0
+        ) {
+          marketSignals.patents = rawMarketSignals.patents.slice(0, 3);
+        }
+
+        return Response.json({ signals: marketSignals });
+      } catch (error) {
+        console.error("Error parsing filtered signals:", error);
+        // Fallback to raw results if parsing fails
+        return Response.json({ signals: rawMarketSignals });
+      }
     } catch (error) {
-      console.error("Error parsing filtered signals:", error);
-      // Fallback to raw results if filtering fails
+      console.error("Error in Groq filtering call:", error);
+      // Fallback to raw results if the API call fails
       return Response.json({ signals: rawMarketSignals });
     }
   } catch (error) {

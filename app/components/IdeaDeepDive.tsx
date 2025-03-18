@@ -26,7 +26,7 @@ import {
 import { AIAnalysisResult, DeepAnalysisResult, IdeaAttribute } from "./types";
 import { WithContext as ReactTags, Tag } from "react-tag-input";
 import { IdeaKnowledgeBase } from "./IdeaKnowledgeBase";
-import { NewsSection } from "./NewsSection";
+import { MarketSignalsSection } from "./MarketSignalsSection";
 import { KnowledgeBaseChat } from "./KnowledgeBaseChat";
 import * as Tabs from "@radix-ui/react-tabs";
 import { BriefingNotes } from "./BriefingNotes";
@@ -821,7 +821,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
                 </div>
 
                 <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-                  <NewsSection
+                  <MarketSignalsSection
                     ideaDetails={editedIdea}
                     missionData={missionData}
                     onInsightUpdate={() => {

@@ -95,140 +95,201 @@ export async function POST(request: Request) {
 
     if (orgError) throw orgError;
 
+    // Map new signal types to ones the database can accept
+    function mapSourceType(type: string): string {
+      // These must match EXACTLY the values allowed in the knowledge_base_source_type_check constraint
+      const typeMap: Record<string, string> = {
+        news: "news",
+        academic: "academic",
+        patent: "patent",
+        trend: "news", // Fallback to news
+        competitor: "news", // Fallback to news
+        industry: "academic", // Fallback to academic
+        funding: "news", // Fallback to news
+      };
+
+      return typeMap[type] || "news"; // Default to news type as fallback
+    }
+
+    // Parse and validate publication date
+    let publicationDate = null;
+    if (signal.date && signal.date !== "N/A") {
+      try {
+        const parsedDate = new Date(signal.date);
+        if (!isNaN(parsedDate.getTime())) {
+          publicationDate = parsedDate.toISOString();
+        }
+      } catch (e) {
+        console.log("Invalid date format:", signal.date);
+      }
+    }
+
     // Save to knowledge base
-    const { data, error } = await supabaseWithAuth
-      .from("knowledge_base")
-      .insert([
-        {
-          idea_id: ideaId,
-          title: signal.title,
-          content: signal.description,
-          source_url: signal.url,
-          source_type: signal.type,
-          source_name: signal.source,
-          publication_date: signal.date !== "N/A" ? signal.date : null,
-          relevance_score: Math.round(relevanceScore),
-          metadata: {
-            ...(signal.patentNumber && { patent_number: signal.patentNumber }),
-            ...(signal.status && { patent_status: signal.status }),
-            ...(signal.inventor && { inventor: signal.inventor }),
-          },
-          last_analyzed: new Date().toISOString(),
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Get all existing knowledge base documents for this idea
-    const { data: knowledgeBase, error: kbError } = await supabaseWithAuth
-      .from("knowledge_base")
-      .select(
-        "title, content, source_type, source_name, publication_date, metadata"
-      )
-      .eq("idea_id", ideaId);
-
-    if (kbError) throw kbError;
-
-    // Generate insights using Groq/Gemma
-    const insightsPrompt = `
-    I need to generate business insights based on a new piece of market intelligence that has been saved to a knowledge base.
-    
-    BUSINESS IDEA DETAILS:
-    Idea Name: ${ideaDetails.name}
-    Category: ${ideaDetails.category}
-    Organization: ${organizationData.name}
-    Mission: ${missionData.name}
-    Market Signals: ${ideaDetails.signals || ""}
-    
-    EXISTING INSIGHTS:
-    ${
-      ideaDetails.insights
-        ? JSON.stringify(ideaDetails.insights)
-        : "No existing insights"
-    }
-    
-    NEW KNOWLEDGE BASE ITEM:
-    Title: ${signal.title}
-    Content: ${signal.description}
-    Source: ${signal.source}
-    Type: ${signal.type}
-    Date: ${signal.date !== "N/A" ? signal.date : "Not available"}
-    ${signal.patentNumber ? `Patent Number: ${signal.patentNumber}` : ""}
-    ${signal.status ? `Patent Status: ${signal.status}` : ""}
-    
-    KNOWLEDGE BASE CONTEXT (${knowledgeBase.length} items):
-    ${JSON.stringify(knowledgeBase.slice(0, 5))}
-    
-    Based on this new information and the existing context, please generate:
-    1. 2-3 key insights that this new information provides about the business idea
-    2. How this impacts the idea's potential or challenges
-    3. Any recommendations or actions to consider
-    
-    Format your response as a JSON array of insight objects:
-    [
-      {
-        "insight": "One sentence insight statement",
-        "impact": "Brief description of how this affects the business idea",
-        "source": "The source of this insight (usually the title of the document)",
-        "date_added": "${new Date().toISOString()}"
-      },
-      ...
-    ]
-    
-    Limit to 2-3 high-quality insights that are directly relevant to the business idea.`;
-
-    // Call Groq to generate insights
-    const insightsResponse = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "user",
-          content: insightsPrompt,
-        },
-      ],
-      model: "gemma2-9b-it",
-      temperature: 0.3,
-      max_tokens: 1024,
-      response_format: { type: "json_object" },
-    });
-
-    let newInsights = [];
+    console.log(
+      `Inserting signal of type ${signal.type} mapped to ${mapSourceType(
+        signal.type
+      )}`
+    );
     try {
-      const parsedContent =
-        insightsResponse.choices[0]?.message?.content || "[]";
-      const parsed = JSON.parse(parsedContent);
-      // Ensure newInsights is always an array
-      newInsights = Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      console.error("Error parsing insights:", e);
-      newInsights = [];
-    }
+      const { data, error } = await supabaseWithAuth
+        .from("knowledge_base")
+        .insert([
+          {
+            idea_id: ideaId,
+            title: signal.title,
+            content: signal.description,
+            source_url: signal.url,
+            source_type: mapSourceType(signal.type),
+            source_name: signal.source,
+            publication_date: publicationDate,
+            relevance_score: Math.round(relevanceScore),
+            metadata: {
+              ...(signal.patentNumber && {
+                patent_number: signal.patentNumber,
+              }),
+              ...(signal.status && { patent_status: signal.status }),
+              ...(signal.inventor && { inventor: signal.inventor }),
+              ...(signal.sentiment && { sentiment: signal.sentiment }),
+              ...(signal.timeframe && { timeframe: signal.timeframe }),
+              ...(signal.trendDirection && {
+                trend_direction: signal.trendDirection,
+              }),
+              ...(signal.impactLevel && { impact_level: signal.impactLevel }),
+              ...(signal.category && { category: signal.category }),
+            },
+            last_analyzed: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single();
 
-    // Combine existing insights with new ones
-    const existingInsights = Array.isArray(ideaDetails.insights)
-      ? ideaDetails.insights
-      : [];
-    const combinedInsights = [...existingInsights, ...newInsights];
+      if (error) {
+        console.error("Error inserting to knowledge base:", error);
+        throw error;
+      }
 
-    // Update the idea with new insights
-    const { data: updatedIdea, error: updateError } = await supabaseWithAuth
-      .from("ideas")
-      .update({
+      // Get all existing knowledge base documents for this idea
+      const { data: knowledgeBase, error: kbError } = await supabaseWithAuth
+        .from("knowledge_base")
+        .select(
+          "title, content, source_type, source_name, publication_date, metadata"
+        )
+        .eq("idea_id", ideaId);
+
+      if (kbError) throw kbError;
+
+      // Generate insights using Groq/Gemma
+      const insightsPrompt = `
+      I need to generate business insights based on a new piece of market intelligence that has been saved to a knowledge base.
+      
+      BUSINESS IDEA DETAILS:
+      Idea Name: ${ideaDetails.name}
+      Category: ${ideaDetails.category}
+      Organization: ${organizationData.name}
+      Mission: ${missionData.name}
+      Market Signals: ${ideaDetails.signals || ""}
+      
+      EXISTING INSIGHTS:
+      ${
+        ideaDetails.insights
+          ? JSON.stringify(ideaDetails.insights)
+          : "No existing insights"
+      }
+      
+      NEW KNOWLEDGE BASE ITEM:
+      Title: ${signal.title}
+      Content: ${signal.description}
+      Source: ${signal.source}
+      Type: ${signal.type}
+      Date: ${signal.date !== "N/A" ? signal.date : "Not available"}
+      ${signal.patentNumber ? `Patent Number: ${signal.patentNumber}` : ""}
+      ${signal.status ? `Patent Status: ${signal.status}` : ""}
+      
+      KNOWLEDGE BASE CONTEXT (${knowledgeBase.length} items):
+      ${JSON.stringify(knowledgeBase.slice(0, 5))}
+      
+      Based on this new information and the existing context, please generate:
+      1. 2-3 key insights that this new information provides about the business idea
+      2. How this impacts the idea's potential or challenges
+      3. Any recommendations or actions to consider
+      
+      Format your response as a JSON array of insight objects:
+      [
+        {
+          "insight": "One sentence insight statement",
+          "impact": "Brief description of how this affects the business idea",
+          "source": "The source of this insight (usually the title of the document)",
+          "date_added": "${new Date().toISOString()}"
+        },
+        ...
+      ]
+      
+      Limit to 2-3 high-quality insights that are directly relevant to the business idea.`;
+
+      // Call Groq to generate insights
+      const insightsResponse = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "user",
+            content: insightsPrompt,
+          },
+        ],
+        model: "gemma2-9b-it",
+        temperature: 0.3,
+        max_tokens: 1024,
+        response_format: { type: "json_object" },
+      });
+
+      let newInsights = [];
+      try {
+        const parsedContent =
+          insightsResponse.choices[0]?.message?.content || "[]";
+        const parsed = JSON.parse(parsedContent);
+
+        // Ensure newInsights is always an array with valid dates
+        newInsights = Array.isArray(parsed)
+          ? parsed.map((insight) => ({
+              ...insight,
+              // Ensure date_added is always a valid ISO string
+              date_added: new Date().toISOString(),
+            }))
+          : [];
+      } catch (e) {
+        console.error("Error parsing insights:", e);
+        newInsights = [];
+      }
+
+      // Combine existing insights with new ones
+      const existingInsights = Array.isArray(ideaDetails.insights)
+        ? ideaDetails.insights
+        : [];
+      const combinedInsights = [...existingInsights, ...newInsights];
+
+      // Update the idea with new insights
+      const { data: updatedIdea, error: updateError } = await supabaseWithAuth
+        .from("ideas")
+        .update({
+          insights: combinedInsights,
+          last_analyzed: new Date().toISOString(),
+        })
+        .eq("id", ideaId);
+
+      if (updateError) {
+        console.error("Error updating insights:", updateError);
+      }
+
+      return Response.json({
+        success: true,
+        document: data,
         insights: combinedInsights,
-        last_analyzed: new Date().toISOString(),
-      })
-      .eq("id", ideaId);
-
-    if (updateError) {
-      console.error("Error updating insights:", updateError);
+      });
+    } catch (error) {
+      console.error("Error saving to knowledge base:", error);
+      return Response.json(
+        { error: "Failed to save to knowledge base" },
+        { status: 500 }
+      );
     }
-
-    return Response.json({
-      success: true,
-      document: data,
-      insights: combinedInsights,
-    });
   } catch (error) {
     console.error("Error saving to knowledge base:", error);
     return Response.json(

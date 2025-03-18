@@ -105,9 +105,23 @@ export interface MarketSignal {
   url: string;
   source: string;
   date: string;
-  type: "news" | "academic" | "patent";
+  type:
+    | "news"
+    | "academic"
+    | "patent"
+    | "trend"
+    | "competitor"
+    | "industry"
+    | "funding";
   patentNumber?: string;
   status?: string;
+  inventor?: string;
+  relevanceScore?: number;
+  trendDirection?: "up" | "down" | "stable";
+  timeframe?: "recent" | "mid-term" | "long-term";
+  sentiment?: "positive" | "negative" | "neutral";
+  category?: string;
+  impactLevel?: "high" | "medium" | "low";
 }
 
 export interface MarketSignalsResponse {
@@ -115,6 +129,10 @@ export interface MarketSignalsResponse {
     news: MarketSignal[];
     academic: MarketSignal[];
     patents: MarketSignal[];
+    trends: MarketSignal[];
+    competitors: MarketSignal[];
+    industry: MarketSignal[];
+    funding: MarketSignal[];
   };
 }
 
