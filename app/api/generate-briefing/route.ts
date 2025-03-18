@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { getServerSupabase } from "@/lib/supabase";
 import Groq from "groq-sdk";
 
 const groq = new Groq({
@@ -8,8 +8,12 @@ const groq = new Groq({
 
 export async function POST(request: Request) {
   try {
+    // Get request data
     const { ideaId, ideaName } = await request.json();
     console.log("Received request for idea:", ideaId);
+
+    // Initialize supabase with service role
+    const supabase = getServerSupabase();
 
     // Get idea details
     const { data: idea, error: ideaError } = await supabase

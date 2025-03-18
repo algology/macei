@@ -206,6 +206,15 @@ export function BriefingNotes({
       setError(null);
       setGenerating(true);
 
+      // Get the user session to include the auth token
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error("Not authenticated");
+      }
+
       // First verify the idea exists
       const { data: idea, error: ideaError } = await supabase
         .from("ideas")
@@ -221,10 +230,13 @@ export function BriefingNotes({
         throw new Error("Idea not found");
       }
 
-      // Call your API endpoint that will use the LLM to generate the briefing
+      // Call your API endpoint with the auth token
       const response = await fetch("/api/generate-briefing", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           ideaId,
           ideaName,
