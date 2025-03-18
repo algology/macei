@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MarketSignal } from "./types";
+import { MarketSignal, IdeaInsight } from "./types";
 import { LoadingSpinner } from "./LoadingSpinner";
 import {
   Newspaper,
@@ -9,6 +9,7 @@ import {
   Save,
   Check,
   AlertCircle,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -16,7 +17,7 @@ import { supabase } from "@/lib/supabase";
 interface Props {
   ideaDetails: any;
   missionData: any;
-  onInsightUpdate?: (insights: any) => void;
+  onInsightUpdate?: (insights: IdeaInsight[]) => void;
 }
 
 interface SavedEntry {
@@ -41,6 +42,8 @@ export function NewsSection({
   const [savedSignals, setSavedSignals] = useState<{ [key: string]: boolean }>(
     {}
   );
+  const [lastInsights, setLastInsights] = useState<IdeaInsight[]>([]);
+  const [showInsights, setShowInsights] = useState(false);
 
   async function checkSavedSignals(signals: MarketSignal[]) {
     try {
@@ -101,6 +104,33 @@ export function NewsSection({
 
       setSavedSignals((prev) => ({ ...prev, [signalKey]: true }));
       toast.success("Added to knowledge base");
+
+      // Handle new insights
+      if (data.insights && data.insights.length > 0) {
+        // Find only the new insights (those not in ideaDetails.insights before)
+        const newInsights = data.insights.slice(
+          -(data.insights.length - (ideaDetails.insights?.length || 0))
+        );
+
+        if (newInsights.length > 0) {
+          setLastInsights(newInsights);
+          setShowInsights(true);
+
+          // Wait 500ms to ensure the toast is visible after the success message
+          setTimeout(() => {
+            toast.message("New insights generated", {
+              description: `${newInsights.length} new insight${
+                newInsights.length > 1 ? "s" : ""
+              } generated from this source`,
+              icon: <MessageCircle className="w-4 h-4" />,
+              action: {
+                label: "View",
+                onClick: () => setShowInsights(true),
+              },
+            });
+          }, 500);
+        }
+      }
 
       if (onInsightUpdate && data.insights) {
         onInsightUpdate(data.insights);
@@ -202,6 +232,57 @@ export function NewsSection({
           )}
         </button>
       </div>
+
+      {/* New Insights Modal */}
+      {showInsights && lastInsights.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-accent-1 border border-accent-2 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-auto p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">New Insights Generated</h3>
+              <button
+                onClick={() => setShowInsights(false)}
+                className="p-1 text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <div className="space-y-4">
+              {lastInsights.map((insight, index) => (
+                <div
+                  key={index}
+                  className="border border-accent-2 rounded-lg p-4 bg-accent-1/50"
+                >
+                  <div className="flex items-start gap-3">
+                    <MessageCircle className="w-5 h-5 text-blue-400 shrink-0 mt-1" />
+                    <div>
+                      <p className="font-medium mb-1">{insight.insight}</p>
+                      <p className="text-sm text-gray-400 mb-2">
+                        {insight.impact}
+                      </p>
+                      <div className="text-xs text-gray-500 flex items-center gap-2 mt-2">
+                        <span>Source: {insight.source}</span>
+                        <span>•</span>
+                        <span>
+                          Added:{" "}
+                          {new Date(insight.date_added).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setShowInsights(false)}
+                className="px-4 py-2 bg-accent-1/90 border border-accent-2 rounded-lg"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <LoadingSpinner />

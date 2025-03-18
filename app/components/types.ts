@@ -132,6 +132,13 @@ export interface DeepAnalysisResult {
   summary: string;
 }
 
+export interface IdeaInsight {
+  insight: string;
+  impact: string;
+  source: string;
+  date_added: string;
+}
+
 export interface IdeaDetails {
   id: number;
   name: string;
@@ -142,6 +149,7 @@ export interface IdeaDetails {
   ai_analysis?: string;
   last_analyzed?: string;
   detailed_analysis?: string;
+  insights?: IdeaInsight[];
   mission_id: string;
   mission?: {
     id: number;
