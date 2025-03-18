@@ -62,6 +62,7 @@ export function MarketSignalsSection({
   const [timeframeFilter, setTimeframeFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("all");
 
   async function checkSavedSignals(signals: MarketSignal[]) {
     try {
@@ -155,20 +156,46 @@ export function MarketSignalsSection({
       });
 
       const data = await response.json();
-      setSignals(
-        data.signals || {
-          news: [],
-          academic: [],
-          patents: [],
-          trends: [],
-          competitors: [],
-          industry: [],
-          funding: [],
-        }
-      );
+
+      // Filter out any signals with invalid URLs
+      const apiSignals = data.signals || {
+        news: [],
+        academic: [],
+        patents: [],
+        trends: [],
+        competitors: [],
+        industry: [],
+        funding: [],
+      };
+
+      const processedSignals = {
+        news: (apiSignals.news || []).filter((signal: MarketSignal) =>
+          isValidUrl(signal.url)
+        ),
+        academic: (apiSignals.academic || []).filter((signal: MarketSignal) =>
+          isValidUrl(signal.url)
+        ),
+        patents: (apiSignals.patents || []).filter((signal: MarketSignal) =>
+          isValidUrl(signal.url)
+        ),
+        trends: (apiSignals.trends || []).filter((signal: MarketSignal) =>
+          isValidUrl(signal.url)
+        ),
+        competitors: (apiSignals.competitors || []).filter(
+          (signal: MarketSignal) => isValidUrl(signal.url)
+        ),
+        industry: (apiSignals.industry || []).filter((signal: MarketSignal) =>
+          isValidUrl(signal.url)
+        ),
+        funding: (apiSignals.funding || []).filter((signal: MarketSignal) =>
+          isValidUrl(signal.url)
+        ),
+      };
+
+      setSignals(processedSignals);
 
       const allSignals = Object.values(
-        data.signals || {}
+        processedSignals
       ).flat() as MarketSignal[];
       await checkSavedSignals(allSignals);
     } catch (error) {
@@ -223,6 +250,18 @@ export function MarketSignalsSection({
   const getSentimentBadge = (sentiment?: string) => {
     if (!sentiment) return null;
 
+    const labels = {
+      positive: "Positive Impact",
+      negative: "Negative Impact",
+      neutral: "Neutral Impact",
+    };
+
+    const icons = {
+      positive: <TrendingUp className="w-3 h-3" />,
+      negative: <AlertCircle className="w-3 h-3" />,
+      neutral: <Newspaper className="w-3 h-3" />,
+    };
+
     const classes =
       {
         positive: "bg-green-500/20 text-green-400 border-green-900",
@@ -231,8 +270,40 @@ export function MarketSignalsSection({
       }[sentiment] || "bg-gray-500/20 text-gray-400 border-gray-900";
 
     return (
-      <span className={`text-xs px-2 py-0.5 rounded-full border ${classes}`}>
-        {sentiment}
+      <span
+        className={`text-xs px-2 py-0.5 rounded-full border ${classes} flex items-center gap-1`}
+      >
+        {icons[sentiment as keyof typeof icons]}
+        {labels[sentiment as keyof typeof labels] || sentiment}
+      </span>
+    );
+  };
+
+  const getCategoryBadge = (category?: string, type?: string) => {
+    if (!category && !type) return null;
+
+    const displayCategory = category || type;
+
+    const bgColors = {
+      news: "bg-gray-500/20 text-gray-300 border-gray-800",
+      academic: "bg-blue-500/20 text-blue-300 border-blue-900",
+      patent: "bg-yellow-500/20 text-yellow-300 border-yellow-900",
+      trend: "bg-green-500/20 text-green-300 border-green-900",
+      competitor: "bg-red-500/20 text-red-300 border-red-900",
+      industry: "bg-purple-500/20 text-purple-300 border-purple-900",
+      funding: "bg-emerald-500/20 text-emerald-300 border-emerald-900",
+    };
+
+    const bgClass =
+      bgColors[type as keyof typeof bgColors] ||
+      "bg-accent-1/50 border-accent-2 text-gray-300";
+
+    return (
+      <span
+        className={`text-xs px-2 py-0.5 rounded-full border ${bgClass} flex items-center gap-1`}
+      >
+        {getSignalIcon(type || "")}
+        {displayCategory}
       </span>
     );
   };
@@ -248,21 +319,70 @@ export function MarketSignalsSection({
     );
   };
 
-  // Filter signals based on current filters
+  // Tab definitions with pretty names and icons
+  const tabs = [
+    {
+      id: "all",
+      label: "All Signals",
+      icon: <Newspaper className="w-4 h-4" />,
+    },
+    { id: "news", label: "News", icon: <Newspaper className="w-4 h-4" /> },
+    { id: "trend", label: "Trends", icon: <TrendingUp className="w-4 h-4" /> },
+    {
+      id: "competitor",
+      label: "Competitors",
+      icon: <Users className="w-4 h-4" />,
+    },
+    {
+      id: "industry",
+      label: "Industry",
+      icon: <Briefcase className="w-4 h-4" />,
+    },
+    {
+      id: "funding",
+      label: "Funding",
+      icon: <DollarSign className="w-4 h-4" />,
+    },
+    { id: "academic", label: "Academic", icon: <Book className="w-4 h-4" /> },
+    { id: "patent", label: "Patents", icon: <Lightbulb className="w-4 h-4" /> },
+  ];
+
+  // Type guard to check if a category exists in our signals object
+  const isValidCategory = (
+    category: string
+  ): category is keyof typeof signals => {
+    return category in signals;
+  };
+
+  // Filter signals based on current filters and active tab
   const filteredSignals = Object.fromEntries(
     Object.entries(signals).map(([category, items]) => {
       let filtered = items;
 
+      // Filter by timeframe
       if (timeframeFilter !== "all") {
         filtered = filtered.filter(
           (signal) => !signal.timeframe || signal.timeframe === timeframeFilter
         );
       }
 
+      // Filter by category
       if (categoryFilter !== "all") {
         filtered = filtered.filter(
           (signal) => !signal.category || signal.category === categoryFilter
         );
+      }
+
+      // Filter by active tab
+      if (activeTab !== "all") {
+        // If the active tab is one of the signal types, only show those items
+        if (category === activeTab) {
+          return [category, filtered];
+        }
+        // If the active tab is a signal type, but not this category, return empty
+        else if (tabs.some((tab) => tab.id === activeTab)) {
+          return [category, []];
+        }
       }
 
       return [category, filtered];
@@ -279,6 +399,37 @@ export function MarketSignalsSection({
       if (signal.category) availableCategories.add(signal.category);
       if (signal.timeframe) availableTimeframes.add(signal.timeframe);
     });
+
+  const isValidUrl = (url: string) => {
+    try {
+      // Check if the URL is properly formed by parsing it
+      const parsedUrl = new URL(url);
+
+      // Check for common signs of synthetic/hallucinated URLs
+      const isSuspiciousUrl =
+        !url ||
+        url === "" ||
+        url.includes("...") ||
+        url.includes("example.com") ||
+        url.includes("/invalid-url") ||
+        url === "#" ||
+        url.endsWith("/") ||
+        url.includes("examplereport") ||
+        url.includes("hypothetical");
+
+      return (
+        !isSuspiciousUrl &&
+        (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:")
+      );
+    } catch (e) {
+      return false;
+    }
+  };
+
+  // Only show source name without any AI label
+  const getSourceTag = (signal: MarketSignal) => {
+    return <span>{signal.source}</span>;
+  };
 
   return (
     <div className="space-y-4">
@@ -312,6 +463,40 @@ export function MarketSignalsSection({
               </>
             )}
           </button>
+        </div>
+      </div>
+
+      {/* Category Tabs */}
+      <div className="border-b border-accent-2 mb-4 -mx-1">
+        <div className="flex overflow-x-auto space-x-1 pb-1">
+          {tabs.map((tab) => {
+            // Only show tabs that have content
+            const hasContent =
+              tab.id === "all" ||
+              (isValidCategory(tab.id) && signals[tab.id].length > 0);
+
+            if (!hasContent) return null;
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-2 flex items-center gap-1.5 text-sm whitespace-nowrap transition-colors ${
+                  activeTab === tab.id
+                    ? "border-b-2 border-blue-500 text-blue-400"
+                    : "text-gray-400 hover:text-gray-300"
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+                {tab.id !== "all" && isValidCategory(tab.id) && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-accent-1/50 text-xs rounded-full">
+                    {signals[tab.id].length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -384,7 +569,6 @@ export function MarketSignalsSection({
                         <div className="flex gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              {getSignalIcon(signal.type)}
                               <h4 className="font-medium">{signal.title}</h4>
                               {signal.impactLevel === "high" && (
                                 <span className="px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-900 rounded-full text-xs">
@@ -396,6 +580,7 @@ export function MarketSignalsSection({
                               {signal.description}
                             </p>
                             <div className="flex flex-wrap items-center gap-2 mb-3">
+                              {getCategoryBadge(signal.category, signal.type)}
                               {getSentimentBadge(signal.sentiment)}
                               {getTimeframeBadge(signal.timeframe)}
                               {signal.trendDirection && (
@@ -404,15 +589,10 @@ export function MarketSignalsSection({
                                   {signal.trendDirection}
                                 </span>
                               )}
-                              {signal.category && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-accent-1/50 border border-accent-2">
-                                  {signal.category}
-                                </span>
-                              )}
                             </div>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2 text-xs text-gray-500">
-                                <span>{signal.source}</span>
+                                {getSourceTag(signal)}
                                 <span>•</span>
                                 <span>
                                   {signal.date !== "N/A"
@@ -441,14 +621,20 @@ export function MarketSignalsSection({
                                   )}
                               </div>
                               <div className="flex items-center gap-4">
-                                <a
-                                  href={signal.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-blue-400 hover:text-blue-300"
-                                >
-                                  View Source
-                                </a>
+                                {isValidUrl(signal.url) ? (
+                                  <a
+                                    href={signal.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-400 hover:text-blue-300"
+                                  >
+                                    View Source
+                                  </a>
+                                ) : (
+                                  <span className="text-xs text-gray-500">
+                                    No source available
+                                  </span>
+                                )}
                                 <button
                                   onClick={() => saveToKnowledgeBase(signal)}
                                   disabled={isSaving || isSaved}
