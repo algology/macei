@@ -14,7 +14,6 @@ import {
   Briefcase,
   DollarSign,
   Clock,
-  Filter,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -59,9 +58,6 @@ export function MarketSignalsSection({
   const [savedSignals, setSavedSignals] = useState<{ [key: string]: boolean }>(
     {}
   );
-  const [timeframeFilter, setTimeframeFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [showFilters, setShowFilters] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("all");
 
   async function checkSavedSignals(signals: MarketSignal[]) {
@@ -354,30 +350,14 @@ export function MarketSignalsSection({
     return category in signals;
   };
 
-  // Filter signals based on current filters and active tab
+  // Filter signals based only on active tab
   const filteredSignals = Object.fromEntries(
     Object.entries(signals).map(([category, items]) => {
-      let filtered = items;
-
-      // Filter by timeframe
-      if (timeframeFilter !== "all") {
-        filtered = filtered.filter(
-          (signal) => !signal.timeframe || signal.timeframe === timeframeFilter
-        );
-      }
-
-      // Filter by category
-      if (categoryFilter !== "all") {
-        filtered = filtered.filter(
-          (signal) => !signal.category || signal.category === categoryFilter
-        );
-      }
-
       // Filter by active tab
       if (activeTab !== "all") {
         // If the active tab is one of the signal types, only show those items
         if (category === activeTab) {
-          return [category, filtered];
+          return [category, items];
         }
         // If the active tab is a signal type, but not this category, return empty
         else if (tabs.some((tab) => tab.id === activeTab)) {
@@ -385,20 +365,9 @@ export function MarketSignalsSection({
         }
       }
 
-      return [category, filtered];
+      return [category, items];
     })
   );
-
-  // Get all available categories and timeframes for filters
-  const availableCategories = new Set<string>();
-  const availableTimeframes = new Set<string>();
-
-  Object.values(signals)
-    .flat()
-    .forEach((signal) => {
-      if (signal.category) availableCategories.add(signal.category);
-      if (signal.timeframe) availableTimeframes.add(signal.timeframe);
-    });
 
   const isValidUrl = (url: string) => {
     try {
@@ -431,6 +400,11 @@ export function MarketSignalsSection({
     return <span>{signal.source}</span>;
   };
 
+  // When changing tabs, we don't need to reset filters anymore
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
@@ -439,13 +413,6 @@ export function MarketSignalsSection({
           <h3 className="text-lg font-semibold">Market Signals</h3>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="px-3 py-1.5 bg-accent-1/50 border border-accent-2 rounded-lg hover:bg-accent-1 transition-colors flex items-center gap-2 text-sm"
-          >
-            <Filter className="w-3 h-3" />
-            Filters
-          </button>
           <button
             onClick={fetchSignals}
             disabled={isLoading}
@@ -480,7 +447,7 @@ export function MarketSignalsSection({
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`px-3 py-2 flex items-center gap-1.5 text-sm whitespace-nowrap transition-colors ${
                   activeTab === tab.id
                     ? "border-b-2 border-blue-500 text-blue-400"
@@ -499,49 +466,6 @@ export function MarketSignalsSection({
           })}
         </div>
       </div>
-
-      {/* Filters Section */}
-      {showFilters && (
-        <div className="p-4 bg-accent-1/30 border border-accent-2 rounded-lg mb-4">
-          <h4 className="font-medium mb-3">Filter Market Signals</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                Timeframe
-              </label>
-              <select
-                value={timeframeFilter}
-                onChange={(e) => setTimeframeFilter(e.target.value)}
-                className="w-full px-3 py-2 bg-black/30 border border-accent-2 rounded-lg text-white"
-              >
-                <option value="all">All Timeframes</option>
-                {Array.from(availableTimeframes).map((timeframe) => (
-                  <option key={timeframe} value={timeframe}>
-                    {timeframe}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                Category
-              </label>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full px-3 py-2 bg-black/30 border border-accent-2 rounded-lg text-white"
-              >
-                <option value="all">All Categories</option>
-                {Array.from(availableCategories).map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
 
       {isLoading ? (
         <LoadingSpinner />
@@ -673,8 +597,22 @@ export function MarketSignalsSection({
           )}
         </div>
       ) : (
-        <div className="text-gray-400 text-center py-8">
-          No market signals found
+        <div className="text-center py-8 border border-accent-2 rounded-lg bg-accent-1/30">
+          <div className="text-gray-400 mb-2">No market signals found</div>
+          {activeTab !== "all" && (
+            <div className="text-sm text-gray-500">
+              Try selecting "All Signals" from the tabs above
+              <div className="mt-2">
+                <button
+                  onClick={() => setActiveTab("all")}
+                  className="px-3 py-1.5 bg-accent-1/50 border border-accent-2 rounded-lg hover:bg-accent-1 transition-colors text-sm inline-flex items-center gap-2"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Show All Signals
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
