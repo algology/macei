@@ -49,7 +49,7 @@ export function Footer() {
             <Link href="/" className="block mb-4">
               <Image
                 src="/logo.svg"
-                alt="MACEI Logo"
+                alt="MACY Logo"
                 width={90}
                 height={26}
                 className="antialiased"
@@ -78,7 +78,7 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-accent-2">
           <p className="text-sm text-gray-400">
-            © {new Date().getFullYear()} MACEI. All rights reserved.
+            © {new Date().getFullYear()} macy. All rights reserved.
           </p>
         </div>
       </div>

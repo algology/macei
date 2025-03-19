@@ -3,7 +3,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "MACEI - Market Analysis & Context Enhancement Intelligence",
+  title: "MACY - Market Analysis & Context Enhancement Intelligence",
   description:
     "AI-powered idea validation for businesses. Analyze market signals and validate your next big idea.",
   icons: {

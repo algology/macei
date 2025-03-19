@@ -21,7 +21,7 @@ export default function Home() {
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-accent-1/50 border border-accent-2 mb-8">
                 <Sparkles className="w-4 h-4 mr-2 text-gray-400" />
                 <span className="text-sm font-mono text-gray-400">
-                  INTRODUCING MACEI
+                  INTRODUCING MACY
                 </span>
               </div>
               <h1 className="text-6xl md:text-8xl font-normal mb-8 leading-tight tracking-tight">
@@ -81,7 +81,7 @@ export default function Home() {
                 <div className="inline-flex items-center px-4 py-2 rounded-full bg-accent-1/50 border border-accent-2 mb-4">
                   <Brain className="w-4 h-4 mr-2 text-gray-400" />
                   <span className="text-sm font-mono text-gray-400">
-                    WHY MACEI
+                    WHY MACY
                   </span>
                 </div>
                 <h2 className="text-4xl md:text-5xl font-bold mb-8 leading-tight">

@@ -27,16 +27,15 @@ export function Background() {
 
     // Create particles
     const particlesGeometry = new THREE.BufferGeometry();
-    const particlesCount = 3000;
+    const particlesCount = 800; // Reduced from 3000
     const positions = new Float32Array(particlesCount * 3);
     const velocities = new Float32Array(particlesCount * 3);
     const colors = new Float32Array(particlesCount * 3);
 
-    const color1 = new THREE.Color("#007cf0").multiplyScalar(0.8);
-    const color2 = new THREE.Color("#00dfd8").multiplyScalar(0.8);
-    const color3 = new THREE.Color("#7928ca").multiplyScalar(0.8);
-    const color4 = new THREE.Color("#ff0080").multiplyScalar(0.8);
-    const colorArray = [color1, color2, color3, color4];
+    // More subtle colors
+    const color1 = new THREE.Color("#4A90E2").multiplyScalar(0.4);
+    const color2 = new THREE.Color("#50E3C2").multiplyScalar(0.4);
+    const colorArray = [color1, color2];
 
     // Create circular texture for glow effect
     const canvas = document.createElement("canvas");
@@ -45,8 +44,8 @@ export function Background() {
     const ctx = canvas.getContext("2d");
     if (ctx) {
       const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-      gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
-      gradient.addColorStop(0.2, "rgba(255, 255, 255, 0.4)");
+      gradient.addColorStop(0, "rgba(255, 255, 255, 0.8)");
+      gradient.addColorStop(0.2, "rgba(255, 255, 255, 0.2)");
       gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 32, 32);
@@ -56,13 +55,13 @@ export function Background() {
     particleTexture.generateMipmaps = false;
 
     for (let i = 0; i < particlesCount * 3; i += 3) {
-      positions[i] = (Math.random() - 0.5) * window.innerWidth * 1.5;
-      positions[i + 1] = (Math.random() - 0.5) * window.innerHeight * 1.5;
-      positions[i + 2] = (Math.random() - 0.5) * 500;
+      positions[i] = (Math.random() - 0.5) * window.innerWidth;
+      positions[i + 1] = (Math.random() - 0.5) * window.innerHeight;
+      positions[i + 2] = (Math.random() - 0.5) * 300; // Reduced depth
 
-      velocities[i] = (Math.random() - 0.5) * 0.2;
-      velocities[i + 1] = (Math.random() - 0.5) * 0.2;
-      velocities[i + 2] = (Math.random() - 0.5) * 0.1;
+      velocities[i] = (Math.random() - 0.5) * 0.1; // Slower movement
+      velocities[i + 1] = (Math.random() - 0.5) * 0.1;
+      velocities[i + 2] = (Math.random() - 0.5) * 0.05;
 
       const randomColor =
         colorArray[Math.floor(Math.random() * colorArray.length)];
@@ -81,10 +80,10 @@ export function Background() {
     );
 
     const particlesMaterial = new THREE.PointsMaterial({
-      size: 12,
+      size: 8, // Smaller particles
       map: particleTexture,
       vertexColors: true,
-      opacity: 0.35,
+      opacity: 0.25, // More transparent
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
@@ -97,8 +96,8 @@ export function Background() {
     let mouseY = 0;
 
     const handleMouseMove = (event: MouseEvent) => {
-      mouseX = (event.clientX - window.innerWidth / 2) * 2;
-      mouseY = (event.clientY - window.innerHeight / 2) * 2;
+      mouseX = event.clientX - window.innerWidth / 2;
+      mouseY = event.clientY - window.innerHeight / 2;
     };
 
     const animate = () => {
@@ -116,9 +115,10 @@ export function Background() {
         const dy = -mouseY - positions[i + 1];
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance < 200) {
-          velocities[i] += dx * 0.00002;
-          velocities[i + 1] += dy * 0.00002;
+        if (distance < 150) {
+          // Reduced interaction radius
+          velocities[i] += dx * 0.00001; // Gentler interaction
+          velocities[i + 1] += dy * 0.00001;
         }
 
         if (Math.abs(positions[i]) > window.innerWidth) {
@@ -129,7 +129,7 @@ export function Background() {
           positions[i + 1] *= -0.5;
           velocities[i + 1] *= -0.5;
         }
-        if (Math.abs(positions[i + 2]) > 500) {
+        if (Math.abs(positions[i + 2]) > 300) {
           positions[i + 2] *= -0.5;
           velocities[i + 2] *= -0.5;
         }

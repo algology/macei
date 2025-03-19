@@ -53,10 +53,10 @@ export function Header() {
       <div className="container mx-auto max-w-7xl px-4">
         <div className="bg-background/40 backdrop-blur-xl border border-accent-2 rounded-full">
           <div className="flex items-center justify-between py-2 px-6">
-            <Link href="/" className="hover:opacity-90 transition-opacity">
+            <Link href="/" className="hover:opacity-90 transition-opacity mt-2">
               <Image
                 src="/logo.svg"
-                alt="MACEI Logo"
+                alt="MACY Logo"
                 width={90}
                 height={26}
                 className="antialiased"

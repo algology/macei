@@ -1,6 +1,6 @@
 # Overview
 
-MACEI aims to automate much of the workflows that an idea validator executes today. The first use-case the MVP will focus on will be the early phase of an 11point2 engagement – idea generation and validation using market signals. This will include the creation of an idea knowledge base (IKB) which will include mission attributes and content relevant for the mission scope. The IKB will be periodically updated based on signals from multiple sources.
+MACY aims to automate much of the workflows that an idea validator executes today. The first use-case the MVP will focus on will be the early phase of an 11point2 engagement – idea generation and validation using market signals. This will include the creation of an idea knowledge base (IKB) which will include mission attributes and content relevant for the mission scope. The IKB will be periodically updated based on signals from multiple sources.
 
 # MVP Scope
 
