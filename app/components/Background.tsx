@@ -165,7 +165,7 @@ export function Background() {
 
   return (
     <div className="fixed inset-0 -z-10 pointer-events-none">
-      <div className="absolute inset-0 grid-pattern opacity-[0.15]" />
+      <div className="absolute inset-0 grid-pattern opacity-[0.08]" />
       <div ref={containerRef} className="absolute inset-0" />
     </div>
   );
