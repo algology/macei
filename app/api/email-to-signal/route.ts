@@ -23,8 +23,31 @@ interface EmailPayload {
 
 export async function POST(request: Request) {
   try {
+    console.log("Email-to-signal processor: Started processing");
+
+    // Check internal API key for security (optional but recommended)
+    const apiKey = request.headers.get("X-API-Key");
+    if (
+      process.env.INTERNAL_API_KEY &&
+      apiKey !== process.env.INTERNAL_API_KEY
+    ) {
+      console.log("Unauthorized access attempt - missing or invalid API key");
+      return NextResponse.json(
+        { error: "Unauthorized access" },
+        { status: 401 }
+      );
+    }
+
     // Get the email payload from the request
     const payload: EmailPayload = await request.json();
+    console.log("Received payload:", {
+      subject: payload.subject,
+      from: payload.from,
+      to: payload.to,
+      textLength: payload.text?.length || 0,
+      htmlLength: payload.html?.length || 0,
+      attachments: payload.attachments?.length || 0,
+    });
 
     // Extract idea ID from the email address
     const ideaIdMatch = payload.to.match(/idea-(\d+)@/);
