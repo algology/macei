@@ -209,17 +209,8 @@ export function MarketSignalsSection({
     }
   }, [ideaDetails?.id]);
 
-  useEffect(() => {
-    // Fetch market signals when the component mounts
-    if (
-      ideaDetails?.id &&
-      !loading &&
-      Object.values(signals).every((arr) => arr.length === 0)
-    ) {
-      setLoading(true);
-      fetchSignals();
-    }
-  }, [ideaDetails?.id]);
+  // No longer fetch signals automatically when component mounts
+  // Instead, show an initial state that requires user interaction
 
   // Prevent showing both loading and refreshing spinners at the same time
   const isLoading = loading || refreshing;
@@ -468,7 +459,19 @@ export function MarketSignalsSection({
       </div>
 
       {isLoading ? (
-        <LoadingSpinner />
+        <div className="flex flex-col items-center justify-center p-10 border border-accent-2 rounded-lg bg-accent-1/30">
+          <div className="flex flex-col items-center space-y-4">
+            <LoadingSpinner className="w-8 h-8 text-blue-400" />
+            <div className="text-center space-y-1">
+              <p className="text-gray-300 font-medium">
+                Refreshing Market Signals
+              </p>
+              <p className="text-sm text-gray-500">
+                This may take a moment as we search for the latest data
+              </p>
+            </div>
+          </div>
+        </div>
       ) : Object.entries(filteredSignals).some(
           ([_, items]) => items.length > 0
         ) ? (
@@ -598,7 +601,11 @@ export function MarketSignalsSection({
         </div>
       ) : (
         <div className="text-center py-8 border border-accent-2 rounded-lg bg-accent-1/30">
-          <div className="text-gray-400 mb-2">No market signals found</div>
+          <div className="text-gray-400 mb-2">
+            {activeTab !== "all"
+              ? "No signals found for this category"
+              : "Click refresh to load market signals"}
+          </div>
           {activeTab !== "all" && (
             <div className="text-sm text-gray-500">
               Try selecting "All Signals" from the tabs above
