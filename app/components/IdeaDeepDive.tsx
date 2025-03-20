@@ -30,6 +30,7 @@ import { MarketSignalsSection } from "./MarketSignalsSection";
 import { KnowledgeBaseChat } from "./KnowledgeBaseChat";
 import * as Tabs from "@radix-ui/react-tabs";
 import { BriefingNotes } from "./BriefingNotes";
+import { EmailToSignalConfig } from "./EmailToSignalConfig";
 import { toast } from "sonner";
 
 interface Props {
@@ -844,6 +845,13 @@ export function IdeaDeepDive({ ideaId }: Props) {
                     onDocumentAdded={() => {
                       fetchIdea();
                     }}
+                  />
+                </div>
+
+                <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-6">
+                  <EmailToSignalConfig
+                    ideaId={parseInt(ideaId, 10)}
+                    ideaName={editedIdea.name}
                   />
                 </div>
 
