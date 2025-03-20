@@ -12,7 +12,6 @@ const groq = new Groq({
 export async function POST(request: Request) {
   try {
     console.log("API Keys available:", {
-      NEWS_API: !!process.env.NEWS_API_KEY,
       SERP_API: !!process.env.SERP_API_KEY,
       GROQ_API: !!process.env.GROQ_API_KEY,
     });
@@ -39,7 +38,6 @@ export async function POST(request: Request) {
       organizationName,
     });
 
-    const NEWS_API_KEY = process.env.NEWS_API_KEY;
     const SERP_API_KEY = process.env.SERP_API_KEY;
 
     // Generate optimized search queries using Groq/Gemma
@@ -53,7 +51,9 @@ export async function POST(request: Request) {
     Market Signals: ${signals || ""}
     AI Analysis: ${aiAnalysis || ""}
     
-    For each type of search, provide a specific search query that will yield highly relevant results:
+    Create SPECIFIC and TARGETED search queries that will yield highly relevant results. Focus on the core concepts and avoid generic terms.
+    
+    For example, if this is about "content moderation with AI", use specific terms like "AI content moderation tools", "machine learning toxic content detection", "automated moderation systems".
     
     Format your response in JSON like this:
     {
@@ -187,16 +187,11 @@ export async function POST(request: Request) {
 
     // Fetch from multiple sources in parallel
     const [newsResults, scholarResults, patentsResults] = await Promise.all([
-      // News API with enhanced query
+      // News (via SerpAPI) with enhanced query
       fetch(
-        `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+        `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
           searchQueries.newsQuery
-        )}&sortBy=relevancy&pageSize=15&language=en`,
-        {
-          headers: {
-            Authorization: `Bearer ${NEWS_API_KEY}`,
-          },
-        }
+        )}&api_key=${SERP_API_KEY}&num=15&tbm=nws&hl=en`
       ).then((res) => res.json()),
 
       // Google Scholar (via SerpAPI) with enhanced query
@@ -210,28 +205,38 @@ export async function POST(request: Request) {
       fetch(
         `https://serpapi.com/search.json?engine=google_patents&q=${encodeURIComponent(
           searchQueries.patentQuery
-        )}&api_key=${SERP_API_KEY}&num=10&sort=new&language=ENGLISH`
+        )}&api_key=${SERP_API_KEY}&num=10&language=ENGLISH&has_abstract=true`
       ).then((res) => res.json()),
     ]);
 
     // Debug API responses
-    console.log("News API response count:", newsResults.articles?.length || 0);
     console.log(
-      "Scholar API response count:",
+      "SERP News API response count:",
+      newsResults.news_results?.length || 0
+    );
+    console.log(
+      "SERP Scholar API response count:",
       scholarResults.organic_results?.length || 0
     );
     console.log(
-      "Patents API response count:",
+      "SERP Patents API response count:",
       patentsResults.organic_results?.length || 0
     );
 
-    // Handle case where News API returns no results
-    let newsArticles = newsResults.articles || [];
+    // Handle case where SERP News API returns no results
+    let newsArticles = (newsResults.news_results || []).map((article: any) => ({
+      title: article.title,
+      description: article.snippet,
+      url: article.link,
+      source: article.source,
+      date: article.date || new Date().toISOString(),
+      type: "news",
+    }));
 
-    // If News API returned no results or had an error, try multiple fallback queries
+    // If SERP News API returned no results or had an error, try multiple fallback queries
     if (newsArticles.length === 0) {
       console.log(
-        "News API returned no results, trying multiple fallback queries"
+        "SERP News API returned no results, trying multiple fallback queries"
       );
 
       // Create an array of different fallback queries to try
@@ -262,27 +267,31 @@ export async function POST(request: Request) {
           console.log(`Trying fallback query: ${query}`);
 
           const fallbackNewsResponse = await fetch(
-            `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+            `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
               query
-            )}&sortBy=relevancy&pageSize=15&language=en`,
-            {
-              headers: {
-                Authorization: `Bearer ${NEWS_API_KEY}`,
-              },
-            }
+            )}&api_key=${SERP_API_KEY}&num=15&tbm=nws&hl=en`
           ).then((res) => res.json());
 
           console.log(
             `Results for '${query}':`,
-            fallbackNewsResponse.articles?.length || 0
+            fallbackNewsResponse.news_results?.length || 0
           );
 
           // If we got results, use them and stop trying
           if (
-            fallbackNewsResponse.articles &&
-            fallbackNewsResponse.articles.length > 0
+            fallbackNewsResponse.news_results &&
+            fallbackNewsResponse.news_results.length > 0
           ) {
-            newsArticles = fallbackNewsResponse.articles;
+            newsArticles = fallbackNewsResponse.news_results.map(
+              (article: any) => ({
+                title: article.title,
+                description: article.snippet,
+                url: article.link,
+                source: article.source,
+                date: article.date || new Date().toISOString(),
+                type: "news",
+              })
+            );
             break;
           }
         } catch (error) {
@@ -294,26 +303,46 @@ export async function POST(request: Request) {
     // If we still have no news articles, try top headlines as a last resort
     if (newsArticles.length === 0) {
       try {
-        console.log("Trying top headlines for technology category");
+        console.log("Trying top headlines with more specific categories");
+
+        // Try to build a more relevant category based on the idea
+        let category = "technology";
+        if (
+          ideaName?.toLowerCase().includes("content moderation") ||
+          signals?.toLowerCase().includes("content moderation")
+        ) {
+          category = "technology";
+        } else if (
+          ideaName?.toLowerCase().includes("game") ||
+          signals?.toLowerCase().includes("game")
+        ) {
+          category = "entertainment";
+        }
 
         const topHeadlinesResponse = await fetch(
-          `https://newsapi.org/v2/top-headlines?category=technology&pageSize=15&language=en`,
-          {
-            headers: {
-              Authorization: `Bearer ${NEWS_API_KEY}`,
-            },
-          }
+          `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
+            `${category} news`
+          )}&api_key=${SERP_API_KEY}&num=15&tbm=nws&hl=en`
         ).then((res) => res.json());
 
         if (
-          topHeadlinesResponse.articles &&
-          topHeadlinesResponse.articles.length > 0
+          topHeadlinesResponse.news_results &&
+          topHeadlinesResponse.news_results.length > 0
         ) {
           console.log(
-            "Got technology headlines:",
-            topHeadlinesResponse.articles.length
+            `Got ${category} headlines:`,
+            topHeadlinesResponse.news_results.length
           );
-          newsArticles = topHeadlinesResponse.articles;
+          newsArticles = topHeadlinesResponse.news_results.map(
+            (article: any) => ({
+              title: article.title,
+              description: article.snippet,
+              url: article.link,
+              source: article.source,
+              date: article.date || new Date().toISOString(),
+              type: "news",
+            })
+          );
         }
       } catch (error) {
         console.error("Error fetching top headlines:", error);
@@ -387,14 +416,7 @@ export async function POST(request: Request) {
           return [];
         }
 
-        return newsArticles.map((article: any) => ({
-          title: article.title,
-          description: article.description,
-          url: article.url, // Use the actual URL from the News API
-          source: article.source?.name || article.source || "News Source",
-          date: article.publishedAt || new Date().toISOString(),
-          type: "news",
-        }));
+        return newsArticles;
       })(),
 
       academic: (() => {
@@ -528,6 +550,58 @@ export async function POST(request: Request) {
       rawMarketSignals.academic.length +
       rawMarketSignals.patents.length;
 
+    // Check for relevance using simple keyword matching
+    const ideaKeywords = [
+      ideaName?.toLowerCase() || "",
+      category?.toLowerCase() || "",
+      ...(searchQueries.keyPhrases || []).map((p: string) => p.toLowerCase()),
+    ].filter(Boolean);
+
+    // Filter out obviously irrelevant results based on keywords
+    if (ideaKeywords.length > 0) {
+      // Filter news articles for relevance
+      rawMarketSignals.news = rawMarketSignals.news.filter((article) => {
+        const text = (
+          article.title +
+          " " +
+          (article.description || "")
+        ).toLowerCase();
+        return (
+          ideaKeywords.some((keyword) => text.includes(keyword)) ||
+          // If no matches, keep the top 5 as they might still be relevant
+          rawMarketSignals.news.indexOf(article) < 5
+        );
+      });
+
+      // Filter academic papers for relevance
+      rawMarketSignals.academic = rawMarketSignals.academic.filter((paper) => {
+        const text = (
+          paper.title +
+          " " +
+          (paper.description || "")
+        ).toLowerCase();
+        return (
+          ideaKeywords.some((keyword) => text.includes(keyword)) ||
+          // If no matches, keep the top 3 as they might still be relevant
+          rawMarketSignals.academic.indexOf(paper) < 3
+        );
+      });
+
+      // Filter patents for relevance
+      rawMarketSignals.patents = rawMarketSignals.patents.filter((patent) => {
+        const text = (
+          patent.title +
+          " " +
+          (patent.description || "")
+        ).toLowerCase();
+        return (
+          ideaKeywords.some((keyword) => text.includes(keyword)) ||
+          // If no matches, keep the top 3 as they might still be relevant
+          rawMarketSignals.patents.indexOf(patent) < 3
+        );
+      });
+    }
+
     // Generate additional market signals using AI combined with real API data
     if (rawMarketSignals.news.length > 0) {
       try {
@@ -537,56 +611,36 @@ export async function POST(request: Request) {
 
         // First, fetch additional data from real APIs for the enhanced signals
         const additionalDataPromises = [
-          // Fetch trend data (reuse news API with trend query)
+          // Fetch trend data (use SERP API with trend query)
           fetch(
-            `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+            `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
               searchQueries.trendQuery ||
                 `${category || ideaName} market trends`
-            )}&sortBy=relevancy&pageSize=10&language=en`,
-            {
-              headers: {
-                Authorization: `Bearer ${NEWS_API_KEY}`,
-              },
-            }
+            )}&api_key=${SERP_API_KEY}&num=10&tbm=nws&hl=en`
           ).then((res) => res.json()),
 
-          // Fetch competitor data (reuse news API with competitor query)
+          // Fetch competitor data (use SERP API with competitor query)
           fetch(
-            `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+            `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
               searchQueries.competitorQuery ||
                 `${category || ideaName} competitors`
-            )}&sortBy=relevancy&pageSize=10&language=en`,
-            {
-              headers: {
-                Authorization: `Bearer ${NEWS_API_KEY}`,
-              },
-            }
+            )}&api_key=${SERP_API_KEY}&num=10&tbm=nws&hl=en`
           ).then((res) => res.json()),
 
-          // Fetch industry data (reuse news API with industry query)
+          // Fetch industry data (use SERP API with industry query)
           fetch(
-            `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+            `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
               searchQueries.industryQuery ||
                 `${category || ideaName} industry report`
-            )}&sortBy=relevancy&pageSize=10&language=en`,
-            {
-              headers: {
-                Authorization: `Bearer ${NEWS_API_KEY}`,
-              },
-            }
+            )}&api_key=${SERP_API_KEY}&num=10&tbm=nws&hl=en`
           ).then((res) => res.json()),
 
-          // Fetch funding data (reuse news API with funding query)
+          // Fetch funding data (use SERP API with funding query)
           fetch(
-            `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+            `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
               searchQueries.fundingQuery ||
                 `${category || ideaName} funding investment`
-            )}&sortBy=relevancy&pageSize=10&language=en`,
-            {
-              headers: {
-                Authorization: `Bearer ${NEWS_API_KEY}`,
-              },
-            }
+            )}&api_key=${SERP_API_KEY}&num=10&tbm=nws&hl=en`
           ).then((res) => res.json()),
         ];
 
@@ -599,83 +653,72 @@ export async function POST(request: Request) {
         ] = await Promise.all(additionalDataPromises);
 
         // Collect real articles from the APIs
-        const trendArticles = trendResults.articles || [];
-        const competitorArticles = competitorResults.articles || [];
-        const industryArticles = industryResults.articles || [];
-        const fundingArticles = fundingResults.articles || [];
+        const trendArticles = trendResults.news_results || [];
+        const competitorArticles = competitorResults.news_results || [];
+        const industryArticles = industryResults.news_results || [];
+        const fundingArticles = fundingResults.news_results || [];
 
-        // Only use AI to analyze and categorize these real results, not for generating URLs
-        const enhancedSignalsPrompt = `
-        I need to analyze and categorize real market signals for a business idea.
-        
-        Idea Name: ${ideaName || ""}
-        Category: ${category || ""}
-        
-        I have collected real articles from APIs that need to be categorized into:
-        1. Market Trends: Current market trends related to this business area
-        2. Competitors: Key competitors or similar businesses in this space
-        3. Industry Analysis: Insights about the overall industry
-        4. Funding/Investment: Recent funding or investment activities in this sector
-        
-        For each article, I need you to:
-        - Determine if it belongs in one of these categories
-        - Add appropriate metadata (timeframe, sentiment, etc.)
-        - DO NOT change or fabricate the URLs, titles, or sources
-        
-        Here are the collected articles:
-        
-        TREND ARTICLES:
-        ${JSON.stringify(trendArticles.slice(0, 5))}
-        
-        COMPETITOR ARTICLES:
-        ${JSON.stringify(competitorArticles.slice(0, 5))}
-        
-        INDUSTRY ARTICLES:
-        ${JSON.stringify(industryArticles.slice(0, 5))}
-        
-        FUNDING ARTICLES:
-        ${JSON.stringify(fundingArticles.slice(0, 5))}
-        
-        Format your response as JSON with these keys:
-        {
-          "trends": [
-            {
-              "title": "Keep the original title",
-              "description": "Keep or summarize the original description",
-              "url": "Keep the exact original URL",
-              "source": "Keep the original source name",
-              "date": "Keep the original date",
-              "type": "trend",
-              "timeframe": "recent", "mid-term", or "long-term",
-              "sentiment": "positive", "negative", or "neutral",
-              "trendDirection": "up", "down", or "stable",
-              "category": "A relevant category label",
-              "impactLevel": "high", "medium", or "low"
-            }
-          ],
-          "competitors": [...],
-          "industry": [...],
-          "funding": [...]
-        }
-        
-        Include ONLY articles that are truly relevant. If a category has no relevant articles, return an empty array for that category.`;
-
-        // Call Groq to analyze and categorize the real articles
-        const enhancedSignalsResponse = await groq.chat.completions.create({
-          messages: [
-            {
-              role: "user",
-              content: enhancedSignalsPrompt,
-            },
-          ],
-          model: "gemma2-9b-it",
-          temperature: 0.3,
-          max_tokens: 2048,
-          response_format: { type: "json_object" },
-        });
-
-        // Parse the enhanced signals
+        // AI enhancement process...
         try {
+          // Only use AI to analyze and categorize these real results, not for generating URLs
+          const enhancedSignalsPrompt = `
+          Analyze and categorize these articles for a business idea: "${
+            ideaName || ""
+          }".
+          Category: ${category || ""}
+          
+          Categorize them into: Market Trends, Competitors, Industry Analysis, and Funding.
+          
+          For each article:
+          - Keep original title, snippet (as description), link (as url), source, and date
+          - Add type field: "trend", "competitor", "industry", or "funding"
+          
+          TREND ARTICLES:
+          ${JSON.stringify(trendArticles.slice(0, 5))}
+          
+          COMPETITOR ARTICLES:
+          ${JSON.stringify(competitorArticles.slice(0, 5))}
+          
+          INDUSTRY ARTICLES:
+          ${JSON.stringify(industryArticles.slice(0, 5))}
+          
+          FUNDING ARTICLES:
+          ${JSON.stringify(fundingArticles.slice(0, 5))}
+          
+          Format response as JSON:
+          {
+            "trends": [
+              {
+                "title": "Original title",
+                "description": "Original snippet",
+                "url": "Original link",
+                "source": "Original source",
+                "date": "Original date",
+                "type": "trend"
+              }
+            ],
+            "competitors": [...],
+            "industry": [...],
+            "funding": [...]
+          }
+          
+          Only include relevant articles. Return empty arrays for categories with no relevant articles.`;
+
+          // Call Groq to analyze and categorize the real articles
+          const enhancedSignalsResponse = await groq.chat.completions.create({
+            messages: [
+              {
+                role: "user",
+                content: enhancedSignalsPrompt,
+              },
+            ],
+            model: "gemma2-9b-it",
+            temperature: 0.3,
+            max_tokens: 2048,
+            response_format: { type: "json_object" },
+          });
+
+          // Parse the enhanced signals
           const enhancedSignals = JSON.parse(
             enhancedSignalsResponse.choices[0]?.message?.content || "{}"
           );
@@ -709,17 +752,58 @@ export async function POST(request: Request) {
           console.log(
             "Successfully added enhanced market signals with real URLs"
           );
+
+          // If AI process fails, use direct mapping
         } catch (error) {
-          console.error("Error parsing enhanced signals:", error);
-          // Initialize empty arrays for new signal types if parsing fails
-          rawMarketSignals.trends = [];
-          rawMarketSignals.competitors = [];
-          rawMarketSignals.industry = [];
-          rawMarketSignals.funding = [];
+          console.error("Error generating enhanced signals:", error);
+
+          // Fallback: map SERP results directly to market signals
+          try {
+            const mapNewsToSignals = (
+              articles: any[],
+              type: "trend" | "competitor" | "industry" | "funding"
+            ) => {
+              return articles.map((article: any) => ({
+                title: article.title,
+                description: article.snippet,
+                url: article.link,
+                source: article.source,
+                date: article.date || new Date().toISOString(),
+                type: type,
+              }));
+            };
+
+            rawMarketSignals.trends = mapNewsToSignals(
+              trendArticles,
+              "trend"
+            ).slice(0, 5);
+            rawMarketSignals.competitors = mapNewsToSignals(
+              competitorArticles,
+              "competitor"
+            ).slice(0, 5);
+            rawMarketSignals.industry = mapNewsToSignals(
+              industryArticles,
+              "industry"
+            ).slice(0, 5);
+            rawMarketSignals.funding = mapNewsToSignals(
+              fundingArticles,
+              "funding"
+            ).slice(0, 5);
+
+            console.log("Using fallback mapping for additional market signals");
+          } catch (mappingError) {
+            console.error("Error in fallback mapping:", mappingError);
+            rawMarketSignals.trends = [];
+            rawMarketSignals.competitors = [];
+            rawMarketSignals.industry = [];
+            rawMarketSignals.funding = [];
+          }
         }
-      } catch (error) {
-        console.error("Error generating enhanced signals:", error);
-        // Initialize empty arrays for new signal types if generation fails
+      } catch (outerError) {
+        console.error(
+          "Error in outer block of enhanced signals generation:",
+          outerError
+        );
         rawMarketSignals.trends = [];
         rawMarketSignals.competitors = [];
         rawMarketSignals.industry = [];
@@ -747,10 +831,17 @@ export async function POST(request: Request) {
     Mission: ${missionName || ""}
     Market Signals: ${signals || ""}
     
+    IMPORTANT INSTRUCTIONS:
+    1. ONLY include items that are clearly relevant to the business idea
+    2. For content moderation ideas: focus on moderation tools, AI safety, content filtering, toxicity detection
+    3. For technology ideas: prioritize articles about the specific technology, not just any tech news
+    4. DISCARD generic tech news that has no connection to the business idea
+    5. ENSURE all selected items have at least one key concept from the idea description
+    
     Here are the collected market signals:
     ${JSON.stringify(rawMarketSignals)}
     
-    Please evaluate each signal and return only the most relevant ones in the same format.
+    Evaluate each signal and return only the most relevant ones in the same format.
     For each type (news, academic, patents), select up to 5-7 items that are most directly relevant to the business idea.
     Remove any that seem irrelevant, off-topic, or only tangentially related.
     
