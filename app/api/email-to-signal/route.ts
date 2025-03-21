@@ -416,25 +416,37 @@ Format your response as a JSON array of insight objects:
 
             const newInsights = JSON.parse(jsonContent);
 
-            // Combine with existing insights
+            // Combine with existing insights, ensuring we have valid arrays
             let existingInsights = [];
-            try {
-              if (ideaDetails && ideaDetails.insights) {
-                existingInsights = JSON.parse(ideaDetails.insights);
+            if (ideaDetails?.insights) {
+              try {
+                const parsed = JSON.parse(ideaDetails.insights);
+                // Verify that parsed data is an array
+                if (Array.isArray(parsed)) {
+                  existingInsights = parsed;
+                } else {
+                  console.error("Existing insights was not an array, resetting");
+                }
+              } catch (e) {
+                console.error("Error parsing existing insights:", e);
               }
-            } catch (e) {
-              console.error("Error parsing existing insights:", e);
             }
 
-            const combinedInsights = [...newInsights, ...existingInsights];
+            // Ensure newInsights is an array
+            const validNewInsights = Array.isArray(newInsights) ? newInsights : [];
+            const combinedInsights = [...validNewInsights, ...existingInsights].slice(0, 100); // Limit to last 100 insights
 
             // Update the idea with new insights
-            await supabase
+            const { error: updateError } = await supabase
               .from("ideas")
               .update({
                 insights: JSON.stringify(combinedInsights),
               })
               .eq("id", ideaId);
+
+            if (updateError) {
+              console.error("Error updating insights:", updateError);
+            }
           } catch (error) {
             console.error("Error updating insights:", error);
           }
