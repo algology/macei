@@ -219,7 +219,7 @@ export function MarketSignalsSection({
     switch (type) {
       case "academic":
         return <Book className="w-4 h-4 text-blue-400" />;
-      case "patent":
+      case "patents":
         return <Lightbulb className="w-4 h-4 text-yellow-400" />;
       case "trend":
         return <TrendingUp className="w-4 h-4 text-green-400" />;
@@ -274,7 +274,7 @@ export function MarketSignalsSection({
     const bgColors = {
       news: "bg-gray-500/20 text-gray-300 border-gray-800",
       academic: "bg-blue-500/20 text-blue-300 border-blue-900",
-      patent: "bg-yellow-500/20 text-yellow-300 border-yellow-900",
+      patents: "bg-yellow-500/20 text-yellow-300 border-yellow-900",
       trend: "bg-green-500/20 text-green-300 border-green-900",
       competitor: "bg-red-500/20 text-red-300 border-red-900",
       industry: "bg-purple-500/20 text-purple-300 border-purple-900",
@@ -331,7 +331,7 @@ export function MarketSignalsSection({
       icon: <DollarSign className="w-4 h-4" />,
     },
     { id: "academic", label: "Academic", icon: <Book className="w-4 h-4" /> },
-    { id: "patent", label: "Patents", icon: <Lightbulb className="w-4 h-4" /> },
+    { id: "patents", label: "Patents", icon: <Lightbulb className="w-4 h-4" /> },
   ];
 
   // Type guard to check if a category exists in our signals object
@@ -533,7 +533,7 @@ export function MarketSignalsSection({
                                       )
                                     : "Date not available"}
                                 </span>
-                                {signal.type === "patent" &&
+                                {signal.type === "patents" &&
                                   signal.patentNumber && (
                                     <>
                                       <span>•</span>

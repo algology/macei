@@ -108,7 +108,7 @@ export interface MarketSignal {
   type:
     | "news"
     | "academic"
-    | "patent"
+    | "patents"
     | "trend"
     | "competitor"
     | "industry"
