@@ -215,8 +215,8 @@ Always return valid JSON. Include all fields. Use "unknown" if you can't determi
               content: prompt,
             },
           ],
-          model: "qwen-2.5-coder-32b",
-          temperature: 0.2,
+          model: "mixtral-8x7b-32768",
+          temperature: 0.5,
           max_tokens: 2048,
         });
 
@@ -399,8 +399,8 @@ Format your response as a JSON array of insight objects:
               content: insightsPrompt,
             },
           ],
-          model: "qwen-2.5-coder-32b",
-          temperature: 0.2,
+          model: "mixtral-8x7b-32768",
+          temperature: 0.7,
           max_tokens: 2048,
         });
 
