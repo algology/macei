@@ -190,7 +190,7 @@ Important: Your response must be valid JSON.`;
           content: prompt,
         },
       ],
-      model: "mixtral-8x7b-32768",
+      model: "gemma2-9b-it",
       temperature: 0.7,
       max_tokens: 4096,
     });
