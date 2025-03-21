@@ -32,6 +32,10 @@ interface GraphData {
     id: string;
     name: string;
     mission_id: string;
+    document_count?: number;
+    briefing_count?: number;
+    signals?: string[];
+    last_briefing_date?: string;
   }>;
 }
 
@@ -51,11 +55,61 @@ export function KnowledgeGraph() {
     // Fetch all ideas
     const { data: ideas } = await supabase
       .from("ideas")
-      .select("id, name, mission_id");
+      .select("id, name, mission_id, signals");
+
+    // Enhanced ideas with additional information
+    const enhancedIdeas = await Promise.all(
+      (ideas || []).map(async (idea) => {
+        // Fetch document count
+        const { count: documentCount } = await supabase
+          .from("idea_documents")
+          .select("id", { count: "exact", head: true })
+          .eq("idea_id", idea.id);
+
+        // Fetch briefing count and latest briefing
+        const { data: briefings } = await supabase
+          .from("briefings")
+          .select("id, date_to")
+          .eq("idea_id", idea.id)
+          .order("date_to", { ascending: false });
+
+        // Parse signals if they exist
+        let parsedSignals = [];
+        try {
+          parsedSignals = idea.signals ? JSON.parse(idea.signals) : [];
+          // Handle both array and object formats
+          if (!Array.isArray(parsedSignals)) {
+            if (typeof parsedSignals === "object" && parsedSignals !== null) {
+              // If it's an object with categories, flatten all values into an array
+              parsedSignals = Object.values(parsedSignals).flat();
+            } else {
+              // If it's a string, split by commas
+              parsedSignals = idea.signals
+                .split(",")
+                .map((s: string) => s.trim());
+            }
+          }
+        } catch (error) {
+          console.error("Error parsing signals:", error);
+          // If parsing fails, try splitting by comma
+          parsedSignals = idea.signals
+            ? idea.signals.split(",").map((s: string) => s.trim())
+            : [];
+        }
+
+        return {
+          ...idea,
+          document_count: documentCount || 0,
+          briefing_count: briefings?.length || 0,
+          signals: parsedSignals,
+          last_briefing_date: briefings?.[0]?.date_to || null,
+        };
+      })
+    );
 
     return {
       organizations: organizations || [],
-      ideas: ideas || [],
+      ideas: enhancedIdeas || [],
     } as GraphData; // Type assertion since we know the structure matches
   }, []);
 
@@ -107,6 +161,11 @@ export function KnowledgeGraph() {
               data: {
                 label: idea.name,
                 icon: <Lightbulb className="w-4 h-4 text-yellow-400" />,
+                type: "idea",
+                document_count: idea.document_count,
+                briefing_count: idea.briefing_count,
+                signals: idea.signals,
+                last_briefing_date: idea.last_briefing_date,
               },
               position: { x: 700, y: ideaIndex * 100 },
               type: "entityNode",
@@ -172,6 +231,11 @@ export function KnowledgeGraph() {
               data: {
                 label: idea.name,
                 icon: <Lightbulb className="w-4 h-4 text-yellow-400" />,
+                type: "idea",
+                document_count: idea.document_count,
+                briefing_count: idea.briefing_count,
+                signals: idea.signals,
+                last_briefing_date: idea.last_briefing_date,
               },
               position: { x: 700, y: ideaIndex * 100 },
               type: "entityNode",
@@ -240,6 +304,11 @@ export function KnowledgeGraph() {
               data: {
                 label: idea.name,
                 icon: <Lightbulb className="w-4 h-4 text-yellow-400" />,
+                type: "idea",
+                document_count: idea.document_count,
+                briefing_count: idea.briefing_count,
+                signals: idea.signals,
+                last_briefing_date: idea.last_briefing_date,
               },
               position: { x: 700, y: ideaIndex * 100 },
               type: "entityNode",
