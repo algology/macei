@@ -10,6 +10,7 @@ import {
   ClipboardCopy,
   Check,
   Bookmark,
+  Lightbulb,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -57,6 +58,8 @@ export function BriefingNotes({
   } | null>(null);
   const [savingInsight, setSavingInsight] = useState(false);
   const selectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [suggestedSignals, setSuggestedSignals] = useState<string[]>([]);
+  const [addingSignal, setAddingSignal] = useState(false);
 
   useEffect(() => {
     fetchBriefings();
@@ -249,6 +252,11 @@ export function BriefingNotes({
       }
 
       const data = await response.json();
+      
+      // Set suggested signals from the response if available
+      if (data.suggested_signals && Array.isArray(data.suggested_signals)) {
+        setSuggestedSignals(data.suggested_signals.map((signal: unknown) => String(signal)));
+      }
 
       // Refresh the briefings list
       await fetchBriefings();
@@ -256,7 +264,9 @@ export function BriefingNotes({
     } catch (error) {
       console.error("Error generating briefing:", error);
       setError(
-        error instanceof Error ? error.message : "Failed to generate briefing"
+        error instanceof Error
+          ? error.message
+          : "An unknown error occurred"
       );
     } finally {
       setGenerating(false);
@@ -341,6 +351,72 @@ ${briefing.key_attributes.join(", ")}`;
           icon: <AlertCircle className="w-4 h-4" />,
         });
       });
+  }
+
+  async function addSignalToIdea(signal: string) {
+    try {
+      setAddingSignal(true);
+      
+      // First get current signals
+      const { data: ideaData, error: ideaError } = await supabase
+        .from("ideas")
+        .select("signals")
+        .eq("id", ideaId)
+        .single();
+        
+      if (ideaError) throw ideaError;
+      
+      // Parse current signals
+      let currentSignals: string[] = [];
+      try {
+        if (ideaData.signals) {
+          const parsed = JSON.parse(ideaData.signals);
+          if (Array.isArray(parsed)) {
+            currentSignals = parsed;
+          } else if (typeof parsed === 'object') {
+            // Handle case where signals might be stored as an object
+            currentSignals = Object.values(parsed).flat() as string[];
+          }
+        }
+      } catch (e) {
+        // If parsing fails, try splitting by comma
+        currentSignals = ideaData.signals
+          ? ideaData.signals.split(",").map((s: string) => s.trim())
+          : [];
+      }
+      
+      // Add the new signal if it doesn't already exist
+      if (!currentSignals.includes(signal)) {
+        currentSignals.push(signal);
+        
+        // Update the idea with the new signals
+        const { error: updateError } = await supabase
+          .from("ideas")
+          .update({
+            signals: JSON.stringify(currentSignals)
+          })
+          .eq("id", ideaId);
+          
+        if (updateError) throw updateError;
+        
+        // Remove from suggested signals
+        setSuggestedSignals(suggestedSignals.filter(s => s !== signal));
+        
+        toast.success(`Added "${signal}" to idea attributes`);
+        
+        // Notify parent if needed
+        if (onSwitchToInsights) {
+          onSwitchToInsights();
+        }
+      } else {
+        toast.info(`"${signal}" is already in your idea attributes`);
+      }
+    } catch (error) {
+      console.error("Error adding signal:", error);
+      toast.error("Failed to add signal to idea attributes");
+    } finally {
+      setAddingSignal(false);
+    }
   }
 
   if (loading) {
@@ -508,6 +584,31 @@ ${briefing.key_attributes.join(", ")}`;
                   </div>
                 </div>
               </div>
+
+              {suggestedSignals.length > 0 && briefings[0]?.id === briefing.id && (
+                <div className="mt-6 pt-4 border-t border-accent-2">
+                  <h5 className="text-base font-medium mb-2 flex items-center gap-2">
+                    <Lightbulb className="w-4 h-4 text-yellow-500" />
+                    Suggested New Market Signals
+                  </h5>
+                  <p className="text-sm text-gray-400 mb-3">
+                    These signals were identified as potentially relevant to your idea. Click to add them to your idea attributes.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestedSignals.map((signal, index) => (
+                      <button
+                        key={index}
+                        onClick={() => addSignalToIdea(signal)}
+                        disabled={addingSignal}
+                        className="px-3 py-1 bg-green-500/20 text-green-400 border border-green-900 rounded-lg hover:bg-green-500/30 transition-colors text-sm flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        {signal}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
