@@ -37,6 +37,7 @@ interface Briefing {
   }>;
   key_attributes: string[];
   created_at: string;
+  suggested_signals?: string[];
 }
 
 export function BriefingNotes({
@@ -195,7 +196,23 @@ export function BriefingNotes({
 
       if (error) throw error;
 
-      setBriefings(data || []);
+      // Process the briefings to ensure properly formatted data
+      const processedBriefings = (data || []).map(briefing => {
+        // Handle suggested_signals if present
+        if (briefing.suggested_signals) {
+          // Update suggestedSignals state if this is the most recent briefing
+          if (data && data.length > 0 && briefing.id === data[0].id) {
+            setSuggestedSignals(
+              Array.isArray(briefing.suggested_signals)
+                ? briefing.suggested_signals.map((signal: any) => String(signal))
+                : []
+            );
+          }
+        }
+        return briefing;
+      });
+
+      setBriefings(processedBriefings);
     } catch (error) {
       console.error("Error fetching briefings:", error);
       setError("Failed to fetch briefings");
