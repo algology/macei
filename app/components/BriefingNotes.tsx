@@ -524,7 +524,10 @@ ${briefing.key_attributes.join(", ")}`;
 
   // Helper function to get favicon URL for a domain
   const getFaviconUrl = (domain: string) => {
-    return `https://www.google.com/s2/favicons?sz=128&domain=https://${domain}`;
+    // Use Google's favicon service for consistent cross-environment behavior
+    // The double-encoding ensures special characters are properly handled
+    const encodedDomain = encodeURIComponent(`https://${domain}`);
+    return `https://www.google.com/s2/favicons?domain=${encodedDomain}&sz=32`;
   };
 
   if (loading) {
@@ -797,17 +800,28 @@ ${briefing.key_attributes.join(", ")}`;
                               <div className="relative overflow-hidden rounded-full">
                                 <div className="rounded-inherit absolute inset-0 bg-white"></div>
                                 <img
-                                  className="relative block"
+                                  className="relative block w-4 h-4 z-10"
                                   alt={`${urlStatus.domain} favicon`}
-                                  width="16"
-                                  height="16"
                                   src={getFaviconUrl(urlStatus.domain)}
-                                  style={{ width: "16px", height: "16px" }}
+                                  style={{ objectFit: "contain" }}
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).src =
-                                      "/favicon.ico";
+                                    // Try a direct favicon.ico approach as fallback
+                                    const target = e.target as HTMLImageElement;
+                                    const domain = urlStatus.domain;
+                                    target.onerror = () => {
+                                      // If that fails too, use a text fallback or local favicon
+                                      target.style.display = "none";
+                                      target.nextElementSibling?.classList.remove(
+                                        "hidden"
+                                      );
+                                    };
+                                    target.src = `https://${domain}/favicon.ico`;
                                   }}
                                 />
+                                {/* Text fallback for when image fails */}
+                                <div className="absolute inset-0 bg-gray-500 text-[8px] font-semibold text-white uppercase items-center justify-center hidden">
+                                  {urlStatus.domain.charAt(0)}
+                                </div>
                                 <div className="rounded-inherit absolute inset-0 border border-[rgba(0,0,0,0.1)] dark:border-transparent"></div>
                               </div>
                             </div>

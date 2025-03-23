@@ -33,6 +33,7 @@ body {
 
 .gradient-text {
   background: var(--accent-gradient);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -102,6 +103,7 @@ body {
 /* Tooltip styles */
 .selection-tooltip {
   animation: fade-in 0.2s ease-out;
+  z-index: 50;
 }
 
 /* Insight source badge */
@@ -125,4 +127,37 @@ body {
   background-color: rgba(75, 85, 99, 0.2);
   color: #9ca3af;
   border-color: rgba(75, 85, 99, 0.4);
+}
+
+/* Briefing styles */
+/* Ensure rounded corners properly inherit */
+.rounded-inherit {
+  border-radius: inherit;
+}
+
+/* Ensure favicon containers have proper stacking and visibility */
+.relative.overflow-hidden.rounded-full {
+  z-index: 10;
+  background-color: white;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure proper z-indexing for layers */
+.z-10 {
+  z-index: 10;
+}
+
+/* Prevent favicon image from being hidden behind other elements */
+img.relative.block {
+  position: relative;
+  z-index: 10;
+}
+
+/* Ensure proper spacing in the reading section */
+.mt-1\.5 {
+  margin-top: 0.375rem;
 }

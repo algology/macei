@@ -7,7 +7,7 @@ interface Props {
 export function LoadingSpinner({ className = "w-4 h-4" }: Props) {
   return (
     <svg
-      className={`animate-spin ${className}`}
+      className={`animate-spin text-current ${className}`}
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"
