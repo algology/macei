@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import Groq from "groq-sdk";
 import JSON5 from "json5";
-import { briefingEvents } from "../briefing-progress/route";
+import { briefingEvents } from "../../lib/briefingEvents";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
