@@ -810,15 +810,8 @@ ${briefing.key_attributes.join(", ")}`;
             {/* Progress UI */}
             {generating && (
               <div className="space-y-4 mb-4 bg-accent-1/30 rounded-lg p-4 border border-accent-2">
-                <div className="flex items-center gap-2">
-                  <LoadingSpinner className="w-4 h-4" />
-                  <p className="text-sm text-gray-300">
-                    Generating briefing...
-                  </p>
-                </div>
-
                 {searchQuery && (
-                  <div className="mt-1.5">
+                  <div>
                     <div className="mb-1 text-xs text-gray-400">
                       <span>Searching</span>
                     </div>
@@ -834,7 +827,7 @@ ${briefing.key_attributes.join(", ")}`;
                 )}
 
                 {urlsBeingProcessed.length > 0 && (
-                  <div className="mt-1.5">
+                  <div className={searchQuery ? "mt-3" : ""}>
                     <div className="mb-1 text-xs text-gray-400">
                       <span>Reading</span>
                     </div>
@@ -901,7 +894,7 @@ ${briefing.key_attributes.join(", ")}`;
                 {generating ? (
                   <>
                     <LoadingSpinner className="w-4 h-4" />
-                    Generating...
+                    Working...
                   </>
                 ) : (
                   <>
