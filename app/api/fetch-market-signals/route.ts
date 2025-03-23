@@ -9,6 +9,38 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+// Define JSON schemas for expected response formats
+const searchQueriesSchema = {
+  newsQuery: "string",
+  academicQuery: "string",
+  patentQuery: "string",
+  trendQuery: "string",
+  competitorQuery: "string",
+  industryQuery: "string",
+  fundingQuery: "string",
+  keyPhrases: ["string"],
+};
+
+// Helper function to validate JSON before parsing
+function safeJsonParse(jsonString: string, fallback: any = {}) {
+  try {
+    // Basic structural validation
+    if (
+      !jsonString ||
+      typeof jsonString !== "string" ||
+      !jsonString.trim().startsWith("{") ||
+      !jsonString.trim().endsWith("}")
+    ) {
+      console.error("Invalid JSON structure:", jsonString?.slice(0, 100));
+      return fallback;
+    }
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error("JSON parse error:", error);
+    return fallback;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     console.log("API Keys available:", {
@@ -55,35 +87,48 @@ export async function POST(request: Request) {
     
     For example, if this is about "content moderation with AI", use specific terms like "AI content moderation tools", "machine learning toxic content detection", "automated moderation systems".
     
-    Format your response in JSON like this:
-    {
-      "newsQuery": "search query for news articles",
-      "academicQuery": "search query for academic papers",
-      "patentQuery": "search query for patents",
-      "trendQuery": "search query for market trends",
-      "competitorQuery": "search query for competitor information",
-      "industryQuery": "search query for industry reports",
-      "fundingQuery": "search query for funding/investment news",
-      "keyPhrases": ["phrase1", "phrase2", "phrase3", "phrase4", "phrase5"]
-    }`;
+    The JSON object MUST use this exact schema and types:
+    ${JSON.stringify(searchQueriesSchema, null, 2)}
+    
+    When generating the JSON:
+    1. Ensure all values are valid strings
+    2. For arrays, ensure all elements are strings
+    3. Do not include any comments or additional keys
+    4. Use short, focused search terms (under 100 characters each)
+    `;
 
     // Call Groq API to generate optimized search queries
     const queryCompletion = await groq.chat.completions.create({
       messages: [
         {
+          role: "system",
+          content:
+            "You are a search query generator that produces clean, valid JSON. Your JSON output must strictly follow the provided schema with no additional fields.",
+        },
+        {
           role: "user",
           content: searchPrompt,
         },
       ],
-      model: "gemma2-9b-it",
-      temperature: 0.2,
+      model: "gemma2-9b-it", // Using llama3-70b, which is better for JSON generation
+      temperature: 0, // Zero temperature for deterministic output
       max_tokens: 1024,
       response_format: { type: "json_object" },
     });
 
-    // Parse the generated queries
-    const searchQueries = JSON.parse(
-      queryCompletion.choices[0]?.message?.content || "{}"
+    // Parse the generated queries with validation
+    const searchQueries = safeJsonParse(
+      queryCompletion.choices[0]?.message?.content || "{}",
+      {
+        newsQuery: "",
+        academicQuery: "",
+        patentQuery: "",
+        trendQuery: "",
+        competitorQuery: "",
+        industryQuery: "",
+        fundingQuery: "",
+        keyPhrases: [],
+      }
     );
 
     if (
@@ -242,18 +287,15 @@ export async function POST(request: Request) {
       // Create an array of different fallback queries to try
       const fallbackQueries = [
         // Use key phrases
-        searchQueries.keyPhrases
-          ? searchQueries.keyPhrases.slice(0, 2).join(" OR ")
-          : null,
+        searchQueries.keyPhrases ? searchQueries.keyPhrases.join(" OR ") : null,
 
-        // Try broader industry terms
-        `${category || ideaName || ""} industry`,
-
-        // Try business-focused query
-        `${ideaName || category || ""} business`,
-
-        // Try technology-focused query
-        `${ideaName || category || ""} technology`,
+        // Use more generic searches based on category or idea
+        `${category || ideaName || ""} industry trends`,
+        `${category || ideaName || ""} latest developments`,
+        `${ideaName || category || ""} business news`,
+        `${ideaName || category || ""} technology news`,
+        `${category || ""} innovations`,
+        `${(ideaName || "").split(" ")[0] || category || ""} news`, // Try with just first word
 
         // Try general term
         ideaName || category || missionName || "technology news",
@@ -557,9 +599,29 @@ export async function POST(request: Request) {
       ...(searchQueries.keyPhrases || []).map((p: string) => p.toLowerCase()),
     ].filter(Boolean);
 
-    // Filter out obviously irrelevant results based on keywords
-    if (ideaKeywords.length > 0) {
-      // Filter news articles for relevance
+    // Make keyword matching less aggressive by using partial matching
+    function hasRelevance(text: string, keywords: string[]): boolean {
+      // If we have no keywords, consider everything relevant
+      if (keywords.length === 0 || !keywords[0]) return true;
+
+      // Break down the text into words for more flexible matching
+      const textWords = text.toLowerCase().split(/\s+/);
+
+      // Check if any keyword partially matches any word in the text
+      return keywords.some((keyword) => {
+        if (keyword.length < 3) return true; // Skip very short keywords
+        return (
+          text.toLowerCase().includes(keyword) ||
+          textWords.some(
+            (word) => word.includes(keyword) || keyword.includes(word)
+          )
+        );
+      });
+    }
+
+    // Apply initial keyword-based filtering to base results
+    if (ideaKeywords.length > 0 && ideaKeywords[0]) {
+      // Filter news articles for relevance, but keep more results
       rawMarketSignals.news = rawMarketSignals.news.filter((article) => {
         const text = (
           article.title +
@@ -567,13 +629,13 @@ export async function POST(request: Request) {
           (article.description || "")
         ).toLowerCase();
         return (
-          ideaKeywords.some((keyword) => text.includes(keyword)) ||
-          // If no matches, keep the top 5 as they might still be relevant
-          rawMarketSignals.news.indexOf(article) < 5
+          hasRelevance(text, ideaKeywords) ||
+          // If no matches, keep the top 8 as they might still be relevant
+          rawMarketSignals.news.indexOf(article) < 8
         );
       });
 
-      // Filter academic papers for relevance
+      // Filter academic papers for relevance, but keep more results
       rawMarketSignals.academic = rawMarketSignals.academic.filter((paper) => {
         const text = (
           paper.title +
@@ -581,13 +643,13 @@ export async function POST(request: Request) {
           (paper.description || "")
         ).toLowerCase();
         return (
-          ideaKeywords.some((keyword) => text.includes(keyword)) ||
-          // If no matches, keep the top 3 as they might still be relevant
-          rawMarketSignals.academic.indexOf(paper) < 3
+          hasRelevance(text, ideaKeywords) ||
+          // If no matches, keep the top 5 as they might still be relevant
+          rawMarketSignals.academic.indexOf(paper) < 5
         );
       });
 
-      // Filter patents for relevance
+      // Filter patents for relevance, but keep more results
       rawMarketSignals.patents = rawMarketSignals.patents.filter((patent) => {
         const text = (
           patent.title +
@@ -595,9 +657,9 @@ export async function POST(request: Request) {
           (patent.description || "")
         ).toLowerCase();
         return (
-          ideaKeywords.some((keyword) => text.includes(keyword)) ||
-          // If no matches, keep the top 3 as they might still be relevant
-          rawMarketSignals.patents.indexOf(patent) < 3
+          hasRelevance(text, ideaKeywords) ||
+          // If no matches, keep the top 5 as they might still be relevant
+          rawMarketSignals.patents.indexOf(patent) < 5
         );
       });
     }
@@ -605,9 +667,7 @@ export async function POST(request: Request) {
     // Generate additional market signals using AI combined with real API data
     if (rawMarketSignals.news.length > 0) {
       try {
-        console.log(
-          "Generating additional market signals using real API data + AI analysis"
-        );
+        console.log("Fetching additional categories of market signals");
 
         // First, fetch additional data from real APIs for the enhanced signals
         const additionalDataPromises = [
@@ -652,158 +712,53 @@ export async function POST(request: Request) {
           fundingResults,
         ] = await Promise.all(additionalDataPromises);
 
-        // Collect real articles from the APIs
-        const trendArticles = trendResults.news_results || [];
-        const competitorArticles = competitorResults.news_results || [];
-        const industryArticles = industryResults.news_results || [];
-        const fundingArticles = fundingResults.news_results || [];
-
-        // AI enhancement process...
-        try {
-          // Only use AI to analyze and categorize these real results, not for generating URLs
-          const enhancedSignalsPrompt = `
-          Analyze and categorize these articles for a business idea: "${
-            ideaName || ""
-          }".
-          Category: ${category || ""}
-          
-          Categorize them into: Market Trends, Competitors, Industry Analysis, and Funding.
-          
-          For each article:
-          - Keep original title, snippet (as description), link (as url), source, and date
-          - Add type field: "trend", "competitor", "industry", or "funding"
-          
-          TREND ARTICLES:
-          ${JSON.stringify(trendArticles.slice(0, 5))}
-          
-          COMPETITOR ARTICLES:
-          ${JSON.stringify(competitorArticles.slice(0, 5))}
-          
-          INDUSTRY ARTICLES:
-          ${JSON.stringify(industryArticles.slice(0, 5))}
-          
-          FUNDING ARTICLES:
-          ${JSON.stringify(fundingArticles.slice(0, 5))}
-          
-          Format response as JSON:
-          {
-            "trends": [
-              {
-                "title": "Original title",
-                "description": "Original snippet",
-                "url": "Original link",
-                "source": "Original source",
-                "date": "Original date",
-                "type": "trend"
-              }
-            ],
-            "competitors": [...],
-            "industry": [...],
-            "funding": [...]
-          }
-          
-          Only include relevant articles. Return empty arrays for categories with no relevant articles.`;
-
-          // Call Groq to analyze and categorize the real articles
-          const enhancedSignalsResponse = await groq.chat.completions.create({
-            messages: [
-              {
-                role: "user",
-                content: enhancedSignalsPrompt,
-              },
-            ],
-            model: "gemma2-9b-it",
-            temperature: 0.3,
-            max_tokens: 2048,
-            response_format: { type: "json_object" },
-          });
-
-          // Parse the enhanced signals
-          const enhancedSignals = JSON.parse(
-            enhancedSignalsResponse.choices[0]?.message?.content || "{}"
-          );
-
-          // Use the AI-categorized results but with real URLs from the API responses
-          if (enhancedSignals.trends && Array.isArray(enhancedSignals.trends)) {
-            rawMarketSignals.trends = enhancedSignals.trends;
-          }
-
-          if (
-            enhancedSignals.competitors &&
-            Array.isArray(enhancedSignals.competitors)
-          ) {
-            rawMarketSignals.competitors = enhancedSignals.competitors;
-          }
-
-          if (
-            enhancedSignals.industry &&
-            Array.isArray(enhancedSignals.industry)
-          ) {
-            rawMarketSignals.industry = enhancedSignals.industry;
-          }
-
-          if (
-            enhancedSignals.funding &&
-            Array.isArray(enhancedSignals.funding)
-          ) {
-            rawMarketSignals.funding = enhancedSignals.funding;
-          }
-
-          console.log(
-            "Successfully added enhanced market signals with real URLs"
-          );
-
-          // If AI process fails, use direct mapping
-        } catch (error) {
-          console.error("Error generating enhanced signals:", error);
-
-          // Fallback: map SERP results directly to market signals
-          try {
-            const mapNewsToSignals = (
-              articles: any[],
-              type: "trend" | "competitor" | "industry" | "funding"
-            ) => {
-              return articles.map((article: any) => ({
-                title: article.title,
-                description: article.snippet,
-                url: article.link,
-                source: article.source,
-                date: article.date || new Date().toISOString(),
-                type: type,
-              }));
-            };
-
-            rawMarketSignals.trends = mapNewsToSignals(
-              trendArticles,
-              "trend"
-            ).slice(0, 5);
-            rawMarketSignals.competitors = mapNewsToSignals(
-              competitorArticles,
-              "competitor"
-            ).slice(0, 5);
-            rawMarketSignals.industry = mapNewsToSignals(
-              industryArticles,
-              "industry"
-            ).slice(0, 5);
-            rawMarketSignals.funding = mapNewsToSignals(
-              fundingArticles,
-              "funding"
-            ).slice(0, 5);
-
-            console.log("Using fallback mapping for additional market signals");
-          } catch (mappingError) {
-            console.error("Error in fallback mapping:", mappingError);
-            rawMarketSignals.trends = [];
-            rawMarketSignals.competitors = [];
-            rawMarketSignals.industry = [];
-            rawMarketSignals.funding = [];
-          }
-        }
-      } catch (outerError) {
-        console.error(
-          "Error in outer block of enhanced signals generation:",
-          outerError
+        // DIRECT MAPPING: Map results directly to their categories, skipping AI enhancement entirely
+        console.log(
+          "Using direct mapping for additional market signals (skipping AI)"
         );
+
+        const mapNewsToType = (
+          articles: any[],
+          type: "trend" | "competitor" | "industry" | "funding"
+        ): MarketSignal[] => {
+          return (articles || [])
+            .map((article: any) => ({
+              title: String(article.title || ""),
+              description: String(article.snippet || ""),
+              url: validateUrl(String(article.link || "")),
+              source: String(article.source || ""),
+              date: String(article.date || new Date().toISOString()),
+              type: type,
+            }))
+            .slice(0, 8); // Allow up to 8 results per category
+        };
+
+        // Map directly without AI filtering
+        rawMarketSignals.trends = mapNewsToType(
+          trendResults.news_results,
+          "trend"
+        );
+
+        rawMarketSignals.competitors = mapNewsToType(
+          competitorResults.news_results,
+          "competitor"
+        );
+
+        rawMarketSignals.industry = mapNewsToType(
+          industryResults.news_results,
+          "industry"
+        );
+
+        rawMarketSignals.funding = mapNewsToType(
+          fundingResults.news_results,
+          "funding"
+        );
+
+        console.log(
+          "Successfully added all market signal categories through direct mapping"
+        );
+      } catch (error) {
+        console.error("Error in market signals generation:", error);
         rawMarketSignals.trends = [];
         rawMarketSignals.competitors = [];
         rawMarketSignals.industry = [];
@@ -817,125 +772,47 @@ export async function POST(request: Request) {
       rawMarketSignals.funding = [];
     }
 
-    if (totalResults <= 6) {
+    // Increase this threshold to allow more results to be returned unfiltered
+    if (totalResults <= 15) {
       return Response.json({ signals: rawMarketSignals });
     }
 
-    // Use AI to evaluate and filter the most relevant results
-    const filteringPrompt = `
-    I have collected market signals related to a business idea. Help me identify which ones are most relevant and useful.
-    
-    Idea Name: ${ideaName || ""}
-    Category: ${category || ""}
-    Organization: ${organizationName || ""}
-    Mission: ${missionName || ""}
-    Market Signals: ${signals || ""}
-    
-    IMPORTANT INSTRUCTIONS:
-    1. ONLY include items that are clearly relevant to the business idea
-    2. For content moderation ideas: focus on moderation tools, AI safety, content filtering, toxicity detection
-    3. For technology ideas: prioritize articles about the specific technology, not just any tech news
-    4. DISCARD generic tech news that has no connection to the business idea
-    5. ENSURE all selected items have at least one key concept from the idea description
-    
-    Here are the collected market signals:
-    ${JSON.stringify(rawMarketSignals)}
-    
-    Evaluate each signal and return only the most relevant ones in the same format.
-    For each type (news, academic, patents), select up to 5-7 items that are most directly relevant to the business idea.
-    Remove any that seem irrelevant, off-topic, or only tangentially related.
-    
-    Format your response STRICTLY as valid JSON like this:
-    {
-      "news": [],
-      "academic": [],
-      "patents": [],
-      "trends": [],
-      "competitors": [],
-      "industry": [],
-      "funding": []
-    }
-    
-    IMPORTANT: Ensure your response is valid JSON that can be parsed. Check that all arrays have proper commas between elements and all objects have proper closing braces.`;
+    // DIRECT FILTERING: Apply simple keyword-based filtering instead of using AI
+    console.log("Using direct keyword-based filtering (skipping AI filtering)");
 
-    // Call Groq API to filter results
-    console.log("About to call Groq API for filtering...");
-    try {
-      const filteringCompletion = await groq.chat.completions.create({
-        messages: [
-          {
-            role: "user",
-            content: filteringPrompt,
-          },
-        ],
-        model: "gemma2-9b-it",
-        temperature: 0.1,
-        max_tokens: 2048,
-        response_format: { type: "json_object" },
-      });
+    // Filter helper function that uses our existing hasRelevance function
+    const filterByRelevance = (
+      signals: MarketSignal[],
+      limit: number
+    ): MarketSignal[] => {
+      return signals
+        .filter((signal) => {
+          const text = (
+            signal.title +
+            " " +
+            (signal.description || "")
+          ).toLowerCase();
+          return (
+            hasRelevance(text, ideaKeywords) ||
+            signals.indexOf(signal) < Math.ceil(limit / 2)
+          ); // Keep at least half
+        })
+        .slice(0, limit);
+    };
 
-      // Parse the filtered results
-      try {
-        const filteredSignals = JSON.parse(
-          filteringCompletion.choices[0]?.message?.content || "{}"
-        );
+    // Create a filtered version of the signals using direct filtering
+    const marketSignals = {
+      news: filterByRelevance(rawMarketSignals.news, 10),
+      academic: filterByRelevance(rawMarketSignals.academic, 8),
+      patents: filterByRelevance(rawMarketSignals.patents, 8),
+      trends: filterByRelevance(rawMarketSignals.trends, 8),
+      competitors: filterByRelevance(rawMarketSignals.competitors, 8),
+      industry: filterByRelevance(rawMarketSignals.industry, 8),
+      funding: filterByRelevance(rawMarketSignals.funding, 8),
+    };
 
-        // Make sure we have all categories, even if empty
-        const marketSignals = {
-          news: Array.isArray(filteredSignals.news)
-            ? filteredSignals.news
-            : rawMarketSignals.news,
-          academic: Array.isArray(filteredSignals.academic)
-            ? filteredSignals.academic
-            : rawMarketSignals.academic,
-          patents: Array.isArray(filteredSignals.patents)
-            ? filteredSignals.patents
-            : rawMarketSignals.patents,
-          trends: Array.isArray(filteredSignals.trends)
-            ? filteredSignals.trends
-            : rawMarketSignals.trends,
-          competitors: Array.isArray(filteredSignals.competitors)
-            ? filteredSignals.competitors
-            : rawMarketSignals.competitors,
-          industry: Array.isArray(filteredSignals.industry)
-            ? filteredSignals.industry
-            : rawMarketSignals.industry,
-          funding: Array.isArray(filteredSignals.funding)
-            ? filteredSignals.funding
-            : rawMarketSignals.funding,
-        };
-
-        // If any category is empty after filtering, use the raw results for that category
-        if (
-          marketSignals.news.length === 0 &&
-          rawMarketSignals.news.length > 0
-        ) {
-          marketSignals.news = rawMarketSignals.news.slice(0, 7);
-        }
-        if (
-          marketSignals.academic.length === 0 &&
-          rawMarketSignals.academic.length > 0
-        ) {
-          marketSignals.academic = rawMarketSignals.academic.slice(0, 5);
-        }
-        if (
-          marketSignals.patents.length === 0 &&
-          rawMarketSignals.patents.length > 0
-        ) {
-          marketSignals.patents = rawMarketSignals.patents.slice(0, 5);
-        }
-
-        return Response.json({ signals: marketSignals });
-      } catch (error) {
-        console.error("Error parsing filtered signals:", error);
-        // Fallback to raw results if parsing fails
-        return Response.json({ signals: rawMarketSignals });
-      }
-    } catch (error) {
-      console.error("Error in Groq filtering call:", error);
-      // Fallback to raw results if the API call fails
-      return Response.json({ signals: rawMarketSignals });
-    }
+    // Return the directly filtered signals
+    return Response.json({ signals: marketSignals });
   } catch (error) {
     console.error("Error fetching market signals:", error);
     return Response.json(
