@@ -21,6 +21,8 @@ interface Props {
   ideaName: string;
   onInsightAdded?: () => void;
   onSwitchToInsights?: () => void;
+  onIdeaUpdated?: () => void;
+  onSwitchToAttributes?: () => void;
 }
 
 interface Briefing {
@@ -33,7 +35,7 @@ interface Briefing {
   details: Array<{
     summary: string;
     url: string;
-    country: string;
+    emoji: string;
   }>;
   key_attributes: string[];
   created_at: string;
@@ -45,6 +47,8 @@ export function BriefingNotes({
   ideaName,
   onInsightAdded,
   onSwitchToInsights,
+  onIdeaUpdated,
+  onSwitchToAttributes,
 }: Props) {
   const [briefings, setBriefings] = useState<Briefing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,14 +201,16 @@ export function BriefingNotes({
       if (error) throw error;
 
       // Process the briefings to ensure properly formatted data
-      const processedBriefings = (data || []).map(briefing => {
+      const processedBriefings = (data || []).map((briefing) => {
         // Handle suggested_signals if present
         if (briefing.suggested_signals) {
           // Update suggestedSignals state if this is the most recent briefing
           if (data && data.length > 0 && briefing.id === data[0].id) {
             setSuggestedSignals(
               Array.isArray(briefing.suggested_signals)
-                ? briefing.suggested_signals.map((signal: any) => String(signal))
+                ? briefing.suggested_signals.map((signal: any) =>
+                    String(signal)
+                  )
                 : []
             );
           }
@@ -269,10 +275,12 @@ export function BriefingNotes({
       }
 
       const data = await response.json();
-      
+
       // Set suggested signals from the response if available
       if (data.suggested_signals && Array.isArray(data.suggested_signals)) {
-        setSuggestedSignals(data.suggested_signals.map((signal: unknown) => String(signal)));
+        setSuggestedSignals(
+          data.suggested_signals.map((signal: unknown) => String(signal))
+        );
       }
 
       // Refresh the briefings list
@@ -281,9 +289,7 @@ export function BriefingNotes({
     } catch (error) {
       console.error("Error generating briefing:", error);
       setError(
-        error instanceof Error
-          ? error.message
-          : "An unknown error occurred"
+        error instanceof Error ? error.message : "An unknown error occurred"
       );
     } finally {
       setGenerating(false);
@@ -345,7 +351,7 @@ ${briefing.summary}
 Details:
 ${briefing.details
   .map(
-    (detail) => `${detail.country} - ${detail.summary}
+    (detail) => `${detail.emoji} - ${detail.summary}
 Source: ${detail.url}`
   )
   .join("\n\n")}
@@ -373,16 +379,16 @@ ${briefing.key_attributes.join(", ")}`;
   async function addSignalToIdea(signal: string) {
     try {
       setAddingSignal(true);
-      
+
       // First get current signals
       const { data: ideaData, error: ideaError } = await supabase
         .from("ideas")
         .select("signals")
         .eq("id", ideaId)
         .single();
-        
+
       if (ideaError) throw ideaError;
-      
+
       // Parse current signals
       let currentSignals: string[] = [];
       try {
@@ -390,7 +396,7 @@ ${briefing.key_attributes.join(", ")}`;
           const parsed = JSON.parse(ideaData.signals);
           if (Array.isArray(parsed)) {
             currentSignals = parsed;
-          } else if (typeof parsed === 'object') {
+          } else if (typeof parsed === "object") {
             // Handle case where signals might be stored as an object
             currentSignals = Object.values(parsed).flat() as string[];
           }
@@ -401,29 +407,35 @@ ${briefing.key_attributes.join(", ")}`;
           ? ideaData.signals.split(",").map((s: string) => s.trim())
           : [];
       }
-      
+
       // Add the new signal if it doesn't already exist
       if (!currentSignals.includes(signal)) {
         currentSignals.push(signal);
-        
+
         // Update the idea with the new signals
         const { error: updateError } = await supabase
           .from("ideas")
           .update({
-            signals: JSON.stringify(currentSignals)
+            signals: JSON.stringify(currentSignals),
           })
           .eq("id", ideaId);
-          
+
         if (updateError) throw updateError;
-        
+
         // Remove from suggested signals
-        setSuggestedSignals(suggestedSignals.filter(s => s !== signal));
-        
+        setSuggestedSignals(suggestedSignals.filter((s) => s !== signal));
+
         toast.success(`Added "${signal}" to idea attributes`);
-        
-        // Notify parent if needed
-        if (onSwitchToInsights) {
-          onSwitchToInsights();
+
+        // Notify parent components of the update
+        if (onIdeaUpdated) {
+          onIdeaUpdated();
+        }
+
+        // Navigate to the attributes tab instead of insights
+        // Check if parent has defined a way to navigate to attributes tab
+        if (onSwitchToAttributes) {
+          onSwitchToAttributes();
         }
       } else {
         toast.info(`"${signal}" is already in your idea attributes`);
@@ -569,7 +581,7 @@ ${briefing.key_attributes.join(", ")}`;
                         className="bg-accent-1/50 rounded p-3 text-sm text-gray-300 selectable-text"
                       >
                         <div className="flex items-start gap-2">
-                          <span>{detail.country}</span>
+                          <span>{detail.emoji}</span>
                           <div>
                             <p>{detail.summary}</p>
                             <a
@@ -588,7 +600,9 @@ ${briefing.key_attributes.join(", ")}`;
                 </div>
 
                 <div>
-                  <h5 className="text-sm font-medium mb-2">Key Attributes</h5>
+                  <h5 className="text-sm font-medium mb-2">
+                    Key Attributes Used
+                  </h5>
                   <div className="flex flex-wrap gap-2">
                     {briefing.key_attributes.map((attribute, index) => (
                       <span
@@ -602,30 +616,32 @@ ${briefing.key_attributes.join(", ")}`;
                 </div>
               </div>
 
-              {suggestedSignals.length > 0 && briefings[0]?.id === briefing.id && (
-                <div className="mt-6 pt-4 border-t border-accent-2">
-                  <h5 className="text-base font-medium mb-2 flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4 text-yellow-500" />
-                    Suggested New Market Signals
-                  </h5>
-                  <p className="text-sm text-gray-400 mb-3">
-                    These signals were identified as potentially relevant to your idea. Click to add them to your idea attributes.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestedSignals.map((signal, index) => (
-                      <button
-                        key={index}
-                        onClick={() => addSignalToIdea(signal)}
-                        disabled={addingSignal}
-                        className="px-3 py-1 bg-green-500/20 text-green-400 border border-green-900 rounded-lg hover:bg-green-500/30 transition-colors text-sm flex items-center gap-1"
-                      >
-                        <Plus className="w-3 h-3" />
-                        {signal}
-                      </button>
-                    ))}
+              {suggestedSignals.length > 0 &&
+                briefings[0]?.id === briefing.id && (
+                  <div className="mt-6 pt-4 border-t border-accent-2">
+                    <h5 className="text-base font-medium mb-2 flex items-center gap-2">
+                      <Lightbulb className="w-4 h-4 text-yellow-500" />
+                      Suggested New Market Signals
+                    </h5>
+                    <p className="text-sm text-gray-400 mb-3">
+                      These signals were identified as potentially relevant to
+                      your idea. Click to add them to your idea attributes.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedSignals.map((signal, index) => (
+                        <button
+                          key={index}
+                          onClick={() => addSignalToIdea(signal)}
+                          disabled={addingSignal}
+                          className="px-3 py-1 bg-green-500/20 text-green-400 border border-green-900 rounded-lg hover:bg-green-500/30 transition-colors text-sm flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          {signal}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           ))}
         </div>

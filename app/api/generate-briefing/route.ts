@@ -192,14 +192,20 @@ THE RESPONSE MUST BE A VALID JSON OBJECT WITH THIS EXACT STRUCTURE:
   "impact_analysis": "string with detailed analysis of how recent developments impact the idea's viability",
   "summary": "string with 5-6 sentences highlighting specific quantitative data, major announcements, policy shifts, and technological innovations",
   "details": [
-    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "country": "🇺🇸"},
-    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "country": "🇬🇧"},
-    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "country": "🌐"},
-    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "country": "🇪🇺"},
-    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "country": "🇨🇦"}
+    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "🔍"},
+    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "📊"},
+    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "🏭"},
+    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "🌱"},
+    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "💡"}
   ],
   "key_attributes": ["string1", "string2", "string3", "string4", "string5"],
-  "suggested_signals": ["string1", "string2", "string3", "string4", "string5"]
+  "suggested_signals": [
+    "carbon capture technology investment",
+    "geological storage innovations",
+    "carbon pricing policy changes",
+    "oil and gas industry transition strategies",
+    "corporate carbon neutrality commitments"
+  ]
 }
 `;
 }
@@ -228,21 +234,38 @@ IMPORTANT BRIEFING GUIDELINES:
 
 3. DETAILS SECTION:
    - For each source, include a concise 1-2 sentence summary that captures the KEY NOVEL INSIGHT
-   - Use proper country flag emojis (🇺🇸, 🇬🇧, 🇪🇺, 🇨🇦, 🇨🇳, 🇦🇺, etc.) representing the primary country
-   - Use 🌐 for global insights with no specific country focus
+   - Choose an appropriate emoji for each detail that represents the content theme:
+     * Use 📊 for market data, statistics, or financial information
+     * Use 🏭 for industry news or manufacturing developments
+     * Use 🔬 for research or scientific breakthroughs
+     * Use 📱 for technology or innovation news
+     * Use 📈 for growth or investment trends
+     * Use 🌱 for sustainability or environmental developments
+     * Use 🏛️ for regulatory or policy news
+     * Use 💡 for new ideas or concept innovations
+     * Use relevant emojis for other categories
    - Include working URLs to the original sources
 
 4. KEY ATTRIBUTES SECTION:
    - Note: The key attributes will be taken from the idea's existing attributes, so whatever you put here will be ignored
    - Just include some placeholder values
 
+5. SUGGESTED SIGNALS SECTION:
+   - This section is VERY IMPORTANT
+   - Based on your analysis of the market data, suggest 5-8 SPECIFIC new market signals that would be valuable to track
+   - These should be concrete, specific terms (NOT generic categories like "technology trends")
+   - Each signal should be directly relevant to the idea and current market developments
+   - DO NOT use placeholders - suggest real, meaningful signals based on gaps in the current market research
+   - Examples: "carbon capture efficiency improvements", "corporate ESG investment trends", "renewable energy storage costs"
+
 ${createJsonStructurePrompt()}
 
 OUTPUT REQUIREMENTS:
 1. ONLY output valid JSON - no markdown, no explanations
 2. Ensure all URLs in the details section are real URLs from the provided context
-3. Use proper country emoji flags - not text characters or malformed symbols
-4. The details section should contain exactly 5 items`;
+3. Use appropriate thematic emojis instead of flag emojis
+4. The details section should contain exactly 5 items
+5. The suggested_signals section must contain 5-8 meaningful, specific market signals to track (not placeholders)`;
 }
 
 // Helper function to prepare URL content in a more structured format
@@ -327,50 +350,144 @@ ${idea.category ? `CATEGORY: ${idea.category}` : ""}
 IMPORTANT GUIDELINES:
 1. Impact Analysis: Analyze how market developments strengthen or challenge the idea (don't just restate the idea)
 2. Summary: Provide 5-6 specific, data-driven sentences with novel insights
-3. Details: Include 5 items with proper country flag emojis (🇺🇸, 🇬🇧, 🇪🇺, 🇨🇦, 🌐)
+3. Details: Include 5 items with appropriate thematic emojis (📊 for data, 🏭 for industry, 🔬 for research, etc.)
 4. Key Attributes: These will be taken from the existing idea, just include placeholders
-5. Suggested Signals: Recommend market signals to track
+5. Suggested Signals: Provide 5-8 SPECIFIC new market signals to track based on the idea - these must be concrete terms, not placeholders
 
 ${createJsonStructurePrompt()}
 
-CRITICAL: Your entire response must be ONLY valid JSON with no additional text.`;
+CRITICAL: Your entire response must be ONLY valid JSON with no additional text.
+CRITICAL: The suggested_signals must be actual specific market signals (like "hydrogen fuel cell efficiency improvements"), not placeholders like "string1".`;
 }
 
-// Helper function to ensure proper emoji flags in details
+// Helper function to ensure proper thematic emojis in details
 function ensureProperEmojis(details: any[]) {
   if (!Array.isArray(details)) return [];
 
+  // Define a set of valid thematic emojis
   const validEmojis = [
-    "🇺🇸",
-    "🇬🇧",
-    "🇪🇺",
-    "🇨🇦",
-    "🇨🇳",
-    "🇯🇵",
-    "🇩🇪",
-    "🇫🇷",
-    "🇮🇳",
-    "🇦🇺",
-    "🇧🇷",
-    "🇷🇺",
-    "🌐",
+    "📊", // charts, data, statistics
+    "🏭", // industry, manufacturing
+    "🔬", // research, science
+    "📱", // technology, digital
+    "📈", // growth, trends
+    "🌱", // sustainability, environment
+    "🏛️", // regulation, policy
+    "💡", // ideas, innovation
+    "🔍", // insights, analysis
+    "🤝", // partnerships, deals
+    "💰", // finance, funding
+    "🔋", // energy
+    "🛢️", // oil, fossil fuels
+    "⚡", // electricity, power
+    "🚀", // startups, launch
+    "🧪", // testing, experiments
+    "🌐", // global, internet
   ];
-  const defaultEmoji = "🌐";
+  const defaultEmoji = "💡";
 
   return details.map((detail) => {
-    // Check if country field exists and is a string
-    if (!detail.country || typeof detail.country !== "string") {
-      return { ...detail, country: defaultEmoji };
+    // Check if emoji field exists and is a string
+    if (!detail.emoji && detail.country) {
+      // Handle case where we're migrating from country to emoji
+      detail.emoji = detail.country;
+      delete detail.country;
     }
 
-    // Check if the country field contains only valid emoji characters
-    const isValidEmoji = validEmojis.includes(detail.country);
+    if (!detail.emoji || typeof detail.emoji !== "string") {
+      return { ...detail, emoji: defaultEmoji };
+    }
+
+    // Check if the emoji field contains a valid emoji
+    const isValidEmoji = validEmojis.includes(detail.emoji);
     if (isValidEmoji) {
       return detail;
     }
 
-    // Handle malformed emoji or text characters by replacing with default
-    return { ...detail, country: defaultEmoji };
+    // Attempt to choose a contextually appropriate emoji based on the summary
+    if (detail.summary) {
+      const summary = detail.summary.toLowerCase();
+
+      if (
+        summary.includes("data") ||
+        summary.includes("statistics") ||
+        summary.includes("report")
+      )
+        return { ...detail, emoji: "📊" };
+      if (summary.includes("industry") || summary.includes("manufacturing"))
+        return { ...detail, emoji: "🏭" };
+      if (
+        summary.includes("research") ||
+        summary.includes("science") ||
+        summary.includes("study")
+      )
+        return { ...detail, emoji: "🔬" };
+      if (
+        summary.includes("technology") ||
+        summary.includes("digital") ||
+        summary.includes("tech")
+      )
+        return { ...detail, emoji: "📱" };
+      if (
+        summary.includes("growth") ||
+        summary.includes("market") ||
+        summary.includes("increase")
+      )
+        return { ...detail, emoji: "📈" };
+      if (
+        summary.includes("sustainable") ||
+        summary.includes("environment") ||
+        summary.includes("green")
+      )
+        return { ...detail, emoji: "🌱" };
+      if (
+        summary.includes("regulation") ||
+        summary.includes("policy") ||
+        summary.includes("government")
+      )
+        return { ...detail, emoji: "🏛️" };
+      if (
+        summary.includes("innovation") ||
+        summary.includes("new") ||
+        summary.includes("idea")
+      )
+        return { ...detail, emoji: "💡" };
+      if (
+        summary.includes("partnership") ||
+        summary.includes("collaboration") ||
+        summary.includes("agreement")
+      )
+        return { ...detail, emoji: "🤝" };
+      if (
+        summary.includes("funding") ||
+        summary.includes("investment") ||
+        summary.includes("financial")
+      )
+        return { ...detail, emoji: "💰" };
+      if (summary.includes("energy") || summary.includes("power"))
+        return { ...detail, emoji: "🔋" };
+      if (
+        summary.includes("oil") ||
+        summary.includes("gas") ||
+        summary.includes("fossil")
+      )
+        return { ...detail, emoji: "🛢️" };
+      if (summary.includes("electricity") || summary.includes("grid"))
+        return { ...detail, emoji: "⚡" };
+      if (summary.includes("startup") || summary.includes("launch"))
+        return { ...detail, emoji: "🚀" };
+      if (summary.includes("test") || summary.includes("experiment"))
+        return { ...detail, emoji: "🧪" };
+      if (
+        summary.includes("global") ||
+        summary.includes("worldwide") ||
+        summary.includes("internet")
+      )
+        return { ...detail, emoji: "🌐" };
+    }
+
+    // Use default emoji if none matched
+    return { ...detail, emoji: defaultEmoji };
   });
 }
 
@@ -842,16 +959,36 @@ export async function POST(request: Request) {
                 idea.category || "current"
               } market landscape.`,
               summary: `${idea.name} appears to have market relevance based on available signals.`,
-              details: allUrls.slice(0, 5).map((url, index) => ({
-                summary: `Market insights related to ${idea.name}.`,
-                url: url,
-                country: ["🇺🇸", "🇬🇧", "🇪🇺", "🇨🇦", "🌐"][index % 5],
-              })),
+              details: allUrls.slice(0, 5).map((url: string, index: number) => {
+                // Define emojis individually to avoid encoding issues
+                const emoji1 = "📊";
+                const emoji2 = "🔬";
+                const emoji3 = "🏭";
+                const emoji4 = "💡";
+                const emoji5 = "🌱";
+
+                // Use index to select emoji
+                let selectedEmoji = emoji1;
+                if (index % 5 === 1) selectedEmoji = emoji2;
+                if (index % 5 === 2) selectedEmoji = emoji3;
+                if (index % 5 === 3) selectedEmoji = emoji4;
+                if (index % 5 === 4) selectedEmoji = emoji5;
+
+                return {
+                  summary: `Market insights related to ${idea.name}.`,
+                  url: url,
+                  emoji: selectedEmoji,
+                };
+              }),
               key_attributes: ideaSignals,
               suggested_signals: [
-                "market-demand",
-                "competitor-analysis",
-                "technology-trends",
+                `${idea.category || "industry"} market growth trends`,
+                `${idea.category || "sector"} innovation developments`,
+                `regulatory changes in ${idea.category || "this sector"}`,
+                `investor interest in ${
+                  idea.category || "similar technologies"
+                }`,
+                `competitive landscape analysis`,
               ],
             };
           }
@@ -874,7 +1011,7 @@ export async function POST(request: Request) {
           .map((url: string, index: number) => ({
             summary: `Market signal related to ${idea.name}.`,
             url: url,
-            country: ["🇺🇸", "🇬🇧", "🇪🇺", "🇨🇦", "🌐"][index % 5],
+            emoji: ["📊", "🔬", "🏭", "💡", "🌱"][index % 5],
           }));
       } else {
         // Ensure each detail has a valid URL
@@ -982,15 +1119,33 @@ export async function POST(request: Request) {
             parsedFallback = {
               impact_analysis: `Impact Analysis for ${idea.name}`,
               summary: `Market summary for ${idea.name}`,
-              details: allUrls
-                .slice(0, 3)
-                .map((url: string, index: number) => ({
+              details: allUrls.slice(0, 3).map((url: string, index: number) => {
+                // Define emojis individually to avoid encoding issues
+                const emoji1 = "📊";
+                const emoji2 = "🔬";
+                const emoji3 = "💡";
+
+                // Use index to select emoji
+                let selectedEmoji = emoji1;
+                if (index % 3 === 1) selectedEmoji = emoji2;
+                if (index % 3 === 2) selectedEmoji = emoji3;
+
+                return {
                   summary: `Market signal related to ${idea.name}.`,
                   url: url,
-                  country: ["🇺🇸", "🇬🇧", "🌐"][index % 3],
-                })),
+                  emoji: selectedEmoji,
+                };
+              }),
               key_attributes: ideaSignals,
-              suggested_signals: ["market-analysis"],
+              suggested_signals: [
+                `${idea.category || "industry"} market growth trends`,
+                `${idea.category || "sector"} innovation developments`,
+                `regulatory changes in ${idea.category || "this sector"}`,
+                `investor interest in ${
+                  idea.category || "similar technologies"
+                }`,
+                `competitive landscape analysis`,
+              ],
             };
           }
         }

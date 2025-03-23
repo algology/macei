@@ -257,6 +257,54 @@ export function IdeaDeepDive({ ideaId }: Props) {
       setMissionData(data.mission);
       setDocuments(documentContents);
       setDocumentContext(documentContext);
+
+      // Parse signals/keywords
+      if (data.signals) {
+        try {
+          let parsed;
+          if (typeof data.signals === "string") {
+            if (
+              data.signals.trim().startsWith("[") ||
+              data.signals.trim().startsWith("{")
+            ) {
+              parsed = JSON.parse(data.signals);
+            } else {
+              // Handle comma-separated string
+              parsed = data.signals.split(",").map((s: string) => s.trim());
+            }
+          } else {
+            parsed = data.signals;
+          }
+
+          let keywordsList: string[] = [];
+
+          if (Array.isArray(parsed)) {
+            keywordsList = parsed;
+          } else if (typeof parsed === "object" && parsed !== null) {
+            // Handle object with categories
+            keywordsList = Object.values(parsed).flat() as string[];
+          }
+
+          // Convert to CustomTag format
+          const newKeywords: CustomTag[] = keywordsList.map(
+            (keyword, index) => ({
+              id: `${index}`,
+              text: keyword,
+              className:
+                "bg-green-500/20 text-green-400 border border-green-900",
+              category: "keyword",
+            })
+          );
+
+          setKeywords(newKeywords);
+        } catch (parseError) {
+          console.error("Error parsing signals:", parseError);
+          // Set empty keywords if parsing fails
+          setKeywords([]);
+        }
+      } else {
+        setKeywords([]);
+      }
     } catch (error) {
       console.error("Error fetching idea:", error);
     } finally {
@@ -877,6 +925,8 @@ export function IdeaDeepDive({ ideaId }: Props) {
                 ideaName={editedIdea.name}
                 onInsightAdded={fetchInsights}
                 onSwitchToInsights={() => setActiveTab("insights")}
+                onSwitchToAttributes={() => setActiveTab("attributes")}
+                onIdeaUpdated={fetchIdea}
               />
             </div>
           </Tabs.Content>
