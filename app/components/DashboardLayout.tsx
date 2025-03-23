@@ -388,17 +388,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             {user && (
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
-                  <button className="relative w-8 h-8 rounded-full overflow-hidden border border-accent-2 hover:border-accent-1 transition-colors">
+                  <button className="w-8 h-8 hover:bg-accent-1 rounded-full flex items-center justify-center">
                     {avatarUrl ? (
                       <Image
                         src={avatarUrl}
                         alt="Avatar"
-                        width={32}
-                        height={32}
-                        className="object-cover w-full h-full"
+                        width={24}
+                        height={24}
+                        className="rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-green-500 flex items-center justify-center text-black font-medium">
+                      <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-black font-medium">
                         {user.email?.[0].toUpperCase()}
                       </div>
                     )}

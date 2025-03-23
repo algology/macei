@@ -36,7 +36,7 @@ export function EmailToSignalConfig({ ideaId, ideaName }: Props) {
 
       <div className="border border-accent-2 bg-accent-1/30 rounded-lg p-4">
         <div className="flex items-center justify-between">
-          <div className="font-mono text-green-400">{emailAddress}</div>
+          <div className="font-mono text-green-400 text-sm">{emailAddress}</div>
           <button
             onClick={copyEmailToClipboard}
             className="p-2 hover:bg-accent-1 rounded-lg transition-colors"
