@@ -233,8 +233,8 @@ IMPORTANT BRIEFING GUIDELINES:
    - Include working URLs to the original sources
 
 4. KEY ATTRIBUTES SECTION:
-   - List relevant attributes related to the idea
-   - Focus on new or especially relevant attributes based on recent developments
+   - Note: The key attributes will be taken from the idea's existing attributes, so whatever you put here will be ignored
+   - Just include some placeholder values
 
 ${createJsonStructurePrompt()}
 
@@ -328,7 +328,7 @@ IMPORTANT GUIDELINES:
 1. Impact Analysis: Analyze how market developments strengthen or challenge the idea (don't just restate the idea)
 2. Summary: Provide 5-6 specific, data-driven sentences with novel insights
 3. Details: Include 5 items with proper country flag emojis (🇺🇸, 🇬🇧, 🇪🇺, 🇨🇦, 🌐)
-4. Key Attributes: List relevant attributes based on market developments
+4. Key Attributes: These will be taken from the existing idea, just include placeholders
 5. Suggested Signals: Recommend market signals to track
 
 ${createJsonStructurePrompt()}
@@ -898,12 +898,9 @@ export async function POST(request: Request) {
       // Fix malformed emojis in details
       parsedBriefing.details = ensureProperEmojis(parsedBriefing.details);
 
-      // Ensure arrays for key attributes and suggested signals
-      parsedBriefing.key_attributes = Array.isArray(
-        parsedBriefing.key_attributes
-      )
-        ? parsedBriefing.key_attributes
-        : ideaSignals;
+      // Always use the idea's existing key attributes instead of what the LLM suggests
+      parsedBriefing.key_attributes = ideaSignals;
+
       parsedBriefing.suggested_signals = Array.isArray(
         parsedBriefing.suggested_signals
       )
@@ -1000,6 +997,9 @@ export async function POST(request: Request) {
 
         // Fix malformed emojis in fallback details
         parsedFallback.details = ensureProperEmojis(parsedFallback.details);
+
+        // Always use the idea's existing key attributes for consistency
+        parsedFallback.key_attributes = ideaSignals;
 
         // Insert the fallback briefing
         const { data: insertedFallback, error: fallbackError } = await supabase
