@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import Groq from "groq-sdk";
 import JSON5 from "json5";
-import { briefingEvents } from "../../lib/briefingEvents";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -522,11 +521,6 @@ export async function POST(request: Request) {
     // Initialize supabase with service role
     const supabase = getServerSupabase();
 
-    // Progress tracking function
-    const sendProgressUpdate = (update: any) => {
-      briefingEvents.sendEventToClients(ideaId.toString(), update);
-    };
-
     // Get idea details
     const { data: idea, error: ideaError } = await supabase
       .from("ideas")
@@ -613,12 +607,6 @@ export async function POST(request: Request) {
       funding?: any[];
     } | null = null;
     try {
-      // Send search query update
-      sendProgressUpdate({
-        type: "search",
-        query: `${ideaName} ${idea.category || ""} market signals`,
-      });
-
       // Call the fetch-market-signals API with a longer timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout instead of default
@@ -777,13 +765,6 @@ export async function POST(request: Request) {
 
     // Modified fetchLimitedUrlContent to report progress for each URL
     const fetchUrlWithProgress = async (signal: any) => {
-      // Send progress update that we're starting to read this URL
-      sendProgressUpdate({
-        type: "url",
-        url: signal.url,
-        status: "reading",
-      });
-
       try {
         const response = await fetch(
           `${
@@ -802,13 +783,6 @@ export async function POST(request: Request) {
 
         const data = await response.json();
 
-        // Send progress update that we've completed reading this URL
-        sendProgressUpdate({
-          type: "url",
-          url: signal.url,
-          status: "completed",
-        });
-
         return {
           url: signal.url,
           title: signal.title,
@@ -819,13 +793,6 @@ export async function POST(request: Request) {
           error: data.error,
         };
       } catch (error) {
-        // Send progress update that we've had an error with this URL
-        sendProgressUpdate({
-          type: "url",
-          url: signal.url,
-          status: "error",
-        });
-
         return {
           url: signal.url,
           title: signal.title,
@@ -1155,9 +1122,6 @@ export async function POST(request: Request) {
 
       console.log("Successfully inserted briefing");
 
-      // Before returning the result, send a completion event
-      sendProgressUpdate({ type: "complete" });
-
       return NextResponse.json(insertedBriefing);
     } catch (error: any) {
       console.error(
@@ -1280,17 +1244,6 @@ export async function POST(request: Request) {
     }
   } catch (error: any) {
     console.error("Unhandled error in generate-briefing:", error);
-
-    // Send error event to client
-    try {
-      const { ideaId } = await request.json();
-      briefingEvents.sendEventToClients(ideaId.toString(), {
-        type: "error",
-        message: error.message || "Unknown error occurred",
-      });
-    } catch (e) {
-      // Ignore errors in sending the error event
-    }
 
     return NextResponse.json(
       { error: error.message || "Unknown error occurred" },

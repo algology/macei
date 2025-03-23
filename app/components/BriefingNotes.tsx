@@ -239,6 +239,7 @@ export function BriefingNotes({
 
   async function generateBriefing() {
     try {
+      // Reset states
       setError(null);
       setGenerating(true);
       setUrlsBeingProcessed([]);
@@ -253,10 +254,36 @@ export function BriefingNotes({
         throw new Error("Not authenticated");
       }
 
-      // First verify the idea exists
+      // First verify the idea exists with all needed fields
+      interface IdeaWithDetails {
+        id: number;
+        category?: string;
+        signals?: string;
+        ai_analysis?: string;
+        mission?: {
+          name?: string;
+          organization?: {
+            name?: string;
+          };
+        };
+      }
+
       const { data: idea, error: ideaError } = await supabase
         .from("ideas")
-        .select("id")
+        .select(
+          `
+          id,
+          category,
+          signals,
+          ai_analysis,
+          mission:missions (
+            name,
+            organization:organizations (
+              name
+            )
+          )
+        `
+        )
         .eq("id", ideaId)
         .single();
 
@@ -268,66 +295,14 @@ export function BriefingNotes({
         throw new Error("Idea not found");
       }
 
-      // Setup event source for progress updates
-      const eventSource = new EventSource(
-        `/api/briefing-progress?ideaId=${ideaId}`
-      );
+      // Type cast to ensure TypeScript knows the shape
+      const ideaWithDetails = idea as unknown as IdeaWithDetails;
 
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
+      // Simulate initial search query being processed
+      setSearchQuery(`${ideaName} market trends and recent developments`);
 
-          if (data.type === "search") {
-            setSearchQuery(data.query);
-          } else if (data.type === "url") {
-            // Add new URL or update existing URL status
-            setUrlsBeingProcessed((prev) => {
-              const exists = prev.some((item) => item.url === data.url);
-
-              if (exists) {
-                return prev.map((item) =>
-                  item.url === data.url
-                    ? { ...item, status: data.status }
-                    : item
-                );
-              } else {
-                // Extract domain from URL
-                let domain = "";
-                try {
-                  domain = new URL(data.url).hostname.replace(/^www\./, "");
-                } catch (e) {
-                  domain =
-                    data.url.split("/")[2]?.replace(/^www\./, "") || "unknown";
-                }
-
-                return [
-                  ...prev,
-                  {
-                    url: data.url,
-                    status: data.status,
-                    domain,
-                  },
-                ];
-              }
-            });
-          } else if (data.type === "complete") {
-            // Close event source and refresh
-            eventSource.close();
-            fetchBriefings();
-            setGenerating(false);
-            setIsDialogOpen(false);
-          }
-        } catch (error) {
-          console.error("Error parsing event data", error);
-        }
-      };
-
-      eventSource.onerror = () => {
-        eventSource.close();
-      };
-
-      // Call your API endpoint with the auth token
-      const response = await fetch("/api/generate-briefing", {
+      // First call the API to get the actual process started
+      const apiResponse = await fetch("/api/generate-briefing", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -339,13 +314,88 @@ export function BriefingNotes({
         }),
       });
 
-      if (!response.ok) {
-        eventSource.close();
-        const errorData = await response.json().catch(() => ({}));
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json().catch(() => ({}));
         throw new Error(errorData.error || "Failed to generate briefing");
       }
 
-      const data = await response.json();
+      // After API call is started, fetch market signals to show real URLs
+      try {
+        const signalsResponse = await fetch("/api/fetch-market-signals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ideaName,
+            category: ideaWithDetails.category,
+            signals: ideaWithDetails.signals,
+            missionName: ideaWithDetails.mission?.name,
+            organizationName: ideaWithDetails.mission?.organization?.name,
+            aiAnalysis: ideaWithDetails.ai_analysis,
+          }),
+        });
+
+        if (signalsResponse.ok) {
+          const signalsData = await signalsResponse.json();
+          const signals = signalsData.signals;
+
+          if (signals) {
+            // Collect all URLs from different signal types
+            const allUrls = [
+              ...(signals.news || []),
+              ...(signals.academic || []),
+              ...(signals.patents || []),
+              ...(signals.trends || []),
+              ...(signals.competitors || []),
+              ...(signals.industry || []),
+              ...(signals.funding || []),
+            ]
+              .filter((signal) => signal.url && signal.url.startsWith("http"))
+              .slice(0, 8); // Limit to a reasonable number
+
+            // Animate showing these URLs being processed
+            for (const signal of allUrls) {
+              // Extract domain for display
+              let domain = "";
+              try {
+                domain = new URL(signal.url).hostname.replace(/^www\./, "");
+              } catch (e) {
+                domain =
+                  signal.url.split("/")[2]?.replace(/^www\./, "") || "unknown";
+              }
+
+              // Add URL as "reading"
+              setUrlsBeingProcessed((prev) => [
+                ...prev,
+                {
+                  url: signal.url,
+                  domain,
+                  status: "reading",
+                },
+              ]);
+
+              // Wait a moment to simulate reading
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+
+              // Update to "completed"
+              setUrlsBeingProcessed((prev) =>
+                prev.map((item) =>
+                  item.url === signal.url
+                    ? { ...item, status: "completed" }
+                    : item
+                )
+              );
+
+              // Small delay between URLs
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching market signals:", error);
+        // Continue with generation even if this fails
+      }
+
+      const data = await apiResponse.json();
 
       // Set suggested signals from the response if available
       if (data.suggested_signals && Array.isArray(data.suggested_signals)) {
@@ -357,9 +407,11 @@ export function BriefingNotes({
       // Refresh the briefings list
       await fetchBriefings();
 
-      // Close the event source - although it should already be closed
-      eventSource.close();
+      // Cleanup
+      setGenerating(false);
       setIsDialogOpen(false);
+      setUrlsBeingProcessed([]);
+      setSearchQuery(null);
     } catch (error) {
       console.error("Error generating briefing:", error);
       setError(
