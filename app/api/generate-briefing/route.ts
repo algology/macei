@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import Groq from "groq-sdk";
 import JSON5 from "json5";
-import { sendEventToClients } from "../briefing-progress/route";
+import { briefingEvents } from "../briefing-progress/route";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -524,7 +524,7 @@ export async function POST(request: Request) {
 
     // Progress tracking function
     const sendProgressUpdate = (update: any) => {
-      sendEventToClients(ideaId.toString(), update);
+      briefingEvents.sendEventToClients(ideaId.toString(), update);
     };
 
     // Get idea details
@@ -1284,7 +1284,7 @@ export async function POST(request: Request) {
     // Send error event to client
     try {
       const { ideaId } = await request.json();
-      sendEventToClients(ideaId.toString(), {
+      briefingEvents.sendEventToClients(ideaId.toString(), {
         type: "error",
         message: error.message || "Unknown error occurred",
       });

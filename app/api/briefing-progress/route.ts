@@ -3,14 +3,20 @@ import { NextRequest, NextResponse } from "next/server";
 // Store active connections by ideaId
 const activeConnections = new Map<string, Set<(data: string) => void>>();
 
-// Function to send event to all clients for a specific ideaId
-export function sendEventToClients(ideaId: string, data: any) {
-  const connections = activeConnections.get(ideaId);
-  if (connections) {
-    const eventData = JSON.stringify(data);
-    connections.forEach((client) => client(`data: ${eventData}\n\n`));
-  }
-}
+// Create an EventEmitter for internal use that doesn't get exported as a route handler
+const briefingEvents = {
+  // Function to send event to all clients for a specific ideaId
+  sendEventToClients: (ideaId: string, data: any) => {
+    const connections = activeConnections.get(ideaId);
+    if (connections) {
+      const eventData = JSON.stringify(data);
+      connections.forEach((client) => client(`data: ${eventData}\n\n`));
+    }
+  },
+};
+
+// Export the event emitter for use in other modules
+export { briefingEvents };
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
