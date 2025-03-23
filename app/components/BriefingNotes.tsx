@@ -11,6 +11,8 @@ import {
   Check,
   Bookmark,
   Lightbulb,
+  Globe,
+  Search,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -42,6 +44,12 @@ interface Briefing {
   suggested_signals?: string[];
 }
 
+interface UrlStatus {
+  url: string;
+  status: "reading" | "completed" | "error";
+  domain: string;
+}
+
 export function BriefingNotes({
   ideaId,
   ideaName,
@@ -65,6 +73,8 @@ export function BriefingNotes({
   const selectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [suggestedSignals, setSuggestedSignals] = useState<string[]>([]);
   const [addingSignal, setAddingSignal] = useState(false);
+  const [urlsBeingProcessed, setUrlsBeingProcessed] = useState<UrlStatus[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBriefings();
@@ -231,6 +241,8 @@ export function BriefingNotes({
     try {
       setError(null);
       setGenerating(true);
+      setUrlsBeingProcessed([]);
+      setSearchQuery(null);
 
       // Get the user session to include the auth token
       const {
@@ -256,6 +268,64 @@ export function BriefingNotes({
         throw new Error("Idea not found");
       }
 
+      // Setup event source for progress updates
+      const eventSource = new EventSource(
+        `/api/briefing-progress?ideaId=${ideaId}`
+      );
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          if (data.type === "search") {
+            setSearchQuery(data.query);
+          } else if (data.type === "url") {
+            // Add new URL or update existing URL status
+            setUrlsBeingProcessed((prev) => {
+              const exists = prev.some((item) => item.url === data.url);
+
+              if (exists) {
+                return prev.map((item) =>
+                  item.url === data.url
+                    ? { ...item, status: data.status }
+                    : item
+                );
+              } else {
+                // Extract domain from URL
+                let domain = "";
+                try {
+                  domain = new URL(data.url).hostname.replace(/^www\./, "");
+                } catch (e) {
+                  domain =
+                    data.url.split("/")[2]?.replace(/^www\./, "") || "unknown";
+                }
+
+                return [
+                  ...prev,
+                  {
+                    url: data.url,
+                    status: data.status,
+                    domain,
+                  },
+                ];
+              }
+            });
+          } else if (data.type === "complete") {
+            // Close event source and refresh
+            eventSource.close();
+            fetchBriefings();
+            setGenerating(false);
+            setIsDialogOpen(false);
+          }
+        } catch (error) {
+          console.error("Error parsing event data", error);
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+      };
+
       // Call your API endpoint with the auth token
       const response = await fetch("/api/generate-briefing", {
         method: "POST",
@@ -270,6 +340,7 @@ export function BriefingNotes({
       });
 
       if (!response.ok) {
+        eventSource.close();
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || "Failed to generate briefing");
       }
@@ -285,6 +356,9 @@ export function BriefingNotes({
 
       // Refresh the briefings list
       await fetchBriefings();
+
+      // Close the event source - although it should already be closed
+      eventSource.close();
       setIsDialogOpen(false);
     } catch (error) {
       console.error("Error generating briefing:", error);
@@ -447,6 +521,11 @@ ${briefing.key_attributes.join(", ")}`;
       setAddingSignal(false);
     }
   }
+
+  // Helper function to get favicon URL for a domain
+  const getFaviconUrl = (domain: string) => {
+    return `https://www.google.com/s2/favicons?sz=128&domain=https://${domain}`;
+  };
 
   if (loading) {
     return (
@@ -650,7 +729,7 @@ ${briefing.key_attributes.join(", ")}`;
       <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] bg-background border border-accent-2 rounded-lg shadow-lg p-4">
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] max-h-[80vh] overflow-y-auto bg-background border border-accent-2 rounded-lg shadow-lg p-4">
             <div className="flex justify-between items-center mb-4">
               <Dialog.Title className="text-lg font-medium">
                 Generate Briefing Note
@@ -670,6 +749,80 @@ ${briefing.key_attributes.join(", ")}`;
               <div className="bg-red-500/10 text-red-400 border border-red-900 rounded-lg p-3 mb-4 flex items-center gap-2 text-sm">
                 <AlertCircle className="w-4 h-4" />
                 <p>{error}</p>
+              </div>
+            )}
+
+            {/* Progress UI */}
+            {generating && (
+              <div className="space-y-4 mb-4 bg-accent-1/30 rounded-lg p-4 border border-accent-2">
+                <div className="flex items-center gap-2">
+                  <LoadingSpinner className="w-4 h-4" />
+                  <p className="text-sm text-gray-300">
+                    Generating briefing...
+                  </p>
+                </div>
+
+                {searchQuery && (
+                  <div className="mt-1.5">
+                    <div className="mb-1 text-xs text-gray-400">
+                      <span>Searching</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="py-1 px-2.5 pl-2 rounded-lg bg-accent-1/50 text-xs font-mono flex items-center gap-1.5">
+                        <Search className="w-3.5 h-3.5" />
+                        <p className="text-[0.68rem] leading-4">
+                          {searchQuery}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {urlsBeingProcessed.length > 0 && (
+                  <div className="mt-1.5">
+                    <div className="mb-1 text-xs text-gray-400">
+                      <span>Reading</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {urlsBeingProcessed.map((urlStatus, idx) => (
+                        <a
+                          key={idx}
+                          href={urlStatus.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-1 pl-1.5 pr-2.5 rounded-lg bg-accent-1/50 hover:bg-accent-1/70 transition-colors duration-300"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <div className="relative flex-none">
+                              <div className="relative overflow-hidden rounded-full">
+                                <div className="rounded-inherit absolute inset-0 bg-white"></div>
+                                <img
+                                  className="relative block"
+                                  alt={`${urlStatus.domain} favicon`}
+                                  width="16"
+                                  height="16"
+                                  src={getFaviconUrl(urlStatus.domain)}
+                                  style={{ width: "16px", height: "16px" }}
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src =
+                                      "/favicon.ico";
+                                  }}
+                                />
+                                <div className="rounded-inherit absolute inset-0 border border-[rgba(0,0,0,0.1)] dark:border-transparent"></div>
+                              </div>
+                            </div>
+                            <div className="line-clamp-1 break-all text-[0.7rem] font-mono">
+                              {urlStatus.domain}
+                            </div>
+                            {urlStatus.status === "reading" && (
+                              <LoadingSpinner className="w-3 h-3 ml-0.5" />
+                            )}
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import Groq from "groq-sdk";
 import JSON5 from "json5";
+import { sendEventToClients } from "../briefing-progress/route";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -521,6 +522,11 @@ export async function POST(request: Request) {
     // Initialize supabase with service role
     const supabase = getServerSupabase();
 
+    // Progress tracking function
+    const sendProgressUpdate = (update: any) => {
+      sendEventToClients(ideaId.toString(), update);
+    };
+
     // Get idea details
     const { data: idea, error: ideaError } = await supabase
       .from("ideas")
@@ -607,6 +613,12 @@ export async function POST(request: Request) {
       funding?: any[];
     } | null = null;
     try {
+      // Send search query update
+      sendProgressUpdate({
+        type: "search",
+        query: `${ideaName} ${idea.category || ""} market signals`,
+      });
+
       // Call the fetch-market-signals API with a longer timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout instead of default
@@ -731,7 +743,7 @@ export async function POST(request: Request) {
 
     let allFreshSignals: any[] = [];
     if (freshMarketSignals) {
-      // Combine all signals into a single array for efficient processing
+      // Combine all signals into a single array for processing
       allFreshSignals = [
         ...(freshMarketSignals.news || []),
         ...(freshMarketSignals.academic || []),
@@ -762,10 +774,84 @@ export async function POST(request: Request) {
 
     // Fetch content for just a limited number of high-priority URLs
     console.log("Fetching content for a limited set of high-priority URLs...");
-    const urlContentResults = await fetchLimitedUrlContent(allFreshSignals, 8);
-    const successfulUrlContents = urlContentResults
-      .filter((result) => result.status === "fulfilled")
-      .map((result) => (result as any).value);
+
+    // Modified fetchLimitedUrlContent to report progress for each URL
+    const fetchUrlWithProgress = async (signal: any) => {
+      // Send progress update that we're starting to read this URL
+      sendProgressUpdate({
+        type: "url",
+        url: signal.url,
+        status: "reading",
+      });
+
+      try {
+        const response = await fetch(
+          `${
+            process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+          }/api/fetch-url-content`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: signal.url, priority: "high" }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch URL content: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Send progress update that we've completed reading this URL
+        sendProgressUpdate({
+          type: "url",
+          url: signal.url,
+          status: "completed",
+        });
+
+        return {
+          url: signal.url,
+          title: signal.title,
+          content:
+            data.content || signal.description || "Content not available",
+          source: signal.source || "Market Signal",
+          type: signal.type || "unknown",
+          error: data.error,
+        };
+      } catch (error) {
+        // Send progress update that we've had an error with this URL
+        sendProgressUpdate({
+          type: "url",
+          url: signal.url,
+          status: "error",
+        });
+
+        return {
+          url: signal.url,
+          title: signal.title,
+          content: signal.description || "Failed to fetch content",
+          source: signal.source || "Market Signal",
+          type: signal.type || "unknown",
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    };
+
+    // Select prioritized URLs for content fetching
+    const prioritizedUrls = allFreshSignals
+      .filter(
+        (signal) =>
+          signal.url &&
+          signal.url.startsWith("http") &&
+          !signal.url.includes("example.com")
+      )
+      .slice(0, 8);
+
+    const urlResults = await Promise.all(
+      prioritizedUrls.map(fetchUrlWithProgress)
+    );
+
+    const successfulUrlContents = urlResults;
 
     console.log(
       `Successfully fetched content for ${successfulUrlContents.length} URLs`
@@ -1069,6 +1155,9 @@ export async function POST(request: Request) {
 
       console.log("Successfully inserted briefing");
 
+      // Before returning the result, send a completion event
+      sendProgressUpdate({ type: "complete" });
+
       return NextResponse.json(insertedBriefing);
     } catch (error: any) {
       console.error(
@@ -1191,6 +1280,18 @@ export async function POST(request: Request) {
     }
   } catch (error: any) {
     console.error("Unhandled error in generate-briefing:", error);
+
+    // Send error event to client
+    try {
+      const { ideaId } = await request.json();
+      sendEventToClients(ideaId.toString(), {
+        type: "error",
+        message: error.message || "Unknown error occurred",
+      });
+    } catch (e) {
+      // Ignore errors in sending the error event
+    }
+
     return NextResponse.json(
       { error: error.message || "Unknown error occurred" },
       { status: 500 }
