@@ -1,11 +1,39 @@
+"use client";
+
 import { ArrowRight, Brain, LineChart, Target, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { Background } from "./components/Background";
 import { HeroInstanceDashboard } from "./components/HeroInstanceDashboard";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function Home() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        router.push("/dashboard");
+      } else {
+        setIsLoading(false);
+      }
+    };
+
+    checkUser();
+  }, [router]);
+
+  // Don't render anything while checking authentication
+  if (isLoading) {
+    return <Background />;
+  }
+
   return (
     <>
       <Background />
