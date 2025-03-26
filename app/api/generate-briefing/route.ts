@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 import Groq from "groq-sdk";
 import JSON5 from "json5";
+import { createNotification } from "@/lib/notificationService";
+import { sendEmail, generateBriefingEmail } from "@/lib/emailService";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -531,8 +535,87 @@ function selectAppropriateModel(contextSize: number) {
 export async function POST(request: Request) {
   try {
     // Get request data
-    const { ideaId, ideaName } = await request.json();
-    console.log("Received request for idea:", ideaId);
+    const requestJsonText = await request.text();
+    console.log("========== RAW REQUEST RECEIVED ==========");
+    console.log("Raw request text:", requestJsonText);
+
+    let requestJson;
+    try {
+      requestJson = JSON.parse(requestJsonText);
+      console.log("Successfully parsed JSON");
+    } catch (parseError) {
+      console.error("ERROR PARSING JSON:", parseError);
+      console.log("Attempting to fix malformed JSON...");
+      // Attempt to fix common JSON issues
+      const fixedText = requestJsonText
+        .replace(/(\w+):/g, '"$1":') // Add quotes to keys
+        .replace(/'/g, '"'); // Replace single quotes with double quotes
+
+      try {
+        requestJson = JSON.parse(fixedText);
+        console.log("Successfully parsed fixed JSON");
+      } catch (fixedParseError) {
+        console.error(
+          "Still failed to parse JSON after fixing:",
+          fixedParseError
+        );
+        // Create a fallback request object
+        requestJson = {
+          ideaId: parseInt(
+            new URL(request.url).searchParams.get("ideaId") || "0"
+          ),
+          isAutomatic:
+            new URL(request.url).searchParams.get("isAutomatic") === "true",
+        };
+        console.log("Using fallback request object:", requestJson);
+      }
+    }
+
+    console.log("Raw JSON object:", requestJson);
+    console.log("Data types in request:", {
+      ideaId: typeof requestJson.ideaId,
+      ideaName: typeof requestJson.ideaName,
+      isAutomatic: typeof requestJson.isAutomatic,
+      debugMode: typeof requestJson.debugMode,
+    });
+    console.log("==========================================");
+
+    const {
+      ideaId,
+      ideaName,
+      isAutomatic: rawIsAutomatic = false,
+      debugMode = false,
+    } = requestJson;
+
+    // Explicitly convert to boolean to handle string values like "true"
+    // Use double equal for string "true" compatibility
+    const isAutomatic = rawIsAutomatic == true;
+
+    console.log("===== PROCESSED REQUEST VALUES =====");
+    console.log("ideaId:", ideaId);
+    console.log("ideaName:", ideaName);
+    console.log(
+      "rawIsAutomatic:",
+      rawIsAutomatic,
+      "type:",
+      typeof rawIsAutomatic
+    );
+    console.log(
+      "isAutomatic (parsed):",
+      isAutomatic,
+      "type:",
+      typeof isAutomatic
+    );
+    console.log("isAutomatic == true:", rawIsAutomatic == true);
+    console.log("debugMode:", debugMode);
+    console.log("====================================");
+
+    console.log(
+      "Received request for idea:",
+      ideaId,
+      isAutomatic ? "(automated)" : "(manual)",
+      debugMode ? "(debug mode)" : ""
+    );
 
     // Initialize supabase with service role
     const supabase = getServerSupabase();
@@ -1191,6 +1274,92 @@ export async function POST(request: Request) {
 
       console.log("Successfully inserted briefing");
 
+      // Add detailed debugging for all parameters being received
+      console.log("=== DETAILED REQUEST DEBUG ===");
+      console.log("ideaId:", ideaId, "type:", typeof ideaId);
+      console.log("ideaName:", ideaName, "type:", typeof ideaName);
+      console.log(
+        "rawIsAutomatic:",
+        rawIsAutomatic,
+        "type:",
+        typeof rawIsAutomatic
+      );
+      console.log(
+        "isAutomatic (parsed):",
+        isAutomatic,
+        "type:",
+        typeof isAutomatic
+      );
+      console.log("isAutomatic === true:", isAutomatic === true);
+      console.log("isAutomatic == true:", isAutomatic == true);
+      console.log("Boolean(isAutomatic):", Boolean(isAutomatic));
+      console.log("debugMode:", debugMode, "type:", typeof debugMode);
+      console.log("=== END REQUEST DEBUG ===");
+
+      // Only create notifications if isAutomatic is explicitly true (boolean)
+      // This ensures notifications won't be created for manual generation
+      const shouldCreateNotification = isAutomatic == true && idea.user_id;
+
+      console.log("Should create notification:", shouldCreateNotification, {
+        isAutomatic,
+        isAutomaticValueType: typeof isAutomatic,
+        isAutomaticDoubleEquals: isAutomatic == true,
+        isAutomaticTripleEquals: isAutomatic === true,
+        hasUserId: !!idea.user_id,
+        userId: idea.user_id,
+      });
+
+      if (shouldCreateNotification) {
+        try {
+          console.log("===== NOTIFICATION ATTEMPT DEBUG =====");
+          console.log(`User ID: ${idea.user_id}`);
+          console.log(`isAutomatic (at notification point): ${isAutomatic}`);
+          console.log(`isAutomatic type: ${typeof isAutomatic}`);
+          console.log(`shouldCreateNotification: ${shouldCreateNotification}`);
+          console.log(`Boolean(isAutomatic): ${Boolean(isAutomatic)}`);
+          console.log(`isAutomatic == true: ${isAutomatic == true}`);
+
+          // Try creating the notification regardless of isAutomatic (for testing)
+          console.log("FORCING NOTIFICATION CREATION FOR TESTING");
+          try {
+            // Use createRouteHandlerClient for notification
+            const clientSupabase = createRouteHandlerClient({ cookies });
+
+            // Create test notification
+            const testResult = await clientSupabase
+              .from("notifications")
+              .insert({
+                user_id: idea.user_id,
+                title: `Test Notification for ${idea.name}`,
+                content: `This is a test notification. isAutomatic=${isAutomatic}`,
+                notification_type: "test",
+                is_read: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .select();
+
+            console.log("Force test notification result:", testResult);
+          } catch (e) {
+            console.error("Force test notification failed:", e);
+          }
+        } catch (error) {
+          console.error("Error in notification creation:", error);
+
+          // Extract more detailed error information
+          const errorDetails = {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            name: error instanceof Error ? error.name : undefined,
+            toString: String(error),
+          };
+
+          console.error("Detailed error info:", errorDetails);
+        }
+      } else {
+        console.log("No user_id found for idea, skipping notification");
+      }
+
       return NextResponse.json(insertedBriefing);
     } catch (error: any) {
       console.error(
@@ -1313,6 +1482,84 @@ export async function POST(request: Request) {
     }
   } catch (error: any) {
     console.error("Unhandled error in generate-briefing:", error);
+
+    // Before returning error, try a direct notification test anyway
+    try {
+      // Get the userId from the request if we can
+      let userId = null;
+      let ideaName = "Unknown Idea";
+
+      try {
+        // Try to get from request data
+        const requestData = await request.json().catch(() => ({}));
+        userId = requestData?.user_id;
+        ideaName = requestData?.ideaName || "Unknown Idea";
+      } catch (parseError) {
+        console.log("Could not parse request in error handler:", parseError);
+      }
+
+      if (userId) {
+        console.log("Creating DIRECT TEST notification for user_id:", userId);
+
+        // Use createRouteHandlerClient to avoid potential permission issues
+        const clientSupabase = createRouteHandlerClient({ cookies });
+
+        // Insert the notification using the client approach
+        const directTestResult = await clientSupabase
+          .from("notifications")
+          .insert({
+            user_id: userId,
+            title: "DIRECT TEST from generate-briefing error handler",
+            content: `Direct notification test at ${new Date().toISOString()}`,
+            notification_type: "test",
+            is_read: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select();
+
+        if (directTestResult.error) {
+          console.error(
+            "DIRECT TEST notification failed:",
+            directTestResult.error
+          );
+
+          // Try fallback with server approach
+          console.log("Trying fallback with server supabase client...");
+          const serverSupabase = getServerSupabase();
+          const fallbackResult = await serverSupabase
+            .from("notifications")
+            .insert({
+              user_id: userId,
+              title: "FALLBACK TEST from generate-briefing error handler",
+              content: `Fallback test at ${new Date().toISOString()}`,
+              notification_type: "test",
+              is_read: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .select();
+
+          if (fallbackResult.error) {
+            console.error("Fallback also failed:", fallbackResult.error);
+          } else {
+            console.log(
+              "Fallback notification succeeded:",
+              fallbackResult.data
+            );
+          }
+        } else {
+          console.log(
+            "DIRECT TEST notification succeeded:",
+            directTestResult.data
+          );
+        }
+      } else {
+        console.log("Cannot create direct test - no user_id available");
+      }
+    } catch (notifError) {
+      console.error("Error in direct notification test:", notifError);
+    }
 
     return NextResponse.json(
       { error: error.message || "Unknown error occurred" },

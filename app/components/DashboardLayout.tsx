@@ -43,6 +43,17 @@ type Profile = {
   updated_at: string;
 };
 
+interface Notification {
+  id: number;
+  title: string;
+  content: string;
+  idea_id?: number;
+  briefing_id?: number;
+  notification_type: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -58,6 +69,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     return false;
   });
   const [isBreadcrumbsLoading, setIsBreadcrumbsLoading] = useState(true);
+  const [unreadNotifications, setUnreadNotifications] = useState<
+    Notification[]
+  >([]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebarCollapsed");
@@ -223,6 +238,57 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     updateBreadcrumbs();
   }, [pathname]);
 
+  useEffect(() => {
+    // Only fetch if user is logged in
+    if (user) {
+      console.log("User is logged in, setting up notifications:", user.id);
+
+      // Fetch immediately on load
+      fetchUnreadNotifications();
+
+      // Then set up a periodic refresh every 10 seconds (reduced from 30s for testing)
+      const intervalId = setInterval(() => {
+        console.log("Running notification refresh interval");
+        fetchUnreadNotifications();
+      }, 10000);
+
+      // Also set up real-time subscription for notifications
+      try {
+        console.log("Setting up real-time notification subscription");
+
+        const notificationSubscription = supabase
+          .channel(`user-notifications-${user.id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "notifications",
+              filter: `user_id=eq.${user.id}`,
+            },
+            (payload) => {
+              console.log("Real-time notification received:", payload);
+              // Refresh notifications when a new one is inserted
+              fetchUnreadNotifications();
+            }
+          )
+          .subscribe((status) => {
+            console.log("Notification subscription status:", status);
+          });
+
+        // Clear the interval and subscription when component unmounts
+        return () => {
+          clearInterval(intervalId);
+          notificationSubscription.unsubscribe();
+        };
+      } catch (subError) {
+        console.error("Error setting up notification subscription:", subError);
+        // Fallback to just clearing the interval
+        return () => clearInterval(intervalId);
+      }
+    }
+  }, [user]);
+
   // Only redirect if not loading and no user
   if (!loading && !user) {
     router.push("/login");
@@ -243,6 +309,115 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     router.push(
       `/dashboard/org/${idea.mission?.organization_id}/mission/${idea.mission_id}/idea/${idea.id}`
     );
+  };
+
+  const fetchUnreadNotifications = async () => {
+    try {
+      console.log("=== DASHBOARD NOTIFICATION DEBUG ===");
+      console.log("Fetching unread notifications for user:", user?.id);
+
+      if (!user?.id) {
+        console.log("No user ID available, cannot fetch notifications");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("notifications")
+        .select(
+          "id, title, content, is_read, created_at, idea_id, briefing_id, notification_type"
+        )
+        .eq("user_id", user?.id)
+        .eq("is_read", false)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching notifications:", error);
+        return;
+      }
+
+      // Also try to get all notifications to see what's there
+      const { data: allNotifications, error: allError } = await supabase
+        .from("notifications")
+        .select("id, user_id")
+        .limit(10);
+
+      console.log("All recent notifications in system:", allNotifications);
+
+      if (allError) {
+        console.error("Error fetching all notifications:", allError);
+      }
+
+      console.log(`Found ${data?.length || 0} unread notifications`);
+      if (data && data.length > 0) {
+        console.log("Notification details:", data[0]);
+      }
+      console.log("=== END DASHBOARD NOTIFICATION DEBUG ===");
+
+      setUnreadNotifications(data || []);
+    } catch (error) {
+      console.error("Error in fetchUnreadNotifications:", error);
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId: number) => {
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true, updated_at: new Date().toISOString() })
+        .eq("id", notificationId)
+        .eq("user_id", user?.id);
+
+      if (error) {
+        console.error("Error marking notification as read:", error);
+        return;
+      }
+
+      // Update local state to remove the notification
+      setUnreadNotifications((prev) =>
+        prev.filter((n) => n.id !== notificationId)
+      );
+    } catch (error) {
+      console.error("Error in markNotificationAsRead:", error);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true, updated_at: new Date().toISOString() })
+        .eq("user_id", user?.id)
+        .eq("is_read", false);
+
+      if (error) {
+        console.error("Error marking all notifications as read:", error);
+        return;
+      }
+
+      // Clear local state
+      setUnreadNotifications([]);
+    } catch (error) {
+      console.error("Error in markAllNotificationsAsRead:", error);
+    }
+  };
+
+  const navigateToNotification = (notification: Notification) => {
+    // Close the dropdown
+    setIsNotificationsOpen(false);
+
+    // Mark as read
+    markNotificationAsRead(notification.id);
+
+    // Navigate to the appropriate page based on notification type
+    if (notification.idea_id && notification.briefing_id) {
+      // If it has both, navigate to the idea's briefing
+      router.push(
+        `/dashboard/ideas/${notification.idea_id}?tab=briefings&briefing=${notification.briefing_id}`
+      );
+    } else if (notification.idea_id) {
+      // If it just has idea_id, navigate to the idea
+      router.push(`/dashboard/ideas/${notification.idea_id}`);
+    }
   };
 
   const renderDashboardContent = () => {
@@ -382,9 +557,76 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <button className="p-2 hover:bg-accent-1 rounded-md">
               <Search className="w-4 h-4 text-gray-400" />
             </button>
-            <button className="p-2 hover:bg-accent-1 rounded-md">
-              <Bell className="w-4 h-4 text-gray-400" />
-            </button>
+            <DropdownMenu.Root
+              open={isNotificationsOpen}
+              onOpenChange={setIsNotificationsOpen}
+            >
+              <DropdownMenu.Trigger asChild>
+                <button className="p-2 hover:bg-accent-1 rounded-md relative bell-icon-container">
+                  <Bell className="w-4 h-4 text-gray-400" />
+                  {unreadNotifications.length > 0 && (
+                    <span className="absolute top-0 right-0 h-4 w-4 text-xs bg-red-500 text-white rounded-full flex items-center justify-center transform translate-x-1 -translate-y-1">
+                      {unreadNotifications.length > 9
+                        ? "9+"
+                        : unreadNotifications.length}
+                    </span>
+                  )}
+                  <span className="sr-only">
+                    Notifications - {unreadNotifications.length} unread
+                  </span>
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  className="w-80 bg-background border border-accent-2 rounded-lg shadow-lg p-2 animate-in fade-in-0 zoom-in-95"
+                  sideOffset={8}
+                  align="end"
+                  style={{ zIndex: 100 }}
+                >
+                  <div className="flex justify-between items-center p-2 border-b border-accent-2 mb-2">
+                    <h3 className="font-medium">Notifications</h3>
+                    {unreadNotifications.length > 0 && (
+                      <button
+                        onClick={markAllNotificationsAsRead}
+                        className="text-xs text-blue-500 hover:text-blue-400"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-96 overflow-y-auto">
+                    {unreadNotifications.length === 0 ? (
+                      <div className="text-center py-6 text-gray-400">
+                        No new notifications
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {unreadNotifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className="p-3 hover:bg-accent-1 rounded-md cursor-pointer"
+                            onClick={() => navigateToNotification(notification)}
+                          >
+                            <div className="font-medium">
+                              {notification.title}
+                            </div>
+                            <div className="text-sm text-gray-400 mt-1">
+                              {notification.content}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-2">
+                              {new Date(
+                                notification.created_at
+                              ).toLocaleString()}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
             {user && (
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>

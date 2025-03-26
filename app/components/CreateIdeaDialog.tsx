@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Idea } from "./types";
 import { IdeaAttributesDialog } from "./IdeaAttributesDialog";
@@ -23,6 +23,19 @@ export function CreateIdeaDialog({
   const [isCreating, setIsCreating] = useState(false);
   const [showAttributesDialog, setShowAttributesDialog] = useState(false);
   const [createdIdea, setCreatedIdea] = useState<Idea | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Get the current user's ID when the component mounts
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        setUserId(data.user.id);
+      }
+    };
+
+    getCurrentUser();
+  }, []);
 
   async function handleCreateIdea(e: React.FormEvent) {
     e.preventDefault();
@@ -37,6 +50,7 @@ export function CreateIdeaDialog({
             mission_id: missionId,
             summary: ideaSummary,
             status: "ideation",
+            user_id: userId,
           },
         ])
         .select()

@@ -311,8 +311,14 @@ export function BriefingNotes({
         body: JSON.stringify({
           ideaId,
           ideaName,
+          isAutomatic: false, // Manual generation doesn't need notifications
         }),
       });
+
+      // Log to console to help with debugging
+      console.log(
+        "Sending generate briefing request with isAutomatic=false (user-initiated)"
+      );
 
       if (!apiResponse.ok) {
         const errorData = await apiResponse.json().catch(() => ({}));

@@ -22,6 +22,7 @@ import {
   X,
   AlertCircle,
   Trash2,
+  Settings,
 } from "lucide-react";
 import { AIAnalysisResult, DeepAnalysisResult, IdeaAttribute } from "./types";
 import { WithContext as ReactTags, Tag } from "react-tag-input";
@@ -57,6 +58,7 @@ interface IdeaDetails {
   };
   detailed_analysis?: string;
   summary?: string;
+  auto_briefing_enabled?: boolean;
 }
 
 interface CustomTag {
@@ -77,6 +79,7 @@ const defaultIdea: IdeaDetails = {
   ai_analysis: "",
   last_analyzed: "",
   mission_id: "",
+  auto_briefing_enabled: true,
 };
 
 export function IdeaDeepDive({ ideaId }: Props) {
@@ -313,31 +316,33 @@ export function IdeaDeepDive({ ideaId }: Props) {
   }
 
   async function handleSave() {
-    if (!idea || !editedIdea) return;
+    if (!editedIdea) return;
 
+    setSaving(true);
     try {
-      setSaving(true);
-      const ideaToUpdate = {
-        name: editedIdea.name,
-        status: editedIdea.status,
-        category: editedIdea.category,
-        signals: JSON.stringify(keywords.map((k) => k.text)),
-        mission_id: editedIdea.mission_id,
-      };
+      // Format signals from tags
+      let formattedSignals = JSON.stringify(keywords.map((tag) => tag.text));
 
       const { error } = await supabase
         .from("ideas")
-        .update(ideaToUpdate)
-        .eq("id", idea.id);
+        .update({
+          name: editedIdea.name,
+          status: editedIdea.status,
+          category: editedIdea.category,
+          signals: formattedSignals,
+          summary: editedIdea.summary,
+          auto_briefing_enabled: editedIdea.auto_briefing_enabled,
+        })
+        .eq("id", ideaId);
 
       if (error) throw error;
 
-      setIdea({ ...editedIdea, ...ideaToUpdate });
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 2000);
+      fetchIdea(); // Refresh the idea data
     } catch (error) {
-      console.error("Error updating idea:", error);
-      alert("Failed to update idea. Please try again.");
+      console.error("Error saving idea:", error);
+      alert("Error saving idea. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -741,6 +746,17 @@ export function IdeaDeepDive({ ideaId }: Props) {
             >
               <ListTodo className="w-4 h-4" />
               Attributes
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="settings"
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors hover:text-white ${
+                activeTab === "settings"
+                  ? "text-white border-b-2 border-green-500"
+                  : "text-gray-400"
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              Settings
             </Tabs.Trigger>
           </Tabs.List>
 
@@ -1401,6 +1417,49 @@ export function IdeaDeepDive({ ideaId }: Props) {
                     )}
                   </div>
                 )}
+              </div>
+            </div>
+          </Tabs.Content>
+
+          <Tabs.Content value="settings" className="outline-none">
+            <div className="space-y-6">
+              <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+                <h3 className="text-lg font-semibold mb-4">Idea Settings</h3>
+
+                <div className="space-y-4">
+                  <div className="bg-accent-1/30 border border-accent-2 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Automated Briefings</h4>
+                        <p className="text-sm text-gray-400 mt-1">
+                          Receive weekly automated briefing notes and
+                          notifications
+                        </p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editedIdea?.auto_briefing_enabled !== false}
+                          onChange={(e) => {
+                            if (editedIdea) {
+                              setEditedIdea({
+                                ...editedIdea,
+                                auto_briefing_enabled: e.target.checked,
+                              });
+                            }
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Space for additional settings */}
+                  {/* <div className="bg-accent-1/30 border border-accent-2 rounded-lg p-4">
+                    Additional settings can be added here
+                  </div> */}
+                </div>
               </div>
             </div>
           </Tabs.Content>
