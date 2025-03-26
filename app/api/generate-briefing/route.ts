@@ -721,8 +721,26 @@ export async function POST(request: Request) {
       knowledgeBaseSignals?.length || 0
     );
 
+    // Separate emailed signals from other knowledge base signals
+    const emailedSignals =
+      knowledgeBaseSignals?.filter(
+        (signal) => signal.metadata?.is_user_submitted
+      ) || [];
+    const otherSignals =
+      knowledgeBaseSignals?.filter(
+        (signal) => !signal.metadata?.is_user_submitted
+      ) || [];
+
+    console.log(
+      `Found ${emailedSignals.length} emailed signals and ${otherSignals.length} other signals`
+    );
+
     // Combine signals, ensuring we don't exceed a reasonable limit
-    const limitedKnowledgeSignals = knowledgeBaseSignals?.slice(0, 50) || []; // Increase limit
+    // Prioritize emailed signals by putting them first
+    const limitedKnowledgeSignals = [...emailedSignals, ...otherSignals].slice(
+      0,
+      50
+    );
 
     // Process and sample market signals to keep prompt size manageable
     console.log(
@@ -757,8 +775,20 @@ export async function POST(request: Request) {
     }
 
     // Create a summarized version of the signals context to reduce size
-    const summarizedSignalsContext =
+    let summarizedSignalsContext =
       prepareSummarizedSignalsContext(freshMarketSignals);
+
+    // Add emailed signals to the context if they exist
+    if (emailedSignals.length > 0) {
+      const emailedSignalsContext = `USER-SUBMITTED SIGNALS:\n${emailedSignals
+        .map(
+          (signal) =>
+            `Title: ${signal.title}\nDescription: ${signal.content}\nURL: ${signal.source_url}\nDate: ${signal.publication_date}`
+        )
+        .join("\n\n")}`;
+
+      summarizedSignalsContext = `${emailedSignalsContext}\n\n${summarizedSignalsContext}`;
+    }
 
     // Fetch content for just a limited number of high-priority URLs
     console.log("Fetching content for a limited set of high-priority URLs...");
