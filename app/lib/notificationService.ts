@@ -1,4 +1,4 @@
-import { getServerSupabase } from "./supabase";
+import { getServerSupabase } from "../../lib/supabase";
 
 /**
  * Direct test function to create a notification using the service role
