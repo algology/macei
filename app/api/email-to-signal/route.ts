@@ -165,6 +165,44 @@ export async function POST(request: Request) {
     // If we have URLs, create signals from each URL (limited to first 3)
     const urlsToProcess = urls.slice(0, 3);
     if (urlsToProcess.length > 0) {
+      // Fetch content for each URL first
+      const urlContents = await Promise.all(
+        urlsToProcess.map(async (url) => {
+          try {
+            const response = await fetch(
+              `${
+                process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+              }/api/fetch-url-content`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url, priority: "high" }),
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error(
+                `Failed to fetch URL content: ${response.status}`
+              );
+            }
+
+            const data = await response.json();
+            return {
+              url,
+              content: data.content || "",
+              error: data.error,
+            };
+          } catch (error) {
+            console.error(`Error fetching content for ${url}:`, error);
+            return {
+              url,
+              content: "",
+              error: error instanceof Error ? error.message : String(error),
+            };
+          }
+        })
+      );
+
       // Use Groq to analyze the URLs and content
       const urlList = urlsToProcess.join("\n");
       const prompt = `
@@ -181,8 +219,10 @@ CONTENT TO ANALYZE:
 Email Subject: ${payload.subject}
 Email Content: ${content.substring(0, 1000)}
 
-URLs:
-${urlList}
+URLs and their content:
+${urlContents
+  .map((uc) => `URL: ${uc.url}\nContent: ${uc.content.substring(0, 1000)}\n`)
+  .join("\n")}
 
 For each URL, please extract important market signal information:
 1. Title (short, descriptive title about this information)
@@ -296,10 +336,10 @@ Always return valid JSON. Include all fields. Use "unknown" if you can't determi
         }
 
         // Set a higher relevance score for user-submitted signals
-        // Normal signals start at 70, but user signals start at 85
+        // Normal signals start at 70, but user signals start at 95 (increased from 85)
         const relevanceScore = Math.min(
           100,
-          85 + (signal.impactLevel === "high" ? 10 : 0)
+          95 + (signal.impactLevel === "high" ? 5 : 0)
         );
 
         // Create knowledge base entry
@@ -425,7 +465,9 @@ Format your response as a JSON array of insight objects:
                 if (Array.isArray(parsed)) {
                   existingInsights = parsed;
                 } else {
-                  console.error("Existing insights was not an array, resetting");
+                  console.error(
+                    "Existing insights was not an array, resetting"
+                  );
                 }
               } catch (e) {
                 console.error("Error parsing existing insights:", e);
@@ -433,8 +475,13 @@ Format your response as a JSON array of insight objects:
             }
 
             // Ensure newInsights is an array
-            const validNewInsights = Array.isArray(newInsights) ? newInsights : [];
-            const combinedInsights = [...validNewInsights, ...existingInsights].slice(0, 100); // Limit to last 100 insights
+            const validNewInsights = Array.isArray(newInsights)
+              ? newInsights
+              : [];
+            const combinedInsights = [
+              ...validNewInsights,
+              ...existingInsights,
+            ].slice(0, 100); // Limit to last 100 insights
 
             // Update the idea with new insights
             const { error: updateError } = await supabase

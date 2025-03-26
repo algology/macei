@@ -835,23 +835,46 @@ export async function POST(request: Request) {
     };
 
     // Select prioritized URLs for content fetching
-    const prioritizedUrls = allFreshSignals
+    const freshUrls = allFreshSignals
       .filter(
         (signal) =>
           signal.url &&
           signal.url.startsWith("http") &&
           !signal.url.includes("example.com")
       )
-      .slice(0, 8);
+      .slice(0, 4); // Reduce to 4 to make room for emailed signals
 
+    // Get URLs from emailed signals
+    const emailedUrls = emailedSignals
+      .filter(
+        (signal) =>
+          signal.source_url &&
+          signal.source_url.startsWith("http") &&
+          !signal.source_url.includes("example.com")
+      )
+      .slice(0, 4); // Take up to 4 emailed signal URLs
+
+    // Combine and fetch content for all URLs
+    const prioritizedUrls = [...freshUrls, ...emailedUrls];
     const urlResults = await Promise.all(
       prioritizedUrls.map(fetchUrlWithProgress)
     );
 
-    const successfulUrlContents = urlResults;
+    // Add emailed signal content directly to the results
+    const successfulUrlContents = [
+      ...urlResults,
+      ...emailedSignals.map((signal) => ({
+        url: signal.source_url,
+        title: signal.title,
+        content: signal.content,
+        source: signal.source_name || "Email Signal",
+        type: signal.source_type || "news",
+        error: null,
+      })),
+    ];
 
     console.log(
-      `Successfully fetched content for ${successfulUrlContents.length} URLs`
+      `Successfully fetched content for ${successfulUrlContents.length} URLs (including ${emailedSignals.length} emailed signals)`
     );
 
     // Create URL content context with truncated content
