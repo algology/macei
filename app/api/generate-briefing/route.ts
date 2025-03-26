@@ -243,8 +243,10 @@ IMPORTANT BRIEFING GUIDELINES:
      * Use 🌱 for sustainability or environmental developments
      * Use 🏛️ for regulatory or policy news
      * Use 💡 for new ideas or concept innovations
+     * Use 📧 for email content or user-submitted information
      * Use relevant emojis for other categories
    - Include working URLs to the original sources
+   - IMPORTANT: Ensure any content from emails or user submissions uses the 📧 emoji
 
 4. KEY ATTRIBUTES SECTION:
    - Note: The key attributes will be taken from the idea's existing attributes, so whatever you put here will be ignored
@@ -265,7 +267,8 @@ OUTPUT REQUIREMENTS:
 2. Ensure all URLs in the details section are real URLs from the provided context
 3. Use appropriate thematic emojis instead of flag emojis
 4. The details section should contain exactly 5 items
-5. The suggested_signals section must contain 5-8 meaningful, specific market signals to track (not placeholders)`;
+5. The suggested_signals section must contain 5-8 meaningful, specific market signals to track (not placeholders)
+6. For any emailed content or user-submitted information, ensure the emoji is 📧`;
 }
 
 // Helper function to prepare URL content in a more structured format
@@ -383,6 +386,7 @@ function ensureProperEmojis(details: any[]) {
     "🚀", // startups, launch
     "🧪", // testing, experiments
     "🌐", // global, internet
+    "📧", // email, user-submitted
   ];
   const defaultEmoji = "💡";
 
@@ -407,6 +411,18 @@ function ensureProperEmojis(details: any[]) {
     // Attempt to choose a contextually appropriate emoji based on the summary
     if (detail.summary) {
       const summary = detail.summary.toLowerCase();
+
+      // Special case for email/user submitted content
+      if (
+        summary.includes("email") ||
+        summary.includes("submitted") ||
+        summary.includes("user") ||
+        (detail.source &&
+          typeof detail.source === "string" &&
+          detail.source.toLowerCase().includes("email"))
+      ) {
+        return { ...detail, emoji: "📧" };
+      }
 
       if (
         summary.includes("data") ||
@@ -865,10 +881,10 @@ export async function POST(request: Request) {
       ...urlResults,
       ...emailedSignals.map((signal) => ({
         url: signal.source_url,
-        title: signal.title,
+        title: `📧 [Email] ${signal.title}`,
         content: signal.content,
-        source: signal.source_name || "Email Signal",
-        type: signal.source_type || "news",
+        source: "Email Signal",
+        type: "email",
         error: null,
       })),
     ];
