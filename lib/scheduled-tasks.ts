@@ -109,28 +109,6 @@ export async function generateAllIdeaBriefings(userId?: string) {
         // Get the response data to extract the briefing information
         const briefingData = await response.json();
 
-        // Create a notification directly to ensure it gets created
-        const notificationData = {
-          user_id: idea.user_id,
-          title: `New Briefing for ${idea.name}`,
-          content: `A new briefing has been generated for your idea: ${idea.name}`,
-          notification_type: "briefing",
-          is_read: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
-        const { error: notifError } = await supabase
-          .from("notifications")
-          .insert(notificationData);
-
-        if (notifError) {
-          console.error(
-            `Error creating notification for idea ${idea.id}:`,
-            notifError
-          );
-        }
-
         // Track successfully processed ideas with briefing details
         processedIdeas.push({
           id: idea.id,

@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
 import Groq from "groq-sdk";
 import JSON5 from "json5";
 import { createNotification } from "@/lib/notificationService";
@@ -1311,38 +1309,67 @@ export async function POST(request: Request) {
 
       if (shouldCreateNotification) {
         try {
-          console.log("===== NOTIFICATION ATTEMPT DEBUG =====");
-          console.log(`User ID: ${idea.user_id}`);
-          console.log(`isAutomatic (at notification point): ${isAutomatic}`);
-          console.log(`isAutomatic type: ${typeof isAutomatic}`);
-          console.log(`shouldCreateNotification: ${shouldCreateNotification}`);
-          console.log(`Boolean(isAutomatic): ${Boolean(isAutomatic)}`);
-          console.log(`isAutomatic == true: ${isAutomatic == true}`);
+          console.log("=== NOTIFICATION DEBUGGING ===");
+          console.log(
+            "NOTIFICATION CREATION STARTED - THIS SHOULD BE VISIBLE IN LOGS"
+          );
+          console.log("Idea user_id:", idea.user_id);
+          console.log("Creating notification with simplified approach");
 
-          // Try creating the notification regardless of isAutomatic (for testing)
-          console.log("FORCING NOTIFICATION CREATION FOR TESTING");
-          try {
-            // Use createRouteHandlerClient for notification
-            const clientSupabase = createRouteHandlerClient({ cookies });
+          // Create simplified notification data - avoid foreign key issues
+          const notificationData = {
+            user_id: idea.user_id,
+            title: `New Briefing for ${idea.name}`,
+            content: `A new briefing has been generated for your idea: ${idea.name}`,
+            // Don't include idea_id and briefing_id to avoid foreign key issues
+            notification_type: "briefing",
+            is_read: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
 
-            // Create test notification
-            const testResult = await clientSupabase
-              .from("notifications")
-              .insert({
-                user_id: idea.user_id,
-                title: `Test Notification for ${idea.name}`,
-                content: `This is a test notification. isAutomatic=${isAutomatic}`,
-                notification_type: "test",
-                is_read: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              })
-              .select();
+          console.log(
+            "Simplified notification data to insert:",
+            notificationData
+          );
 
-            console.log("Force test notification result:", testResult);
-          } catch (e) {
-            console.error("Force test notification failed:", e);
+          // Insert the notification
+          const result = await supabase
+            .from("notifications")
+            .insert(notificationData)
+            .select();
+
+          // Check for errors
+          if (result.error) {
+            console.error(
+              "Error inserting simplified notification:",
+              result.error
+            );
+            console.log("ERROR DETAILS:", {
+              message: result.error.message,
+              code: result.error.code,
+              details: result.error.details,
+              hint: result.error.hint,
+            });
+            console.log("Failed to create notification");
+          } else {
+            console.log("Notification created successfully:", result.data);
           }
+
+          // Verify if any notifications exist for this user
+          const { data: existingNotifs, error: checkError } = await supabase
+            .from("notifications")
+            .select("id, title, created_at")
+            .eq("user_id", idea.user_id)
+            .order("created_at", { ascending: false })
+            .limit(5);
+
+          console.log("Recent notifications for user:", existingNotifs);
+          if (checkError) {
+            console.error("Error checking notifications:", checkError);
+          }
+
+          console.log("=== END NOTIFICATION DEBUGGING ===");
         } catch (error) {
           console.error("Error in notification creation:", error);
 
@@ -1501,11 +1528,8 @@ export async function POST(request: Request) {
       if (userId) {
         console.log("Creating DIRECT TEST notification for user_id:", userId);
 
-        // Use createRouteHandlerClient to avoid potential permission issues
-        const clientSupabase = createRouteHandlerClient({ cookies });
-
-        // Insert the notification using the client approach
-        const directTestResult = await clientSupabase
+        const supabase = getServerSupabase();
+        const directTestResult = await supabase
           .from("notifications")
           .insert({
             user_id: userId,
@@ -1523,31 +1547,6 @@ export async function POST(request: Request) {
             "DIRECT TEST notification failed:",
             directTestResult.error
           );
-
-          // Try fallback with server approach
-          console.log("Trying fallback with server supabase client...");
-          const serverSupabase = getServerSupabase();
-          const fallbackResult = await serverSupabase
-            .from("notifications")
-            .insert({
-              user_id: userId,
-              title: "FALLBACK TEST from generate-briefing error handler",
-              content: `Fallback test at ${new Date().toISOString()}`,
-              notification_type: "test",
-              is_read: false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .select();
-
-          if (fallbackResult.error) {
-            console.error("Fallback also failed:", fallbackResult.error);
-          } else {
-            console.log(
-              "Fallback notification succeeded:",
-              fallbackResult.data
-            );
-          }
         } else {
           console.log(
             "DIRECT TEST notification succeeded:",
