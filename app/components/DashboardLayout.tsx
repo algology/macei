@@ -28,6 +28,7 @@ import { SidebarNavigation } from "./SidebarNavigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { LogOut } from "lucide-react";
 import { LoadingSpinner } from "./LoadingSpinner";
+import { FeedbackWidget } from "./FeedbackWidget";
 
 type BreadcrumbItem = {
   id: string;
@@ -694,6 +695,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           {renderDashboardContent()}
         </main>
       </div>
+
+      {/* Add FeedbackWidget */}
+      {user && <FeedbackWidget variant="floating" />}
     </div>
   );
 }
