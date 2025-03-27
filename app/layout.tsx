@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/react";
 
 // This needs to be imported only on the server side
 import { initScheduledTasks } from "@/lib/scheduled-tasks";
@@ -37,6 +38,7 @@ export default function RootLayout({
       <body className="antialiased">
         {children}
         <Toaster richColors position="top-right" />
+        <Analytics />
       </body>
     </html>
   );
