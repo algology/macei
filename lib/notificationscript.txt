@@ -1,0 +1,5 @@
+curl -X POST 'https://hmlkhbnvuhtyhytippve.supabase.co/rest/v1/rpc/add_notification_to_all_users' \
+  -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtbGtoYm52dWh0eWh5dGlwcHZlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczOTA2NTE3MSwiZXhwIjoyMDU0NjQxMTcxfQ.fjc8Gh8t2q-66cHSmRcT7BHkH-PgKy-lJE47rC6cTv8" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtbGtoYm52dWh0eWh5dGlwcHZlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczOTA2NTE3MSwiZXhwIjoyMDU0NjQxMTcxfQ.fjc8Gh8t2q-66cHSmRcT7BHkH-PgKy-lJE47rC6cTv8" \
+  -H "Content-Type: application/json" \
+  -d '{"p_title":"YOUR_TITLE_HERE","p_content":"YOUR_CONTENT_HERE","p_notification_type":"system"}'
