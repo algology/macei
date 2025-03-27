@@ -1,19 +1,207 @@
--- Create a notifications table
-CREATE TABLE IF NOT EXISTS notifications (
-  id BIGSERIAL PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  content TEXT NOT NULL,
-  idea_id BIGINT REFERENCES ideas(id) ON DELETE CASCADE,
-  briefing_id BIGINT REFERENCES briefings(id) ON DELETE CASCADE,
-  is_read BOOLEAN NOT NULL DEFAULT FALSE,
-  notification_type TEXT NOT NULL DEFAULT 'briefing', -- 'briefing', 'signal', etc.
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Create index on user_id for faster queries
-CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON notifications(user_id);
-
--- Create index on is_read for filtering unread notifications
-CREATE INDEX IF NOT EXISTS notifications_is_read_idx ON notifications(is_read); 
+[
+  {
+    "table_schema": "auth",
+    "table_name": "audit_log_entries",
+    "columns": "instance_id uuid\nid uuid NOT NULL\npayload json\ncreated_at timestamp with time zone\nip_address character varying NOT NULL DEFAULT ''::character varying"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "flow_state",
+    "columns": "id uuid NOT NULL\nuser_id uuid\nauth_code text NOT NULL\ncode_challenge_method USER-DEFINED NOT NULL\ncode_challenge text NOT NULL\nprovider_type text NOT NULL\nprovider_access_token text\nprovider_refresh_token text\ncreated_at timestamp with time zone\nupdated_at timestamp with time zone\nauthentication_method text NOT NULL\nauth_code_issued_at timestamp with time zone"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "identities",
+    "columns": "provider_id text NOT NULL\nuser_id uuid NOT NULL\nidentity_data jsonb NOT NULL\nprovider text NOT NULL\nlast_sign_in_at timestamp with time zone\ncreated_at timestamp with time zone\nupdated_at timestamp with time zone\nemail text\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "instances",
+    "columns": "id uuid NOT NULL\nuuid uuid\nraw_base_config text\ncreated_at timestamp with time zone\nupdated_at timestamp with time zone"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "mfa_amr_claims",
+    "columns": "session_id uuid NOT NULL\ncreated_at timestamp with time zone NOT NULL\nupdated_at timestamp with time zone NOT NULL\nauthentication_method text NOT NULL\nid uuid NOT NULL"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "mfa_challenges",
+    "columns": "id uuid NOT NULL\nfactor_id uuid NOT NULL\ncreated_at timestamp with time zone NOT NULL\nverified_at timestamp with time zone\nip_address inet NOT NULL\notp_code text\nweb_authn_session_data jsonb"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "mfa_factors",
+    "columns": "id uuid NOT NULL\nuser_id uuid NOT NULL\nfriendly_name text\nfactor_type USER-DEFINED NOT NULL\nstatus USER-DEFINED NOT NULL\ncreated_at timestamp with time zone NOT NULL\nupdated_at timestamp with time zone NOT NULL\nsecret text\nphone text\nlast_challenged_at timestamp with time zone\nweb_authn_credential jsonb\nweb_authn_aaguid uuid"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "one_time_tokens",
+    "columns": "id uuid NOT NULL\nuser_id uuid NOT NULL\ntoken_type USER-DEFINED NOT NULL\ntoken_hash text NOT NULL\nrelates_to text NOT NULL\ncreated_at timestamp without time zone NOT NULL DEFAULT now()\nupdated_at timestamp without time zone NOT NULL DEFAULT now()"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "refresh_tokens",
+    "columns": "instance_id uuid\nid bigint NOT NULL DEFAULT nextval('auth.refresh_tokens_id_seq'::regclass)\ntoken character varying\nuser_id character varying\nrevoked boolean\ncreated_at timestamp with time zone\nupdated_at timestamp with time zone\nparent character varying\nsession_id uuid"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "saml_providers",
+    "columns": "id uuid NOT NULL\nsso_provider_id uuid NOT NULL\nentity_id text NOT NULL\nmetadata_xml text NOT NULL\nmetadata_url text\nattribute_mapping jsonb\ncreated_at timestamp with time zone\nupdated_at timestamp with time zone\nname_id_format text"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "saml_relay_states",
+    "columns": "id uuid NOT NULL\nsso_provider_id uuid NOT NULL\nrequest_id text NOT NULL\nfor_email text\nredirect_to text\ncreated_at timestamp with time zone\nupdated_at timestamp with time zone\nflow_state_id uuid"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "schema_migrations",
+    "columns": "version character varying NOT NULL"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "sessions",
+    "columns": "id uuid NOT NULL\nuser_id uuid NOT NULL\ncreated_at timestamp with time zone\nupdated_at timestamp with time zone\nfactor_id uuid\naal USER-DEFINED\nnot_after timestamp with time zone\nrefreshed_at timestamp without time zone\nuser_agent text\nip inet\ntag text"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "sso_domains",
+    "columns": "id uuid NOT NULL\nsso_provider_id uuid NOT NULL\ndomain text NOT NULL\ncreated_at timestamp with time zone\nupdated_at timestamp with time zone"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "sso_providers",
+    "columns": "id uuid NOT NULL\nresource_id text\ncreated_at timestamp with time zone\nupdated_at timestamp with time zone"
+  },
+  {
+    "table_schema": "auth",
+    "table_name": "users",
+    "columns": "instance_id uuid\nid uuid NOT NULL\naud character varying\nrole character varying\nemail character varying\nencrypted_password character varying\nemail_confirmed_at timestamp with time zone\ninvited_at timestamp with time zone\nconfirmation_token character varying\nconfirmation_sent_at timestamp with time zone\nrecovery_token character varying\nrecovery_sent_at timestamp with time zone\nemail_change_token_new character varying\nemail_change character varying\nemail_change_sent_at timestamp with time zone\nlast_sign_in_at timestamp with time zone\nraw_app_meta_data jsonb\nraw_user_meta_data jsonb\nis_super_admin boolean\ncreated_at timestamp with time zone\nupdated_at timestamp with time zone\nphone text DEFAULT NULL::character varying\nphone_confirmed_at timestamp with time zone\nphone_change text DEFAULT ''::character varying\nphone_change_token character varying DEFAULT ''::character varying\nphone_change_sent_at timestamp with time zone\nconfirmed_at timestamp with time zone\nemail_change_token_current character varying DEFAULT ''::character varying\nemail_change_confirm_status smallint DEFAULT 0\nbanned_until timestamp with time zone\nreauthentication_token character varying DEFAULT ''::character varying\nreauthentication_sent_at timestamp with time zone\nis_sso_user boolean NOT NULL DEFAULT false\ndeleted_at timestamp with time zone\nis_anonymous boolean NOT NULL DEFAULT false"
+  },
+  {
+    "table_schema": "pgsodium",
+    "table_name": "key",
+    "columns": "id uuid NOT NULL DEFAULT gen_random_uuid()\nstatus USER-DEFINED DEFAULT 'valid'::pgsodium.key_status\ncreated timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP\nexpires timestamp with time zone\nkey_type USER-DEFINED\nkey_id bigint DEFAULT nextval('pgsodium.key_key_id_seq'::regclass)\nkey_context bytea DEFAULT '\\x7067736f6469756d'::bytea\nname text\nassociated_data text DEFAULT 'associated'::text\nraw_key bytea\nraw_key_nonce bytea\nparent_key uuid\ncomment text\nuser_data text"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "briefings",
+    "columns": "id bigint NOT NULL\nidea_id bigint NOT NULL\ndate_from timestamp with time zone NOT NULL\ndate_to timestamp with time zone NOT NULL\nimpact_analysis text NOT NULL\nsummary text NOT NULL\ndetails jsonb NOT NULL\nkey_attributes ARRAY DEFAULT '{}'::text[]\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())\nsuggested_signals jsonb DEFAULT '[]'::jsonb"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "idea_documents",
+    "columns": "id bigint NOT NULL\nidea_id bigint\nname text NOT NULL\nurl text NOT NULL\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ideas",
+    "columns": "id bigint NOT NULL\nname text NOT NULL\nmission_id bigint NOT NULL\nstatus text DEFAULT 'ideation'::text\ncategory text\nimpact text\nsignals text\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())\nai_analysis text\nlast_analyzed timestamp with time zone\ndescription text\ndetailed_analysis text\nsummary text\ninsights jsonb DEFAULT '[]'::jsonb\nuser_id uuid\nauto_briefing_enabled boolean DEFAULT true"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "knowledge_base",
+    "columns": "id bigint NOT NULL\nidea_id bigint NOT NULL\ntitle text NOT NULL\ncontent text\nsource_url text\nsource_type text NOT NULL\nsource_name text\npublication_date timestamp with time zone\nrelevance_score integer\nmetadata jsonb DEFAULT '{}'::jsonb\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())\nlast_analyzed timestamp with time zone\nbriefing_id bigint"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "missions",
+    "columns": "id bigint NOT NULL\nname text NOT NULL\norganization_id bigint NOT NULL\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())\nmotivation text\nsuccess_criteria text\ndescription text"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "notifications",
+    "columns": "id bigint NOT NULL DEFAULT nextval('notifications_id_seq'::regclass)\nuser_id uuid NOT NULL\ntitle text NOT NULL\ncontent text NOT NULL\nidea_id bigint\nbriefing_id bigint\nis_read boolean NOT NULL DEFAULT false\nnotification_type text NOT NULL DEFAULT 'briefing'::text\ncreated_at timestamp with time zone NOT NULL DEFAULT now()\nupdated_at timestamp with time zone NOT NULL DEFAULT now()"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "organizations",
+    "columns": "id bigint NOT NULL\nname text NOT NULL\nuser_id uuid NOT NULL\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())\nwebsite_url text\nindustry text\ntarget_market text\ndescription text"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "profiles",
+    "columns": "id uuid NOT NULL\nfull_name text\navatar_url text\nupdated_at timestamp with time zone DEFAULT timezone('utc'::text, now())"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "messages",
+    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "messages_2025_03_23",
+    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "messages_2025_03_24",
+    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "messages_2025_03_25",
+    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "messages_2025_03_26",
+    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "messages_2025_03_27",
+    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "messages_2025_03_28",
+    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "messages_2025_03_29",
+    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "schema_migrations",
+    "columns": "version bigint NOT NULL\ninserted_at timestamp without time zone"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "subscription",
+    "columns": "id bigint NOT NULL\nsubscription_id uuid NOT NULL\nentity regclass NOT NULL\nfilters ARRAY NOT NULL DEFAULT '{}'::realtime.user_defined_filter[]\nclaims jsonb NOT NULL\nclaims_role regrole NOT NULL\ncreated_at timestamp without time zone NOT NULL DEFAULT timezone('utc'::text, now())"
+  },
+  {
+    "table_schema": "storage",
+    "table_name": "buckets",
+    "columns": "id text NOT NULL\nname text NOT NULL\nowner uuid\ncreated_at timestamp with time zone DEFAULT now()\nupdated_at timestamp with time zone DEFAULT now()\npublic boolean DEFAULT false\navif_autodetection boolean DEFAULT false\nfile_size_limit bigint\nallowed_mime_types ARRAY\nowner_id text"
+  },
+  {
+    "table_schema": "storage",
+    "table_name": "migrations",
+    "columns": "id integer NOT NULL\nname character varying NOT NULL\nhash character varying NOT NULL\nexecuted_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP"
+  },
+  {
+    "table_schema": "storage",
+    "table_name": "objects",
+    "columns": "id uuid NOT NULL DEFAULT gen_random_uuid()\nbucket_id text\nname text\nowner uuid\ncreated_at timestamp with time zone DEFAULT now()\nupdated_at timestamp with time zone DEFAULT now()\nlast_accessed_at timestamp with time zone DEFAULT now()\nmetadata jsonb\npath_tokens ARRAY\nversion text\nowner_id text\nuser_metadata jsonb"
+  },
+  {
+    "table_schema": "storage",
+    "table_name": "s3_multipart_uploads",
+    "columns": "id text NOT NULL\nin_progress_size bigint NOT NULL DEFAULT 0\nupload_signature text NOT NULL\nbucket_id text NOT NULL\nkey text NOT NULL\nversion text NOT NULL\nowner_id text\ncreated_at timestamp with time zone NOT NULL DEFAULT now()\nuser_metadata jsonb"
+  },
+  {
+    "table_schema": "storage",
+    "table_name": "s3_multipart_uploads_parts",
+    "columns": "id uuid NOT NULL DEFAULT gen_random_uuid()\nupload_id text NOT NULL\nsize bigint NOT NULL DEFAULT 0\npart_number integer NOT NULL\nbucket_id text NOT NULL\nkey text NOT NULL\netag text NOT NULL\nowner_id text\nversion text NOT NULL\ncreated_at timestamp with time zone NOT NULL DEFAULT now()"
+  },
+  {
+    "table_schema": "vault",
+    "table_name": "secrets",
+    "columns": "id uuid NOT NULL DEFAULT gen_random_uuid()\nname text\ndescription text NOT NULL DEFAULT ''::text\nsecret text NOT NULL\nkey_id uuid DEFAULT (pgsodium.create_key()).id\nnonce bytea DEFAULT pgsodium.crypto_aead_det_noncegen()\ncreated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP\nupdated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP"
+  }
+]
