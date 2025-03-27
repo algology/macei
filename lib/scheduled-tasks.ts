@@ -217,7 +217,7 @@ export async function generateAllIdeaBriefings(userId?: string) {
               const userName =
                 profile?.full_name ||
                 userData.raw_user_meta_data?.full_name ||
-                "MACEI User";
+                "MACY User";
 
               const emailHtml = generateBriefingEmail(
                 userName,

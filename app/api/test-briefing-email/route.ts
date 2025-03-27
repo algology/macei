@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     // Fetch data if needed
     const supabase = getServerSupabase();
     let ideaName = "Sample Idea";
-    let userName = "MACEI User";
+    let userName = "MACY User";
 
     if (ideaId) {
       const { data: idea, error } = await supabase
