@@ -15,6 +15,7 @@ import {
   DollarSign,
   Clock,
   Plus,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -491,9 +492,36 @@ export function MarketSignalsSection({
                           <div className="p-5">
                             <div className="flex flex-col gap-3">
                               <div className="flex items-start justify-between">
-                                <h4 className="font-medium text-gray-200 group-hover:text-white transition-colors line-clamp-2">
-                                  {signal.title}
-                                </h4>
+                                <div className="flex items-start gap-3">
+                                  <div className="flex-shrink-0">
+                                    {signal.url && (
+                                      <img
+                                        src={`https://www.google.com/s2/favicons?domain=${
+                                          new URL(signal.url).hostname
+                                        }&sz=32`}
+                                        alt={`${signal.source} favicon`}
+                                        className="w-6 h-6 rounded-sm"
+                                        onError={(e) => {
+                                          // Hide the image if it fails to load
+                                          (
+                                            e.target as HTMLImageElement
+                                          ).style.display = "none";
+                                        }}
+                                      />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-medium text-gray-200 group-hover:text-white transition-colors line-clamp-2">
+                                      {signal.title}
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      {getSignalIcon(signal.type)}
+                                      <span className="text-xs text-gray-500">
+                                        {signal.source}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
                                 {signal.impactLevel === "high" && (
                                   <span className="ml-2 px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-900 rounded-full text-xs flex items-center whitespace-nowrap">
                                     <AlertCircle className="w-3 h-3 mr-1" />
@@ -511,8 +539,22 @@ export function MarketSignalsSection({
                                 {getSentimentBadge(signal.sentiment)}
                                 {getTimeframeBadge(signal.timeframe)}
                                 {signal.trendDirection && (
-                                  <span className="flex items-center gap-1 text-xs text-gray-400 border border-gray-700 px-2 py-0.5 rounded-full">
-                                    <TrendingUp className="w-3 h-3" />
+                                  <span
+                                    className={`flex items-center gap-1 text-xs border px-2 py-0.5 rounded-full ${
+                                      signal.trendDirection === "up"
+                                        ? "bg-green-500/20 text-green-400 border-green-900"
+                                        : signal.trendDirection === "down"
+                                        ? "bg-red-500/20 text-red-400 border-red-900"
+                                        : "bg-gray-500/20 text-gray-400 border-gray-900"
+                                    }`}
+                                  >
+                                    <TrendingUp
+                                      className={`w-3 h-3 ${
+                                        signal.trendDirection === "down"
+                                          ? "rotate-180"
+                                          : ""
+                                      }`}
+                                    />
                                     {signal.trendDirection}
                                   </span>
                                 )}
@@ -523,8 +565,6 @@ export function MarketSignalsSection({
                           <div className="border-t border-accent-2 bg-accent-1/50 p-3">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="flex items-center gap-2 text-xs text-gray-500">
-                                {getSourceTag(signal)}
-                                <span>•</span>
                                 <span>
                                   {signal.date !== "N/A"
                                     ? new Date(signal.date).toLocaleDateString(
@@ -557,8 +597,9 @@ export function MarketSignalsSection({
                                     href={signal.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
                                   >
+                                    <ExternalLink className="w-3 h-3" />
                                     View Source
                                   </a>
                                 ) : (
