@@ -1051,23 +1051,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
           <Tabs.Content value="market-signals" className="outline-none">
             <div className="bg-gradient-to-br from-accent-1/60 to-accent-1/40 backdrop-blur-sm border border-accent-2 rounded-xl p-6 transition-all duration-300 hover:shadow-lg hover:shadow-accent-1/10">
               <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-xl font-semibold">Market Signals</h3>
-                  <button
-                    onClick={() => {
-                      const refreshButton = document.querySelector(
-                        "[data-refresh-signals]"
-                      );
-                      if (refreshButton instanceof HTMLElement) {
-                        refreshButton.click();
-                      }
-                    }}
-                    className="px-3 py-1.5 bg-accent-1/50 hover:bg-accent-1/70 text-gray-300 border border-accent-2 rounded-lg transition-colors flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Refresh Signals
-                  </button>
-                </div>
+                <h3 className="text-xl font-semibold mb-2">Market Signals</h3>
                 <p className="text-gray-400 text-sm">
                   Track market trends and insights relevant to your idea.
                   Discover important news, trends, competitors, and industry

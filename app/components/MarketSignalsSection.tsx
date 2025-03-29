@@ -462,6 +462,26 @@ export function MarketSignalsSection({
           ([_, items]) => items.length > 0
         ) ? (
         <div className="space-y-6">
+          <div className="flex justify-end">
+            <button
+              onClick={fetchSignals}
+              disabled={isLoading}
+              data-refresh-signals
+              className="px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-900 rounded-lg hover:bg-blue-500/30 transition-colors text-sm inline-flex items-center gap-2"
+            >
+              {refreshing ? (
+                <>
+                  <LoadingSpinner className="w-4 h-4" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh Market Signals
+                </>
+              )}
+            </button>
+          </div>
           {Object.entries(filteredSignals).map(
             ([category, items]) =>
               items.length > 0 && (
