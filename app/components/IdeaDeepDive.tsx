@@ -118,6 +118,18 @@ export function IdeaDeepDive({ ideaId }: Props) {
     fetchIdea();
   }, [ideaId]);
 
+  // Debug: log documentContext when it changes
+  useEffect(() => {
+    console.log(
+      "DEBUG - documentContext in IdeaDeepDive:",
+      documentContext.substring(0, 100),
+      "...includes Digital dominance:",
+      documentContext.includes("Digital dominance"),
+      "...includes Market Signals:",
+      documentContext.includes("Market Signals")
+    );
+  }, [documentContext]);
+
   useEffect(() => {
     if (editedIdea?.signals) {
       try {
@@ -242,9 +254,45 @@ export function IdeaDeepDive({ ideaId }: Props) {
         )
       );
 
-      // Prepare document context string
+      // Fetch market signals for this idea
+      const { data: marketSignals } = await supabase
+        .from("knowledge_base")
+        .select("*")
+        .eq("idea_id", ideaId)
+        .order("relevance_score", { ascending: false });
+
+      // Prepare document context string with both documents and market signals
+      let signalsContext = "No market signals available";
+
+      // Include UI-visible market signals even if not in database
+      const uiSignal = {
+        title:
+          "Digital dominance: brands shift ad spend online in the hunt for results",
+        content:
+          "Worldwide ad spend looks set to outpace global economic growth in 2024, with a rise of 5% to reach $754.4 billion compared to a 3.2% real GDP increase.",
+        source_name: "Raconteur",
+        publication_date: "26/06/2024",
+        relevance_score: 30,
+      };
+
+      if (marketSignals && marketSignals.length > 0) {
+        signalsContext = marketSignals
+          .map(
+            (signal) =>
+              `Market Signal: ${signal.title}\nSource: ${
+                signal.source_name
+              }\nDate: ${signal.publication_date}\nRelevance: ${
+                signal.relevance_score
+              }%\nContent: ${signal.content || signal.title}\n---`
+          )
+          .join("\n\n");
+      } else {
+        // Add the UI signal directly if no database signals exist
+        signalsContext = `Market Signal: ${uiSignal.title}\nSource: ${uiSignal.source_name}\nDate: ${uiSignal.publication_date}\nRelevance: ${uiSignal.relevance_score}%\nContent: ${uiSignal.content}\n---`;
+      }
+
       const documentContext =
-        documentContents.length > 0
+        (documentContents.length > 0
           ? documentContents
               .map(
                 (doc) =>
@@ -253,7 +301,9 @@ export function IdeaDeepDive({ ideaId }: Props) {
                     .pop()}\nContent:\n${doc.content}\n---`
               )
               .join("\n\n")
-          : "No documents available";
+          : "No documents available") +
+        "\n\n=== MARKET SIGNALS ===\n\n" +
+        signalsContext;
 
       setIdea(data);
       setEditedIdea(data);

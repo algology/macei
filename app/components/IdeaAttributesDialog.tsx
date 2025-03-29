@@ -195,7 +195,7 @@ export function IdeaAttributesDialog({
     <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] bg-background border border-accent-2 rounded-lg shadow-lg p-4">
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] max-h-[90vh] overflow-y-auto bg-background border border-accent-2 rounded-lg shadow-lg p-4">
           <div className="flex justify-between items-center mb-4">
             <Dialog.Title className="text-lg font-medium">
               Idea Attributes
