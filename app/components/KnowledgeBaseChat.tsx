@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { IdeaDetails } from "./types";
 import ReactMarkdown from "react-markdown";
@@ -17,23 +17,6 @@ export function KnowledgeBaseChat({ ideaDetails, documents }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  // Debug: Log what documents the chat component is receiving
-  useEffect(() => {
-    console.log(
-      "KnowledgeBaseChat documents prop:",
-      documents.substring(0, 100)
-    );
-    console.log(
-      "Contains 'Digital dominance':",
-      documents.includes("Digital dominance")
-    );
-    console.log(
-      "Contains 'Market Signals':",
-      documents.includes("Market Signals")
-    );
-    console.log("Contains 'Relevance':", documents.includes("Relevance"));
-  }, [documents]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

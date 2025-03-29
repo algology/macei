@@ -119,18 +119,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
     fetchIdea();
   }, [ideaId]);
 
-  // Debug: log documentContext when it changes
-  useEffect(() => {
-    console.log(
-      "DEBUG - documentContext in IdeaDeepDive:",
-      documentContext.substring(0, 100),
-      "...includes Digital dominance:",
-      documentContext.includes("Digital dominance"),
-      "...includes Market Signals:",
-      documentContext.includes("Market Signals")
-    );
-  }, [documentContext]);
-
   useEffect(() => {
     if (editedIdea?.signals) {
       try {
@@ -237,10 +225,14 @@ export function IdeaDeepDive({ ideaId }: Props) {
       if (error) throw error;
 
       // Fetch documents for this idea
-      const { data: docs } = await supabase
-        .from("idea_documents")
-        .select("*")
-        .eq("idea_id", ideaId);
+      const [{ data: docs }, { data: knowledgeBase }] = await Promise.all([
+        supabase.from("idea_documents").select("*").eq("idea_id", ideaId),
+        supabase
+          .from("knowledge_base")
+          .select("*")
+          .eq("idea_id", ideaId)
+          .order("relevance_score", { ascending: false }),
+      ]);
 
       // Download and parse document contents
       const documentContents = await Promise.all(
@@ -255,25 +247,9 @@ export function IdeaDeepDive({ ideaId }: Props) {
         )
       );
 
-      // Prepare document context string with both documents and market signals
-      let signalsContext = "No market signals available";
-
-      // Include UI-visible market signals even if not in database
-      const uiSignal = {
-        title:
-          "Digital dominance: brands shift ad spend online in the hunt for results",
-        content:
-          "Worldwide ad spend looks set to outpace global economic growth in 2024, with a rise of 5% to reach $754.4 billion compared to a 3.2% real GDP increase.",
-        source_name: "Raconteur",
-        publication_date: "26/06/2024",
-        relevance_score: 30,
-      };
-
-      // Add the UI signal directly
-      signalsContext = `Market Signal: ${uiSignal.title}\nSource: ${uiSignal.source_name}\nDate: ${uiSignal.publication_date}\nRelevance: ${uiSignal.relevance_score}%\nContent: ${uiSignal.content}\n---`;
-
-      const documentContext =
-        (documentContents.length > 0
+      // Create document context from actual knowledge base documents
+      const documentsSection =
+        documentContents.length > 0
           ? documentContents
               .map(
                 (doc) =>
@@ -282,9 +258,21 @@ export function IdeaDeepDive({ ideaId }: Props) {
                     .pop()}\nContent:\n${doc.content}\n---`
               )
               .join("\n\n")
-          : "No documents available") +
-        "\n\n=== MARKET SIGNALS ===\n\n" +
-        signalsContext;
+          : "No documents available";
+
+      // Create knowledge base section from actual market signals
+      const knowledgeBaseSection =
+        knowledgeBase && knowledgeBase.length > 0
+          ? knowledgeBase
+              .map(
+                (signal) =>
+                  `Market Signal: ${signal.title}\nSource: ${signal.source_name}\nDate: ${signal.publication_date}\nRelevance: ${signal.relevance_score}%\nContent: ${signal.content}\n---`
+              )
+              .join("\n\n")
+          : "No market signals available";
+
+      // Combine both sections
+      const documentContext = `=== DOCUMENTS ===\n\n${documentsSection}\n\n=== MARKET SIGNALS ===\n\n${knowledgeBaseSection}`;
 
       setIdea(data);
       setEditedIdea(data);
@@ -1023,14 +1011,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
                             newKeywords.map((k) => k.text)
                           ),
                         });
-
-                        // Trigger a refresh of market signals on the signals tab when attributes are updated
-                        // This will be applied when they save changes
-                        // We don't want to auto-save here, just flag that changes should refresh signals
-                        localStorage.setItem(
-                          "refreshSignalsOnTabChange",
-                          "true"
-                        );
                       }}
                       inputFieldPosition="bottom"
                       placeholder="Type an attribute and press enter..."
@@ -1071,7 +1051,23 @@ export function IdeaDeepDive({ ideaId }: Props) {
           <Tabs.Content value="market-signals" className="outline-none">
             <div className="bg-gradient-to-br from-accent-1/60 to-accent-1/40 backdrop-blur-sm border border-accent-2 rounded-xl p-6 transition-all duration-300 hover:shadow-lg hover:shadow-accent-1/10">
               <div className="mb-4">
-                <h3 className="text-xl font-semibold mb-2">Market Signals</h3>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xl font-semibold">Market Signals</h3>
+                  <button
+                    onClick={() => {
+                      const refreshButton = document.querySelector(
+                        "[data-refresh-signals]"
+                      );
+                      if (refreshButton instanceof HTMLElement) {
+                        refreshButton.click();
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-accent-1/50 hover:bg-accent-1/70 text-gray-300 border border-accent-2 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Refresh Signals
+                  </button>
+                </div>
                 <p className="text-gray-400 text-sm">
                   Track market trends and insights relevant to your idea.
                   Discover important news, trends, competitors, and industry
@@ -1086,52 +1082,54 @@ export function IdeaDeepDive({ ideaId }: Props) {
                   </label>
                 </div>
                 <div className="bg-accent-1 border border-accent-2 rounded-md p-3 mb-4">
-                  {keywords.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {keywords.map((tag, index) => (
-                        <div
-                          key={index}
-                          className="inline-flex items-center bg-green-500/20 text-green-400 border border-green-900 px-2 py-1 rounded-md"
-                        >
-                          {tag.text}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-sm">
-                      No attributes defined for this idea yet.
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm text-gray-400">
-                    Add Signal
-                  </label>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Type a new signal and press Add..."
-                    className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-2 focus:ring-green-500/20 transition-all duration-200"
-                    value={newSignalText || ""}
-                    onChange={(e) => setNewSignalText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && newSignalText) {
-                        e.preventDefault();
-                        addNewSignal();
+                  <ReactTags
+                    tags={keywords}
+                    delimiters={delimiters}
+                    handleDelete={(i) => {
+                      try {
+                        const newKeywords = keywords.filter(
+                          (_, index) => index !== i
+                        );
+                        setKeywords(newKeywords);
+                        setEditedIdea({
+                          ...editedIdea!,
+                          signals: JSON.stringify(
+                            newKeywords.map((k) => k.text)
+                          ),
+                        });
+                      } catch (error) {
+                        console.error("Error deleting keyword:", error);
                       }
                     }}
+                    handleAddition={(tag: Tag) => {
+                      const newTag: CustomTag = {
+                        id: tag.id,
+                        text: tag.id,
+                        className: "tag-class",
+                        category: selectedCategory,
+                      };
+                      const newKeywords = [...keywords, newTag];
+                      setKeywords(newKeywords);
+                      setEditedIdea({
+                        ...editedIdea!,
+                        signals: JSON.stringify(newKeywords.map((k) => k.text)),
+                      });
+                    }}
+                    inputFieldPosition="bottom"
+                    placeholder="Type an attribute and press enter..."
+                    autofocus={false}
+                    allowUnique={true}
+                    classNames={{
+                      tags: "space-y-2",
+                      tagInput: "mt-2 pt-2 border-t border-accent-2",
+                      tag: "inline-flex items-center bg-green-500/20 text-green-400 border border-green-900 px-2 py-1 rounded-md mr-2",
+                      remove:
+                        "ml-2 text-green-400 hover:text-green-300 cursor-pointer",
+                      suggestions: "hidden",
+                    }}
                   />
-                  <button
-                    onClick={addNewSignal}
-                    disabled={!newSignalText}
-                    className="px-3 py-2 bg-green-500/20 text-green-400 border border-green-900 rounded-md hover:bg-green-500/30 transition-all flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add
-                  </button>
                 </div>
+
                 <p className="text-xs text-gray-500 mt-2">
                   Add signals or keywords to better track market data for your
                   idea
