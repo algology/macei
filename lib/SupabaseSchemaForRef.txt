@@ -91,6 +91,11 @@
   },
   {
     "table_schema": "public",
+    "table_name": "feedback",
+    "columns": "id bigint NOT NULL\nuser_id uuid NOT NULL\ncontent text NOT NULL\npage_url text\ncomponent text\nrating integer\nidea_id bigint\nmission_id bigint\norganization_id bigint\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())\nstatus text DEFAULT 'unread'::text\npriority text DEFAULT 'medium'::text\ntags ARRAY"
+  },
+  {
+    "table_schema": "public",
     "table_name": "idea_documents",
     "columns": "id bigint NOT NULL\nidea_id bigint\nname text NOT NULL\nurl text NOT NULL\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())"
   },
@@ -131,21 +136,6 @@
   },
   {
     "table_schema": "realtime",
-    "table_name": "messages_2025_03_23",
-    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
-  },
-  {
-    "table_schema": "realtime",
-    "table_name": "messages_2025_03_24",
-    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
-  },
-  {
-    "table_schema": "realtime",
-    "table_name": "messages_2025_03_25",
-    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
-  },
-  {
-    "table_schema": "realtime",
     "table_name": "messages_2025_03_26",
     "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
   },
@@ -162,6 +152,21 @@
   {
     "table_schema": "realtime",
     "table_name": "messages_2025_03_29",
+    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "messages_2025_03_30",
+    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "messages_2025_03_31",
+    "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
+  },
+  {
+    "table_schema": "realtime",
+    "table_name": "messages_2025_04_01",
     "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
   },
   {
