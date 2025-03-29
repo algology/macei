@@ -1,6 +1,20 @@
 import Groq from "groq-sdk";
 import { supabase } from "@/lib/supabase";
 
+// Define a type for the signal data
+interface SignalData {
+  title: string;
+  content: string;
+  source_name: string;
+  publication_date: string;
+  relevance_score: number;
+  source_type: string;
+  metadata: {
+    impact_level: string;
+    sentiment: string;
+  };
+}
+
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
@@ -73,7 +87,7 @@ export async function POST(request: Request) {
     );
 
     // Manual fallback - attempt to fetch signal data directly from UI state
-    let fallbackSignals = [];
+    let fallbackSignals: SignalData[] = [];
     if (documents && typeof documents === "string") {
       // Try to extract signal data from the documents string if it contains signal data
       try {
@@ -145,8 +159,8 @@ export async function POST(request: Request) {
         : fallbackSignals;
 
     // Process market signals for better analysis
-    let processedSignals = {};
-    let savedSignalsList = [];
+    let processedSignals: Record<string, any> = {};
+    let savedSignalsList: Array<any> = [];
 
     if (effectiveSignals.length > 0) {
       processedSignals = effectiveSignals.reduce((acc: any, signal: any) => {
@@ -272,42 +286,45 @@ export async function POST(request: Request) {
       savedSignalsList = manualSignals;
 
       // Process manual signals into categories
-      processedSignals = manualSignals.reduce((acc: any, signal: any) => {
-        const type = signal.type;
-        if (!acc[type]) {
-          acc[type] = {
-            count: 0,
-            highImpact: 0,
-            positive: 0,
-            negative: 0,
-            recent: 0,
-            oldest: null,
-            newest: null,
-            savedSignals: [],
-          };
-        }
+      processedSignals = manualSignals.reduce(
+        (acc: Record<string, any>, signal) => {
+          const type = signal.type;
+          if (!acc[type]) {
+            acc[type] = {
+              count: 0,
+              highImpact: 0,
+              positive: 0,
+              negative: 0,
+              recent: 0,
+              oldest: null,
+              newest: null,
+              savedSignals: [],
+            };
+          }
 
-        acc[type].count++;
-        if (signal.impact === "high") acc[type].highImpact++;
-        if (signal.sentiment === "positive") acc[type].positive++;
-        if (signal.sentiment === "negative") acc[type].negative++;
+          acc[type].count++;
+          if (signal.impact === "high") acc[type].highImpact++;
+          if (signal.sentiment === "positive") acc[type].positive++;
+          if (signal.sentiment === "negative") acc[type].negative++;
 
-        const date = new Date(signal.date);
-        if (!acc[type].oldest || date < new Date(acc[type].oldest)) {
-          acc[type].oldest = signal.date;
-        }
-        if (!acc[type].newest || date > new Date(acc[type].newest)) {
-          acc[type].newest = signal.date;
-        }
+          const date = new Date(signal.date);
+          if (!acc[type].oldest || date < new Date(acc[type].oldest)) {
+            acc[type].oldest = signal.date;
+          }
+          if (!acc[type].newest || date > new Date(acc[type].newest)) {
+            acc[type].newest = signal.date;
+          }
 
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        if (date >= thirtyDaysAgo) acc[type].recent++;
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          if (date >= thirtyDaysAgo) acc[type].recent++;
 
-        acc[type].savedSignals.push(signal);
+          acc[type].savedSignals.push(signal);
 
-        return acc;
-      }, {});
+          return acc;
+        },
+        {}
+      );
     }
 
     console.log("Processed signals for types:", Object.keys(processedSignals));
