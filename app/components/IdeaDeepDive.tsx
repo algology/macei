@@ -106,6 +106,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
   const [newInsight, setNewInsight] = useState("");
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [savingInsight, setSavingInsight] = useState(false);
+  const [newSignalText, setNewSignalText] = useState("");
 
   const KeyCodes = {
     comma: 188,
@@ -254,13 +255,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
         )
       );
 
-      // Fetch market signals for this idea
-      const { data: marketSignals } = await supabase
-        .from("knowledge_base")
-        .select("*")
-        .eq("idea_id", ideaId)
-        .order("relevance_score", { ascending: false });
-
       // Prepare document context string with both documents and market signals
       let signalsContext = "No market signals available";
 
@@ -275,21 +269,8 @@ export function IdeaDeepDive({ ideaId }: Props) {
         relevance_score: 30,
       };
 
-      if (marketSignals && marketSignals.length > 0) {
-        signalsContext = marketSignals
-          .map(
-            (signal) =>
-              `Market Signal: ${signal.title}\nSource: ${
-                signal.source_name
-              }\nDate: ${signal.publication_date}\nRelevance: ${
-                signal.relevance_score
-              }%\nContent: ${signal.content || signal.title}\n---`
-          )
-          .join("\n\n");
-      } else {
-        // Add the UI signal directly if no database signals exist
-        signalsContext = `Market Signal: ${uiSignal.title}\nSource: ${uiSignal.source_name}\nDate: ${uiSignal.publication_date}\nRelevance: ${uiSignal.relevance_score}%\nContent: ${uiSignal.content}\n---`;
-      }
+      // Add the UI signal directly
+      signalsContext = `Market Signal: ${uiSignal.title}\nSource: ${uiSignal.source_name}\nDate: ${uiSignal.publication_date}\nRelevance: ${uiSignal.relevance_score}%\nContent: ${uiSignal.content}\n---`;
 
       const documentContext =
         (documentContents.length > 0
@@ -389,7 +370,17 @@ export function IdeaDeepDive({ ideaId }: Props) {
 
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 2000);
+
+      // If there's a flag to refresh signals, keep it set for the next tab change
+      const shouldRefreshSignals =
+        localStorage.getItem("refreshSignalsOnTabChange") === "true";
+
       fetchIdea(); // Refresh the idea data
+
+      // If user modifies signals and clicks save, make sure the market signals will refresh
+      if (shouldRefreshSignals && activeTab !== "market-signals") {
+        localStorage.setItem("refreshSignalsOnTabChange", "true");
+      }
     } catch (error) {
       console.error("Error saving idea:", error);
       alert("Error saving idea. Please try again.");
@@ -695,6 +686,64 @@ export function IdeaDeepDive({ ideaId }: Props) {
     }
   }
 
+  async function addNewSignal() {
+    if (!newSignalText.trim()) return;
+
+    try {
+      setSaving(true);
+      // Create a new tag with the required CustomTag properties
+      const newTag: CustomTag = {
+        id: newSignalText.trim(),
+        text: newSignalText.trim(),
+        className: "tag-class",
+        category: "keyword",
+      };
+
+      const newKeywords = [...keywords, newTag];
+      setKeywords(newKeywords);
+      setEditedIdea({
+        ...editedIdea!,
+        signals: JSON.stringify(newKeywords.map((k) => k.text)),
+      });
+
+      const { error } = await supabase
+        .from("ideas")
+        .update({
+          signals: JSON.stringify(newKeywords.map((k) => k.text)),
+        })
+        .eq("id", ideaId);
+
+      if (error) throw error;
+
+      setNewSignalText("");
+      setShowSaved(true);
+      setTimeout(() => setShowSaved(false), 2000);
+
+      // If user modifies signals and clicks save, make sure the market signals will refresh
+      localStorage.setItem("refreshSignalsOnTabChange", "true");
+
+      // Refresh market signals if we're already on that tab
+      if (activeTab === "market-signals") {
+        setTimeout(() => {
+          const refreshButton = document.querySelector(
+            "[data-refresh-signals]"
+          );
+          if (refreshButton instanceof HTMLElement) {
+            refreshButton.click();
+          }
+        }, 300);
+      }
+    } catch (error) {
+      console.error("Error adding new signal:", error);
+      toast.error("Failed to add new signal", {
+        description: "Please try again.",
+        icon: <AlertCircle className="w-4 h-4" />,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const hasChanges = JSON.stringify(idea) !== JSON.stringify(editedIdea);
 
   if (loading)
@@ -776,6 +825,34 @@ export function IdeaDeepDive({ ideaId }: Props) {
             >
               <FileText className="w-4 h-4" />
               Briefings
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="market-signals"
+              onClick={() => {
+                // Check if we need to refresh signals based on attribute changes
+                const shouldRefresh =
+                  localStorage.getItem("refreshSignalsOnTabChange") === "true";
+                if (shouldRefresh) {
+                  localStorage.removeItem("refreshSignalsOnTabChange");
+                  // Wait a moment for the tab to become active before refreshing
+                  setTimeout(() => {
+                    const refreshButton = document.querySelector(
+                      "[data-refresh-signals]"
+                    );
+                    if (refreshButton instanceof HTMLElement) {
+                      refreshButton.click();
+                    }
+                  }, 300);
+                }
+              }}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors hover:text-white ${
+                activeTab === "market-signals"
+                  ? "text-white border-b-2 border-green-500"
+                  : "text-gray-400"
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              Market Signals
             </Tabs.Trigger>
             <Tabs.Trigger
               value="insights"
@@ -877,6 +954,36 @@ export function IdeaDeepDive({ ideaId }: Props) {
                   </div>
                 </div>
 
+                <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-6">
+                  <IdeaKnowledgeBase
+                    ideaId={parseInt(ideaId, 10)}
+                    onDocumentAdded={() => {
+                      fetchIdea();
+                    }}
+                  />
+                </div>
+
+                <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-4">
+                  <EmailToSignalConfig
+                    ideaId={parseInt(ideaId, 10)}
+                    ideaName={editedIdea.name}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">
+                      Knowledge Base Chat
+                    </h3>
+                  </div>
+                  <KnowledgeBaseChat
+                    ideaDetails={editedIdea}
+                    documents={documentContext}
+                  />
+                </div>
+
                 <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
                   <label className="block text-sm text-gray-400 mb-1">
                     Idea Attributes
@@ -916,6 +1023,14 @@ export function IdeaDeepDive({ ideaId }: Props) {
                             newKeywords.map((k) => k.text)
                           ),
                         });
+
+                        // Trigger a refresh of market signals on the signals tab when attributes are updated
+                        // This will be applied when they save changes
+                        // We don't want to auto-save here, just flag that changes should refresh signals
+                        localStorage.setItem(
+                          "refreshSignalsOnTabChange",
+                          "true"
+                        );
                       }}
                       inputFieldPosition="bottom"
                       placeholder="Type an attribute and press enter..."
@@ -936,52 +1051,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
                     will be used to track the idea.
                   </p>
                 </div>
-
-                <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-                  <MarketSignalsSection
-                    ideaDetails={editedIdea}
-                    missionData={missionData}
-                    onInsightUpdate={() => {
-                      // Refresh the knowledge base when a signal is saved
-                      const knowledgeBase = document.querySelector(
-                        '[data-component="knowledge-base"]'
-                      );
-                      if (knowledgeBase) {
-                        (knowledgeBase as any).__fetchData?.();
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-6">
-                  <IdeaKnowledgeBase
-                    ideaId={parseInt(ideaId, 10)}
-                    onDocumentAdded={() => {
-                      fetchIdea();
-                    }}
-                  />
-                </div>
-
-                <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-6">
-                  <EmailToSignalConfig
-                    ideaId={parseInt(ideaId, 10)}
-                    ideaName={editedIdea.name}
-                  />
-                </div>
-
-                <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">
-                      Knowledge Base Chat
-                    </h3>
-                  </div>
-                  <KnowledgeBaseChat
-                    ideaDetails={editedIdea}
-                    documents={documentContext}
-                  />
-                </div>
               </div>
             </div>
           </Tabs.Content>
@@ -995,6 +1064,92 @@ export function IdeaDeepDive({ ideaId }: Props) {
                 onSwitchToInsights={() => setActiveTab("insights")}
                 onSwitchToAttributes={() => setActiveTab("attributes")}
                 onIdeaUpdated={fetchIdea}
+              />
+            </div>
+          </Tabs.Content>
+
+          <Tabs.Content value="market-signals" className="outline-none">
+            <div className="bg-gradient-to-br from-accent-1/60 to-accent-1/40 backdrop-blur-sm border border-accent-2 rounded-xl p-6 transition-all duration-300 hover:shadow-lg hover:shadow-accent-1/10">
+              <div className="mb-4">
+                <h3 className="text-xl font-semibold mb-2">Market Signals</h3>
+                <p className="text-gray-400 text-sm">
+                  Track market trends and insights relevant to your idea.
+                  Discover important news, trends, competitors, and industry
+                  insights that could impact your innovation.
+                </p>
+              </div>
+
+              <div className="bg-accent-1/50 border border-accent-2 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm text-gray-400">
+                    Current Idea Attributes
+                  </label>
+                </div>
+                <div className="bg-accent-1 border border-accent-2 rounded-md p-3 mb-4">
+                  {keywords.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {keywords.map((tag, index) => (
+                        <div
+                          key={index}
+                          className="inline-flex items-center bg-green-500/20 text-green-400 border border-green-900 px-2 py-1 rounded-md"
+                        >
+                          {tag.text}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">
+                      No attributes defined for this idea yet.
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm text-gray-400">
+                    Add Signal
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Type a new signal and press Add..."
+                    className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-2 focus:ring-green-500/20 transition-all duration-200"
+                    value={newSignalText || ""}
+                    onChange={(e) => setNewSignalText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newSignalText) {
+                        e.preventDefault();
+                        addNewSignal();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={addNewSignal}
+                    disabled={!newSignalText}
+                    className="px-3 py-2 bg-green-500/20 text-green-400 border border-green-900 rounded-md hover:bg-green-500/30 transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Add signals or keywords to better track market data for your
+                  idea
+                </p>
+              </div>
+
+              <MarketSignalsSection
+                ideaDetails={editedIdea}
+                missionData={missionData}
+                onInsightUpdate={() => {
+                  // Refresh the knowledge base when a signal is saved
+                  const knowledgeBase = document.querySelector(
+                    '[data-component="knowledge-base"]'
+                  );
+                  if (knowledgeBase) {
+                    (knowledgeBase as any).__fetchData?.();
+                  }
+                }}
               />
             </div>
           </Tabs.Content>

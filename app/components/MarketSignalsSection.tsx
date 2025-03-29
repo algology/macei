@@ -14,6 +14,7 @@ import {
   Briefcase,
   DollarSign,
   Clock,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -331,7 +332,11 @@ export function MarketSignalsSection({
       icon: <DollarSign className="w-4 h-4" />,
     },
     { id: "academic", label: "Academic", icon: <Book className="w-4 h-4" /> },
-    { id: "patents", label: "Patents", icon: <Lightbulb className="w-4 h-4" /> },
+    {
+      id: "patents",
+      label: "Patents",
+      icon: <Lightbulb className="w-4 h-4" />,
+    },
   ];
 
   // Type guard to check if a category exists in our signals object
@@ -397,36 +402,10 @@ export function MarketSignalsSection({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Newspaper className="w-4 h-4 text-gray-400" />
-          <h3 className="text-lg font-semibold">Market Signals</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={fetchSignals}
-            disabled={isLoading}
-            className="px-3 py-1.5 bg-accent-1/50 border border-accent-2 rounded-lg hover:bg-accent-1 transition-colors flex items-center gap-2 text-sm"
-          >
-            {refreshing ? (
-              <>
-                <LoadingSpinner className="w-3 h-3" />
-                Refreshing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-3 h-3" />
-                Refresh
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       {/* Category Tabs */}
-      <div className="border-b border-accent-2 mb-4 -mx-1">
-        <div className="flex overflow-x-auto space-x-1 pb-1">
+      <div className="border-b border-accent-2">
+        <div className="flex overflow-x-auto">
           {tabs.map((tab) => {
             // Only show tabs that have content
             const hasContent =
@@ -439,18 +418,21 @@ export function MarketSignalsSection({
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`px-3 py-2 flex items-center gap-1.5 text-sm whitespace-nowrap transition-colors ${
+                className={`px-4 py-3 flex items-center gap-2 text-sm whitespace-nowrap transition-colors duration-200 relative ${
                   activeTab === tab.id
-                    ? "border-b-2 border-blue-500 text-blue-400"
+                    ? "text-blue-400 font-medium"
                     : "text-gray-400 hover:text-gray-300"
                 }`}
               >
                 {tab.icon}
                 {tab.label}
                 {tab.id !== "all" && isValidCategory(tab.id) && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-accent-1/50 text-xs rounded-full">
+                  <span className="ml-1 px-2 py-0.5 bg-accent-1/50 text-xs rounded-full">
                     {signals[tab.id].length}
                   </span>
+                )}
+                {activeTab === tab.id && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-500" />
                 )}
               </button>
             );
@@ -459,15 +441,18 @@ export function MarketSignalsSection({
       </div>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center p-10 border border-accent-2 rounded-lg bg-accent-1/30">
+        <div className="flex flex-col items-center justify-center p-10 border border-accent-2 rounded-lg bg-gradient-to-br from-accent-1/30 to-accent-1/10">
           <div className="flex flex-col items-center space-y-4">
-            <LoadingSpinner className="w-8 h-8 text-blue-400" />
-            <div className="text-center space-y-1">
+            <div className="p-4 bg-blue-500/10 rounded-full border border-blue-900">
+              <LoadingSpinner className="w-10 h-10 text-blue-400" />
+            </div>
+            <div className="text-center space-y-2">
               <p className="text-gray-300 font-medium">
-                Refreshing Market Signals
+                Discovering Market Signals
               </p>
-              <p className="text-sm text-gray-500">
-                This may take a moment as we search for the latest data
+              <p className="text-sm text-gray-500 max-w-md">
+                We're searching the market for signals relevant to your idea.
+                This includes news, trends, competitors, and industry insights.
               </p>
             </div>
           </div>
@@ -480,44 +465,63 @@ export function MarketSignalsSection({
             ([category, items]) =>
               items.length > 0 && (
                 <div key={category} className="space-y-4">
-                  <h4 className="text-sm font-medium capitalize text-gray-400">
-                    {category}
+                  <h4 className="text-sm font-medium capitalize text-gray-400 flex items-center">
+                    <span className="mr-2">{category}</span>
+                    <span className="px-2 py-0.5 bg-accent-1/50 text-xs rounded-full">
+                      {items.length} signals
+                    </span>
                   </h4>
-                  {items.map((signal, index) => {
-                    const signalKey = `${signal.type}-${signal.title}`;
-                    const isSaving = savingSignals[signalKey];
-                    const isSaved = savedSignals[signalKey];
+                  <div
+                    className={`grid gap-4 ${
+                      items.length > 1
+                        ? "grid-cols-1 md:grid-cols-2"
+                        : "grid-cols-1"
+                    }`}
+                  >
+                    {items.map((signal, index) => {
+                      const signalKey = `${signal.type}-${signal.title}`;
+                      const isSaving = savingSignals[signalKey];
+                      const isSaved = savedSignals[signalKey];
 
-                    return (
-                      <div
-                        key={index}
-                        className="block p-4 bg-accent-1/30 border border-accent-2 rounded-lg hover:bg-accent-1/50 transition-colors"
-                      >
-                        <div className="flex gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-medium">{signal.title}</h4>
-                              {signal.impactLevel === "high" && (
-                                <span className="px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-900 rounded-full text-xs">
-                                  High Impact
-                                </span>
-                              )}
+                      return (
+                        <div
+                          key={index}
+                          className="block p-0 bg-gradient-to-br from-accent-1/30 to-accent-1/10 border border-accent-2 rounded-lg transition-all duration-300 hover:from-accent-1/40 hover:to-accent-1/20 overflow-hidden group"
+                        >
+                          <div className="p-5">
+                            <div className="flex flex-col gap-3">
+                              <div className="flex items-start justify-between">
+                                <h4 className="font-medium text-gray-200 group-hover:text-white transition-colors line-clamp-2">
+                                  {signal.title}
+                                </h4>
+                                {signal.impactLevel === "high" && (
+                                  <span className="ml-2 px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-900 rounded-full text-xs flex items-center whitespace-nowrap">
+                                    <AlertCircle className="w-3 h-3 mr-1" />
+                                    High Impact
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors line-clamp-3">
+                                {signal.description}
+                              </p>
+
+                              <div className="flex flex-wrap items-center gap-2 pt-1">
+                                {getCategoryBadge(signal.category, signal.type)}
+                                {getSentimentBadge(signal.sentiment)}
+                                {getTimeframeBadge(signal.timeframe)}
+                                {signal.trendDirection && (
+                                  <span className="flex items-center gap-1 text-xs text-gray-400 border border-gray-700 px-2 py-0.5 rounded-full">
+                                    <TrendingUp className="w-3 h-3" />
+                                    {signal.trendDirection}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <p className="text-sm text-gray-400 mb-2">
-                              {signal.description}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-2 mb-3">
-                              {getCategoryBadge(signal.category, signal.type)}
-                              {getSentimentBadge(signal.sentiment)}
-                              {getTimeframeBadge(signal.timeframe)}
-                              {signal.trendDirection && (
-                                <span className="flex items-center gap-1 text-xs text-gray-400">
-                                  <TrendingUp className="w-3 h-3" />
-                                  {signal.trendDirection}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center justify-between">
+                          </div>
+
+                          <div className="border-t border-accent-2 bg-accent-1/50 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="flex items-center gap-2 text-xs text-gray-500">
                                 {getSourceTag(signal)}
                                 <span>•</span>
@@ -547,13 +551,13 @@ export function MarketSignalsSection({
                                     </>
                                   )}
                               </div>
-                              <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-3">
                                 {isValidUrl(signal.url) ? (
                                   <a
                                     href={signal.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-xs text-blue-400 hover:text-blue-300"
+                                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                                   >
                                     View Source
                                   </a>
@@ -565,10 +569,10 @@ export function MarketSignalsSection({
                                 <button
                                   onClick={() => saveToKnowledgeBase(signal)}
                                   disabled={isSaving || isSaved}
-                                  className={`flex items-center gap-1 px-2 py-1 text-xs border rounded transition-colors ${
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-md transition-all ${
                                     isSaved
                                       ? "bg-green-500/20 text-green-400 border-green-900"
-                                      : "bg-accent-1/50 hover:bg-accent-1 border-accent-2"
+                                      : "bg-blue-500/20 text-blue-400 border-blue-900 hover:bg-blue-500/30"
                                   } disabled:opacity-50`}
                                 >
                                   {isSaving ? (
@@ -592,34 +596,102 @@ export function MarketSignalsSection({
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               )
           )}
         </div>
       ) : (
-        <div className="text-center py-8 border border-accent-2 rounded-lg bg-accent-1/30">
-          <div className="text-gray-400 mb-2">
-            {activeTab !== "all"
-              ? "No signals found for this category"
-              : "Click refresh to load market signals"}
-          </div>
-          {activeTab !== "all" && (
-            <div className="text-sm text-gray-500">
-              Try selecting "All Signals" from the tabs above
-              <div className="mt-2">
-                <button
-                  onClick={() => setActiveTab("all")}
-                  className="px-3 py-1.5 bg-accent-1/50 border border-accent-2 rounded-lg hover:bg-accent-1 transition-colors text-sm inline-flex items-center gap-2"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  Show All Signals
-                </button>
+        <div className="text-center py-12 border border-accent-2 rounded-lg bg-gradient-to-br from-accent-1/30 to-accent-1/10">
+          <div className="flex flex-col items-center justify-center">
+            <div className="p-4 bg-gray-800/50 rounded-full border border-accent-2 mb-4">
+              <Newspaper className="w-8 h-8 text-gray-400" />
+            </div>
+            <div className="text-gray-300 mb-3 font-medium">
+              {activeTab !== "all"
+                ? "No signals found for this category"
+                : "Discover Market Signals for Your Idea"}
+            </div>
+            <div className="text-sm text-gray-500 max-w-md mb-6">
+              {activeTab !== "all"
+                ? "Try selecting 'All Signals' from the tabs above to see all available signals."
+                : "Market signals help you understand trends, competitors, and other factors that might impact your idea."}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mb-6">
+              <div className="bg-accent-1/20 p-4 rounded-lg border border-accent-2">
+                <div className="flex items-start mb-2">
+                  <TrendingUp className="w-5 h-5 text-green-400 mr-2 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-gray-300">Market Trends</h4>
+                    <p className="text-xs text-gray-500">
+                      Discover trends that might impact your idea
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-accent-1/20 p-4 rounded-lg border border-accent-2">
+                <div className="flex items-start mb-2">
+                  <Users className="w-5 h-5 text-blue-400 mr-2 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-gray-300">Competitors</h4>
+                    <p className="text-xs text-gray-500">
+                      Identify competitors in your market space
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-accent-1/20 p-4 rounded-lg border border-accent-2">
+                <div className="flex items-start mb-2">
+                  <Newspaper className="w-5 h-5 text-purple-400 mr-2 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-gray-300">
+                      News & Reports
+                    </h4>
+                    <p className="text-xs text-gray-500">
+                      Stay updated with latest industry news
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-accent-1/20 p-4 rounded-lg border border-accent-2">
+                <div className="flex items-start mb-2">
+                  <DollarSign className="w-5 h-5 text-yellow-400 mr-2 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-gray-300">Funding</h4>
+                    <p className="text-xs text-gray-500">
+                      Track investment activities in your area
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
+
+            {activeTab !== "all" ? (
+              <button
+                onClick={() => setActiveTab("all")}
+                className="px-4 py-2 bg-accent-1/50 border border-accent-2 rounded-lg hover:bg-accent-1 transition-colors text-sm inline-flex items-center gap-2"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Show All Signals
+              </button>
+            ) : (
+              <button
+                onClick={fetchSignals}
+                disabled={isLoading}
+                data-refresh-signals
+                className="px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-900 rounded-lg hover:bg-blue-500/30 transition-colors text-sm inline-flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Fetch Market Signals
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
