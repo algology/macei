@@ -107,6 +107,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [savingInsight, setSavingInsight] = useState(false);
   const [newSignalText, setNewSignalText] = useState("");
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
 
   const KeyCodes = {
     comma: 188,
@@ -950,28 +951,9 @@ export function IdeaDeepDive({ ideaId }: Props) {
                     }}
                   />
                 </div>
-
-                <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-4">
-                  <EmailToSignalConfig
-                    ideaId={parseInt(ideaId, 10)}
-                    ideaName={editedIdea.name}
-                  />
-                </div>
               </div>
 
               <div className="space-y-6">
-                <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">
-                      Knowledge Base Chat
-                    </h3>
-                  </div>
-                  <KnowledgeBaseChat
-                    ideaDetails={editedIdea}
-                    documents={documentContext}
-                  />
-                </div>
-
                 <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
                   <label className="block text-sm text-gray-400 mb-1">
                     Idea Attributes
@@ -1030,6 +1012,13 @@ export function IdeaDeepDive({ ideaId }: Props) {
                     Press enter or comma to add an attribute. These attributes
                     will be used to track the idea.
                   </p>
+                </div>
+
+                <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-4">
+                  <EmailToSignalConfig
+                    ideaId={parseInt(ideaId, 10)}
+                    ideaName={editedIdea.name}
+                  />
                 </div>
               </div>
             </div>
@@ -1660,6 +1649,46 @@ export function IdeaDeepDive({ ideaId }: Props) {
             Changes saved
           </div>
         )}
+      </div>
+
+      {/* Floating Knowledge Base Chat */}
+      <div
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] sm:w-[600px] md:w-[720px] lg:w-[800px] xl:w-[1000px] 2xl:w-[1200px] max-w-[1400px] ${
+          isChatExpanded
+            ? "bg-accent-1/95 backdrop-blur-md border border-accent-2 rounded-t-xl"
+            : "bg-green-500/20 text-green-400 border border-green-900 rounded-xl hover:bg-green-500/30"
+        } shadow-lg shadow-accent-1/20 z-50 transition-all duration-300 ease-in-out ${
+          isChatExpanded ? "h-[500px] rounded-b-none" : "h-10"
+        }`}
+      >
+        <div
+          className="px-4 h-10 cursor-pointer flex items-center justify-between transition-colors rounded-t-xl"
+          onClick={() => setIsChatExpanded(!isChatExpanded)}
+        >
+          <h3 className="text-base font-semibold leading-none">
+            Knowledge Base Chat
+          </h3>
+          <ChevronDown
+            className={`w-4 h-4 transition-transform duration-300 ${
+              !isChatExpanded ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+        <div
+          className={`transition-all duration-300 ${
+            isChatExpanded
+              ? "opacity-100 h-[calc(100%-2.5rem)]"
+              : "opacity-0 h-0"
+          } overflow-hidden`}
+        >
+          <div className="p-4 h-full">
+            <KnowledgeBaseChat
+              ideaDetails={editedIdea}
+              documents={documentContext}
+              onFocus={() => setIsChatExpanded(true)}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

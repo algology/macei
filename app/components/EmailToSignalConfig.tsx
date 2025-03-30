@@ -30,8 +30,8 @@ export function EmailToSignalConfig({ ideaId, ideaName }: Props) {
 
       <p className="text-gray-400 text-sm">
         Send emails to the address below to automatically create market signals
-        for "{ideaName}". You can include links, text, or attach images which
-        will be analyzed and added to the knowledge base.
+        for "{ideaName}". Include links and text which will be analyzed and
+        added to the knowledge base.
       </p>
 
       <div className="border border-accent-2 bg-accent-1/30 rounded-lg p-4">
@@ -51,14 +51,12 @@ export function EmailToSignalConfig({ ideaId, ideaName }: Props) {
       </div>
 
       <div className="bg-green-500/10 border border-green-900 rounded-lg p-4 text-sm text-gray-300">
-        <h4 className="text-green-400 font-medium mb-2">Usage Tips</h4>
+        <h4 className="text-green-400 font-medium mb-2">
+          Usage Tips & Compatibility
+        </h4>
         <ul className="list-disc pl-5 space-y-1">
           <li>
             Include URLs in your email to automatically extract market signals
-          </li>
-          <li>
-            Attach images for visual insights (screenshots of articles, charts,
-            etc.)
           </li>
           <li>
             Use a descriptive subject line that summarizes the key insight
@@ -67,18 +65,9 @@ export function EmailToSignalConfig({ ideaId, ideaName }: Props) {
             Content you send will be given higher relevance than automatically
             discovered signals
           </li>
-        </ul>
-      </div>
-
-      <div className="bg-blue-500/10 border border-blue-900 rounded-lg p-4 text-sm text-gray-300">
-        <h4 className="text-blue-400 font-medium mb-2">Works With</h4>
-        <ul className="list-disc pl-5 grid grid-cols-2 gap-1">
-          <li>Email forwarding</li>
-          <li>Mobile email clients</li>
-          <li>Newsletter subscriptions</li>
-          <li>Email-to-PDF services</li>
-          <li>Screenshots</li>
-          <li>Direct emails</li>
+          <li>Works with email forwarding and mobile email clients</li>
+          <li>Compatible with newsletter subscriptions and direct emails</li>
+          <li>Supports email-to-PDF services for document analysis</li>
         </ul>
       </div>
     </div>
