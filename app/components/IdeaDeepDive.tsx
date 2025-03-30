@@ -32,6 +32,8 @@ import { KnowledgeBaseChat } from "./KnowledgeBaseChat";
 import * as Tabs from "@radix-ui/react-tabs";
 import { BriefingNotes } from "./BriefingNotes";
 import { EmailToSignalConfig } from "./EmailToSignalConfig";
+import { FeedbackWidget } from "./FeedbackWidget";
+import { KnowledgeBaseChatIcon } from "./KnowledgeBaseChatIcon";
 import { toast } from "sonner";
 
 interface Props {
@@ -1651,45 +1653,40 @@ export function IdeaDeepDive({ ideaId }: Props) {
         )}
       </div>
 
-      {/* Floating Knowledge Base Chat */}
-      <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] sm:w-[600px] md:w-[720px] lg:w-[800px] xl:w-[1000px] 2xl:w-[1200px] max-w-[1400px] ${
-          isChatExpanded
-            ? "bg-accent-1/95 backdrop-blur-md border border-accent-2 rounded-t-xl"
-            : "bg-green-500/20 text-green-400 border border-green-900 rounded-xl hover:bg-green-500/30"
-        } shadow-lg shadow-accent-1/20 z-50 transition-all duration-300 ease-in-out ${
-          isChatExpanded ? "h-[500px] rounded-b-none" : "h-10"
-        }`}
-      >
-        <div
-          className="px-4 h-10 cursor-pointer flex items-center justify-between transition-colors rounded-t-xl"
-          onClick={() => setIsChatExpanded(!isChatExpanded)}
-        >
-          <h3 className="text-base font-semibold leading-none">
-            Knowledge Base Chat
-          </h3>
-          <ChevronDown
-            className={`w-4 h-4 transition-transform duration-300 ${
-              !isChatExpanded ? "rotate-180" : ""
-            }`}
-          />
-        </div>
-        <div
-          className={`transition-all duration-300 ${
-            isChatExpanded
-              ? "opacity-100 h-[calc(100%-2.5rem)]"
-              : "opacity-0 h-0"
-          } overflow-hidden`}
-        >
-          <div className="p-4 h-full">
-            <KnowledgeBaseChat
-              ideaDetails={editedIdea}
-              documents={documentContext}
-              onFocus={() => setIsChatExpanded(true)}
-            />
+      {/* Knowledge Base Chat Icon */}
+      <KnowledgeBaseChatIcon
+        ideaId={Number(ideaId)}
+        ideaName={editedIdea?.name || ""}
+        onToggle={() => setIsChatExpanded(!isChatExpanded)}
+        isExpanded={isChatExpanded}
+      />
+
+      {/* Feedback Widget */}
+      <FeedbackWidget ideaId={Number(ideaId)} variant="floating" />
+
+      {/* Expanded Knowledge Base Chat */}
+      {isChatExpanded && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] sm:w-[600px] md:w-[720px] lg:w-[800px] xl:w-[1000px] 2xl:w-[1200px] max-w-[1400px] bg-accent-1/95 backdrop-blur-md border border-accent-2 rounded-xl h-[500px] shadow-lg shadow-accent-1/20 z-50 transition-all duration-300 ease-in-out">
+          <div
+            className="px-4 h-10 cursor-pointer flex items-center justify-between transition-colors rounded-t-xl"
+            onClick={() => setIsChatExpanded(false)}
+          >
+            <h3 className="text-base font-semibold leading-none">
+              Knowledge Base Chat
+            </h3>
+            <ChevronDown className="w-4 h-4" />
+          </div>
+          <div className="h-[calc(100%-2.5rem)] overflow-hidden">
+            <div className="p-4 h-full">
+              <KnowledgeBaseChat
+                ideaDetails={editedIdea}
+                documents={documentContext}
+                onFocus={() => setIsChatExpanded(true)}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

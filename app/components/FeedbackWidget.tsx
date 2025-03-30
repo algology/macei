@@ -123,10 +123,10 @@ export function FeedbackWidget({
         return (
           <button
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-green-500/20 text-green-400 border border-green-900 flex items-center justify-center shadow-lg hover:bg-green-500/30 transition-colors"
+            className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-gray-500/20 text-gray-400 border border-gray-800 flex items-center justify-center shadow-lg hover:bg-gray-500/30 transition-colors"
             aria-label="Open feedback form"
           >
-            <MessageSquare className="w-5 h-5" />
+            <SmilePlus className="w-5 h-5" />
           </button>
         );
       case "inline":
@@ -135,7 +135,7 @@ export function FeedbackWidget({
             onClick={() => setIsOpen(true)}
             className="px-4 py-2 bg-green-500/20 text-green-400 border border-green-900 rounded-lg hover:bg-green-500/30 transition-colors flex items-center gap-2"
           >
-            <MessageSquare className="w-4 h-4" />
+            <SmilePlus className="w-4 h-4" />
             Feedback
           </button>
         );
@@ -164,7 +164,7 @@ export function FeedbackWidget({
           <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] max-h-[85vh] overflow-y-auto bg-background border border-accent-2 rounded-lg shadow-lg p-6 z-50">
             <div className="flex justify-between items-center mb-4">
               <Dialog.Title className="text-lg font-medium flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-green-400" />
+                <SmilePlus className="w-5 h-5 text-gray-400" />
                 Beta Feedback
               </Dialog.Title>
               <Dialog.Close className="text-gray-400 hover:text-gray-300">
