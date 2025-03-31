@@ -232,7 +232,43 @@ Always return valid JSON. Include all fields. Use "unknown" if you can't determi
               if (match) jsonContent = match[1];
             }
 
-            const analysisResults = JSON.parse(jsonContent);
+            // Add more robust JSON parsing with fallback
+            let analysisResults;
+            try {
+              analysisResults = JSON.parse(jsonContent);
+            } catch (parseError) {
+              console.error("Initial JSON parse failed:", parseError);
+              
+              // Try cleaning the JSON string
+              const cleanedJson = jsonContent.replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+                .replace(/,\s*}/g, '}')  // Remove trailing commas
+                .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
+                
+              try {
+                analysisResults = JSON.parse(cleanedJson);
+              } catch (secondParseError) {
+                console.error("Failed to parse cleaned JSON:", secondParseError);
+                
+                // Last resort: try to find and extract any array-like structure
+                const arrayMatch = jsonContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
+                if (arrayMatch) {
+                  try {
+                    analysisResults = JSON.parse(arrayMatch[0]);
+                  } catch (e) {
+                    // Give up and use an empty array
+                    analysisResults = [];
+                  }
+                } else {
+                  analysisResults = [];
+                }
+              }
+            }
+
+            // Ensure analysisResults is an array
+            if (!Array.isArray(analysisResults)) {
+              console.warn("Analysis results is not an array, converting to empty array");
+              analysisResults = [];
+            }
 
             // Add these results to our signals to process
             for (let i = 0; i < analysisResults.length; i++) {
