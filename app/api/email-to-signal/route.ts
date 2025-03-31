@@ -143,23 +143,30 @@ export async function POST(request: Request) {
       return cleanUrl;
     });
     
-    // Deduplicate URLs again after cleaning
-    urls = [...new Set(urls)];
+    // Filter out non-web URLs and duplicates
+    const webUrls = [...new Set(
+      urls.filter(url => 
+        (url.startsWith('http://') || url.startsWith('https://')) &&
+        !url.startsWith('mailto:')
+      )
+    )];
+
+    // Clean the email content - focus on keeping it simple
+    // 1. Remove any quoted reply text (common in email replies)
+    const cleanedContent = content
+      .replace(/^\s*>.*$/gm, '') // Remove lines starting with >
+      .replace(/\n{3,}/g, '\n\n') // Normalize multiple newlines
+      .trim();
 
     // Create a signals array to process
     const signalsToProcess = [];
 
-    // Create a description that includes URLs
-    const urlsText = urls.length > 0 
-      ? `\n\nLinks included:\n${urls.join('\n')}`
-      : '';
-
     // Generate a single signal from the email content with included URLs
     signalsToProcess.push({
       title: payload.subject,
-      description: content.substring(0, 500) + urlsText, // Limit to a reasonable length but include URLs
+      description: cleanedContent.substring(0, 500), // Just the cleaned email body, no links appended
       source: payload.from,
-      url: urls.length > 0 ? urls[0] : "email://" + payload.subject.replace(/\s+/g, "-"),
+      url: webUrls.length > 0 ? webUrls[0] : "email://" + payload.subject.replace(/\s+/g, "-"),
       date: new Date().toISOString(),
       type: "news", // Default type
       isUserSubmitted: true,
@@ -214,7 +221,7 @@ export async function POST(request: Request) {
             {
               idea_id: ideaId,
               title: signal.title,
-              content: signal.description,
+              content: signal.description, // Just the cleaned email body
               source_url: signal.url,
               source_type: mapSourceType(signal.type),
               source_name: signal.source,
@@ -226,6 +233,7 @@ export async function POST(request: Request) {
                 is_user_submitted: true,
                 email_subject: payload.subject,
                 from_email: payload.from,
+                web_urls: webUrls, // Store URLs in metadata instead
               },
               last_analyzed: new Date().toISOString(),
             },
