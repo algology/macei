@@ -100,12 +100,25 @@ export async function POST(request: Request) {
     // If HTML is available, extract URLs and potentially more text
     if (payload.html) {
       const root = parse(payload.html);
-      const htmlText = root.textContent;
-
-      // Look for URLs in HTML
+      
+      // Extract URLs from anchor tags properly
+      const anchorTags = root.querySelectorAll('a');
+      const anchorUrls = anchorTags
+        .map(a => a.getAttribute('href'))
+        .filter((href): href is string => href !== null && href !== undefined);
+      
+      // Also look for URLs in text
       const htmlUrls = payload.html.match(urlRegex) || [];
-      urls = [...new Set([...urls, ...htmlUrls])]; // Deduplicate
+      
+      // Combine all URLs and deduplicate
+      urls = [...new Set([...urls, ...anchorUrls, ...htmlUrls])]; 
     }
+    
+    // Clean any HTML/broken artifacts from URLs
+    urls = urls.map(url => {
+      // Clean URL if it contains HTML tags or closing quotes
+      return url.replace(/["'>]+|<\/a>.*$/g, '');
+    });
 
     // Create a signals array to process
     const signalsToProcess = [];
@@ -439,7 +452,37 @@ Format your response as a JSON array of insight objects:
               if (match) jsonContent = match[1];
             }
 
-            const newInsights = JSON.parse(jsonContent);
+            // Add more robust JSON parsing with fallback
+            let newInsights;
+            try {
+              newInsights = JSON.parse(jsonContent);
+            } catch (parseError) {
+              console.error("Initial insights JSON parse failed:", parseError);
+              
+              // Try cleaning the JSON string
+              const cleanedJson = jsonContent.replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+                .replace(/,\s*}/g, '}')  // Remove trailing commas
+                .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
+                
+              try {
+                newInsights = JSON.parse(cleanedJson);
+              } catch (secondParseError) {
+                console.error("Failed to parse cleaned insights JSON:", secondParseError);
+                
+                // Last resort: try to find and extract any array-like structure
+                const arrayMatch = jsonContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
+                if (arrayMatch) {
+                  try {
+                    newInsights = JSON.parse(arrayMatch[0]);
+                  } catch (e) {
+                    // Give up and use an empty array
+                    newInsights = [];
+                  }
+                } else {
+                  newInsights = [];
+                }
+              }
+            }
 
             // Combine with existing insights, ensuring we have valid arrays
             let existingInsights = [];
