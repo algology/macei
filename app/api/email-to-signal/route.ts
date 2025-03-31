@@ -114,11 +114,32 @@ export async function POST(request: Request) {
       urls = [...new Set([...urls, ...anchorUrls, ...htmlUrls])]; 
     }
     
-    // Clean any HTML/broken artifacts from URLs
+    // Clean and normalize URLs
     urls = urls.map(url => {
-      // Clean URL if it contains HTML tags or closing quotes
-      return url.replace(/["'>]+|<\/a>.*$/g, '');
+      // First remove any HTML tags completely
+      let cleanUrl = url.replace(/<[^>]*>/g, '');
+      
+      // Remove closing quotes, parentheses, etc.
+      cleanUrl = cleanUrl.replace(/["')\]}>]+$/g, '');
+      
+      // Fix common URL issues
+      // Remove duplicated protocol (https://www.example.com/https://www.example.com)
+      const protocolMatch = cleanUrl.match(/^(https?:\/\/[^\/]+)\/(https?:\/\/)/i);
+      if (protocolMatch) {
+        cleanUrl = protocolMatch[2] + cleanUrl.substring(protocolMatch[1].length + protocolMatch[2].length + 1);
+      }
+      
+      // Remove any trailing HTML content
+      cleanUrl = cleanUrl.split('<')[0];
+      
+      // Remove trailing punctuation
+      cleanUrl = cleanUrl.replace(/[,.;:!?]+$/, '');
+      
+      return cleanUrl;
     });
+    
+    // Deduplicate URLs again after cleaning
+    urls = [...new Set(urls)];
 
     // Create a signals array to process
     const signalsToProcess = [];
@@ -399,7 +420,9 @@ Mission: ${idea.mission?.name || "Not provided"}
 EXISTING INSIGHTS:
 ${
   ideaDetails && ideaDetails.insights
-    ? JSON.stringify(ideaDetails.insights)
+    ? (typeof ideaDetails.insights === 'string' 
+       ? ideaDetails.insights 
+       : JSON.stringify(ideaDetails.insights))
     : "No existing insights"
 }
 
@@ -488,14 +511,18 @@ Format your response as a JSON array of insight objects:
             let existingInsights = [];
             if (ideaDetails?.insights) {
               try {
-                const parsed = JSON.parse(ideaDetails.insights);
-                // Verify that parsed data is an array
-                if (Array.isArray(parsed)) {
-                  existingInsights = parsed;
+                // Handle both string and object formats
+                if (typeof ideaDetails.insights === 'string') {
+                  const parsed = JSON.parse(ideaDetails.insights);
+                  if (Array.isArray(parsed)) {
+                    existingInsights = parsed;
+                  } else {
+                    console.error("Existing insights was not an array, resetting");
+                  }
+                } else if (Array.isArray(ideaDetails.insights)) {
+                  existingInsights = ideaDetails.insights;
                 } else {
-                  console.error(
-                    "Existing insights was not an array, resetting"
-                  );
+                  console.error("Insights in unexpected format:", typeof ideaDetails.insights);
                 }
               } catch (e) {
                 console.error("Error parsing existing insights:", e);
