@@ -92,8 +92,8 @@ export async function POST(request: Request) {
     let content = payload.text;
     let urls: string[] = [];
 
-    // Extract URLs from the text
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    // Extract URLs from the text - improved regex to catch www. links without http prefix
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
     const textUrls = payload.text.match(urlRegex) || [];
     urls = [...textUrls];
 
@@ -121,6 +121,11 @@ export async function POST(request: Request) {
       
       // Remove closing quotes, parentheses, etc.
       cleanUrl = cleanUrl.replace(/["')\]}>]+$/g, '');
+      
+      // Add http:// prefix to www. URLs if missing
+      if (cleanUrl.startsWith('www.') && !cleanUrl.match(/^https?:\/\//)) {
+        cleanUrl = 'http://' + cleanUrl;
+      }
       
       // Fix common URL issues
       // Remove duplicated protocol (https://www.example.com/https://www.example.com)
@@ -154,7 +159,7 @@ export async function POST(request: Request) {
       title: payload.subject,
       description: content.substring(0, 500) + urlsText, // Limit to a reasonable length but include URLs
       source: payload.from,
-      url: "email://" + payload.subject.replace(/\s+/g, "-"),
+      url: urls.length > 0 ? urls[0] : "email://" + payload.subject.replace(/\s+/g, "-"),
       date: new Date().toISOString(),
       type: "news", // Default type
       isUserSubmitted: true,
