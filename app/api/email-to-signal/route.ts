@@ -107,44 +107,6 @@ export async function POST(request: Request) {
       urls = [...new Set([...urls, ...htmlUrls])]; // Deduplicate
     }
 
-    // If there are attachments, process them (we'll store image attachments)
-    let imageUrls: string[] = [];
-    if (payload.attachments && payload.attachments.length > 0) {
-      // Process image attachments
-      const imageAttachments = payload.attachments.filter((att) =>
-        att.contentType.startsWith("image/")
-      );
-
-      for (const attachment of imageAttachments) {
-        try {
-          // Upload image to Supabase Storage
-          const { data, error } = await supabase.storage
-            .from("idea-documents")
-            .upload(
-              `idea-${ideaId}/email-attachment-${Date.now()}-${
-                attachment.filename
-              }`,
-              Buffer.from(attachment.content, "base64"),
-              {
-                contentType: attachment.contentType,
-                upsert: false,
-              }
-            );
-
-          if (error) throw error;
-
-          // Get public URL
-          const { data: publicUrlData } = supabase.storage
-            .from("idea-documents")
-            .getPublicUrl(data.path);
-
-          imageUrls.push(publicUrlData.publicUrl);
-        } catch (error) {
-          console.error("Error uploading attachment:", error);
-        }
-      }
-    }
-
     // Create a signals array to process
     const signalsToProcess = [];
 
@@ -255,7 +217,7 @@ Always return valid JSON. Include all fields. Use "unknown" if you can't determi
               content: prompt,
             },
           ],
-          model: "mixtral-8x7b-32768",
+          model: "llama-3.3-70b-versatile",
           temperature: 0.5,
           max_tokens: 2048,
         });
@@ -289,19 +251,6 @@ Always return valid JSON. Include all fields. Use "unknown" if you can't determi
       } catch (error) {
         console.error("Error calling Groq:", error);
       }
-    }
-
-    // Add image URLs as signals
-    for (const imageUrl of imageUrls) {
-      signalsToProcess.push({
-        title: `Image: ${payload.subject}`,
-        description: `User submitted image related to ${idea.name}`,
-        source: payload.from,
-        url: imageUrl,
-        date: new Date().toISOString(),
-        type: "news",
-        isUserSubmitted: true,
-      });
     }
 
     // Save signals to the knowledge base
@@ -439,7 +388,7 @@ Format your response as a JSON array of insight objects:
               content: insightsPrompt,
             },
           ],
-          model: "mixtral-8x7b-32768",
+          model: "llama-3.3-70b-versatile",
           temperature: 0.7,
           max_tokens: 2048,
         });
