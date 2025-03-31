@@ -191,14 +191,13 @@ function createJsonStructurePrompt() {
   return `
 THE RESPONSE MUST BE A VALID JSON OBJECT WITH THIS EXACT STRUCTURE:
 {
-  "impact_analysis": "string with detailed analysis of how recent developments impact the idea's viability",
   "summary": "string with 5-6 sentences highlighting specific quantitative data, major announcements, policy shifts, and technological innovations",
   "details": [
-    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "🔍"},
-    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "📊"},
-    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "🏭"},
-    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "🌱"},
-    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "💡"}
+    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "🔍", "source_name": "Source Name"},
+    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "📊", "source_name": "Source Name"},
+    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "🏭", "source_name": "Source Name"},
+    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "🌱", "source_name": "Source Name"},
+    {"summary": "Concise 1-2 sentence summary focused on key novel insight", "url": "source URL", "emoji": "💡", "source_name": "Source Name"}
   ],
   "key_attributes": ["string1", "string2", "string3", "string4", "string5"],
   "suggested_signals": [
@@ -219,14 +218,7 @@ function createBriefingPrompt(combinedContext: string) {
 ${combinedContext}
 
 IMPORTANT BRIEFING GUIDELINES:
-1. IMPACT ANALYSIS SECTION:
-   - Do NOT re-state the idea's description
-   - Evaluate whether new market signals strengthen or weaken the idea's viability
-   - Provide specific evidence from the sources that support or challenge the idea
-   - Discuss potential risks, market shifts, or unforeseen obstacles based on recent developments
-   - Focus on HOW and WHY recent developments affect the idea (not what the idea is)
-
-2. SUMMARY SECTION:
+1. SUMMARY SECTION:
    - Write 5-6 sentences highlighting the most important NOVEL insights from the period
    - Include specific quantitative data where available
    - Mention major announcements from companies in the space
@@ -234,8 +226,9 @@ IMPORTANT BRIEFING GUIDELINES:
    - Highlight relevant technological innovations
    - AVOID generic trends - be specific and data-driven
 
-3. DETAILS SECTION:
+2. DETAILS SECTION:
    - For each source, include a concise 1-2 sentence summary that captures the KEY NOVEL INSIGHT
+   - Include a meaningful source_name that identifies the publisher (e.g., "Fortune India", "Bloomberg", "Reuters")
    - Choose an appropriate emoji for each detail that represents the content theme:
      * Use 📊 for market data, statistics, or financial information
      * Use 🏭 for industry news or manufacturing developments
@@ -250,11 +243,11 @@ IMPORTANT BRIEFING GUIDELINES:
    - Include working URLs to the original sources
    - IMPORTANT: Ensure any content from emails or user submissions uses the 📧 emoji
 
-4. KEY ATTRIBUTES SECTION:
+3. KEY ATTRIBUTES SECTION:
    - Note: The key attributes will be taken from the idea's existing attributes, so whatever you put here will be ignored
    - Just include some placeholder values
 
-5. SUGGESTED SIGNALS SECTION:
+4. SUGGESTED SIGNALS SECTION:
    - This section is VERY IMPORTANT
    - Based on your analysis of the market data, suggest 5-8 SPECIFIC new market signals that would be valuable to track
    - These should be concrete, specific terms (NOT generic categories like "technology trends")
@@ -353,11 +346,10 @@ BRIEF DESCRIPTION: ${effectiveDescription.substring(0, 200)}...
 ${idea.category ? `CATEGORY: ${idea.category}` : ""}
 
 IMPORTANT GUIDELINES:
-1. Impact Analysis: Analyze how market developments strengthen or challenge the idea (don't just restate the idea)
-2. Summary: Provide 5-6 specific, data-driven sentences with novel insights
-3. Details: Include 5 items with appropriate thematic emojis (📊 for data, 🏭 for industry, 🔬 for research, etc.)
-4. Key Attributes: These will be taken from the existing idea, just include placeholders
-5. Suggested Signals: Provide 5-8 SPECIFIC new market signals to track based on the idea - these must be concrete terms, not placeholders
+1. Summary: Provide 5-6 specific, data-driven sentences with novel insights
+2. Details: Include 5 items with appropriate thematic emojis (📊 for data, 🏭 for industry, 🔬 for research, etc.)
+3. Key Attributes: These will be taken from the existing idea, just include placeholders
+4. Suggested Signals: Provide 5-8 SPECIFIC new market signals to track based on the idea - these must be concrete terms, not placeholders
 
 ${createJsonStructurePrompt()}
 
@@ -527,6 +519,50 @@ function selectAppropriateModel(contextSize: number) {
   } else {
     // For larger contexts, use the model with largest context window
     return "llama-3.3-70b-versatile";
+  }
+}
+
+// Helper function to extract source name from URL
+function extractSourceNameFromUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.replace(/^www\./, "");
+    
+    // Special case handling for common domains
+    if (hostname.includes("github.com")) return "GitHub";
+    if (hostname.includes("medium.com")) return "Medium";
+    if (hostname.includes("techcrunch.com")) return "TechCrunch";
+    if (hostname.includes("forbes.com")) return "Forbes";
+    if (hostname.includes("bloomberg.com")) return "Bloomberg";
+    if (hostname.includes("reuters.com")) return "Reuters";
+    if (hostname.includes("bbc.")) return "BBC";
+    if (hostname.includes("nytimes.com")) return "New York Times";
+    if (hostname.includes("wsj.com")) return "Wall Street Journal";
+    if (hostname.includes("economist.com")) return "The Economist";
+    if (hostname.includes("wired.com")) return "Wired";
+    if (hostname.includes("cnn.com")) return "CNN";
+    if (hostname.includes("theverge.com")) return "The Verge";
+    if (hostname.includes("springer.com")) return "Springer";
+    if (hostname.includes("nature.com")) return "Nature";
+    if (hostname.includes("sciencedirect.com")) return "ScienceDirect";
+    if (hostname.includes("arxiv.org")) return "arXiv";
+    if (hostname.includes("aljazeera.com")) return "Al Jazeera";
+    if (hostname.includes("morningstar.com")) return "Morningstar";
+    if (hostname.includes("fortuneindia.com")) return "Fortune India";
+    
+    // For domains with multiple parts, use the second-to-last part (typically the main domain name)
+    const domainParts = hostname.split(".");
+    if (domainParts.length >= 2) {
+      // Capitalize the first letter
+      const mainName = domainParts[domainParts.length - 2];
+      return mainName.charAt(0).toUpperCase() + mainName.slice(1);
+    }
+    
+    // Default fallback
+    return hostname;
+  } catch (e) {
+    console.error("Error extracting source name from URL:", e);
+    return "Source";
   }
 }
 
@@ -1156,31 +1192,23 @@ export async function POST(request: Request) {
 
             // Create fallback briefing with basic structure
             parsedBriefing = {
-              impact_analysis: `Impact Analysis for ${
-                idea.name
-              }: Based on market signals, this idea has potential in the ${
-                idea.category || "current"
-              } market landscape.`,
-              summary: `${idea.name} appears to have market relevance based on available signals.`,
-              details: allUrls.slice(0, 5).map((url: string, index: number) => {
+              summary: `Market summary for ${idea.name}`,
+              details: allUrls.slice(0, 3).map((url: string, index: number) => {
                 // Define emojis individually to avoid encoding issues
                 const emoji1 = "📊";
                 const emoji2 = "🔬";
-                const emoji3 = "🏭";
-                const emoji4 = "💡";
-                const emoji5 = "🌱";
+                const emoji3 = "💡";
 
                 // Use index to select emoji
                 let selectedEmoji = emoji1;
-                if (index % 5 === 1) selectedEmoji = emoji2;
-                if (index % 5 === 2) selectedEmoji = emoji3;
-                if (index % 5 === 3) selectedEmoji = emoji4;
-                if (index % 5 === 4) selectedEmoji = emoji5;
+                if (index % 3 === 1) selectedEmoji = emoji2;
+                if (index % 3 === 2) selectedEmoji = emoji3;
 
                 return {
-                  summary: `Market insights related to ${idea.name}.`,
+                  summary: `Market signal related to ${idea.name}.`,
                   url: url,
                   emoji: selectedEmoji,
+                  source_name: extractSourceNameFromUrl(url)
                 };
               }),
               key_attributes: ideaSignals,
@@ -1199,8 +1227,6 @@ export async function POST(request: Request) {
       }
 
       // Ensure the briefing has all required properties and valid URLs
-      parsedBriefing.impact_analysis =
-        parsedBriefing.impact_analysis || `Impact Analysis for ${idea.name}`;
       parsedBriefing.summary =
         parsedBriefing.summary || `Summary for ${idea.name}`;
 
@@ -1215,6 +1241,7 @@ export async function POST(request: Request) {
             summary: `Market signal related to ${idea.name}.`,
             url: url,
             emoji: ["📊", "🔬", "🏭", "💡", "🌱"][index % 5],
+            source_name: extractSourceNameFromUrl(url)
           }));
       } else {
         // Ensure each detail has a valid URL
@@ -1228,6 +1255,7 @@ export async function POST(request: Request) {
               return {
                 ...detail,
                 url: validUrl,
+                source_name: extractSourceNameFromUrl(validUrl)
               };
             }
             return detail;
@@ -1247,6 +1275,19 @@ export async function POST(request: Request) {
         ? parsedBriefing.suggested_signals
         : [];
 
+      // Ensure all details have source_name field
+      if (Array.isArray(parsedBriefing.details)) {
+        parsedBriefing.details = parsedBriefing.details.map((detail: any) => {
+          if (!detail.source_name && detail.url) {
+            return {
+              ...detail,
+              source_name: extractSourceNameFromUrl(detail.url)
+            };
+          }
+          return detail;
+        });
+      }
+
       // Insert the briefing into the database
       const { data: insertedBriefing, error: insertError } = await supabase
         .from("briefings")
@@ -1255,7 +1296,6 @@ export async function POST(request: Request) {
             idea_id: ideaId,
             date_from: dateFrom,
             date_to: dateTo,
-            impact_analysis: parsedBriefing.impact_analysis,
             summary: parsedBriefing.summary,
             details: parsedBriefing.details,
             key_attributes: parsedBriefing.key_attributes,
@@ -1435,7 +1475,6 @@ export async function POST(request: Request) {
           } catch (json5Error) {
             // Ultimate fallback - create our own minimal structure
             parsedFallback = {
-              impact_analysis: `Impact Analysis for ${idea.name}`,
               summary: `Market summary for ${idea.name}`,
               details: allUrls.slice(0, 3).map((url: string, index: number) => {
                 // Define emojis individually to avoid encoding issues
@@ -1452,6 +1491,7 @@ export async function POST(request: Request) {
                   summary: `Market signal related to ${idea.name}.`,
                   url: url,
                   emoji: selectedEmoji,
+                  source_name: extractSourceNameFromUrl(url)
                 };
               }),
               key_attributes: ideaSignals,
@@ -1474,6 +1514,19 @@ export async function POST(request: Request) {
         // Always use the idea's existing key attributes for consistency
         parsedFallback.key_attributes = ideaSignals;
 
+        // Ensure all details have source_name field
+        if (Array.isArray(parsedFallback.details)) {
+          parsedFallback.details = parsedFallback.details.map((detail: any) => {
+            if (!detail.source_name && detail.url) {
+              return {
+                ...detail,
+                source_name: extractSourceNameFromUrl(detail.url)
+              };
+            }
+            return detail;
+          });
+        }
+
         // Insert the fallback briefing
         const { data: insertedFallback, error: fallbackError } = await supabase
           .from("briefings")
@@ -1482,7 +1535,6 @@ export async function POST(request: Request) {
               idea_id: ideaId,
               date_from: dateFrom,
               date_to: dateTo,
-              impact_analysis: parsedFallback.impact_analysis,
               summary: parsedFallback.summary,
               details: parsedFallback.details,
               key_attributes: parsedFallback.key_attributes,

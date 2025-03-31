@@ -13,6 +13,8 @@ import {
   Lightbulb,
   Globe,
   Search,
+  ExternalLink,
+  Globe2,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -32,12 +34,12 @@ interface Briefing {
   idea_id: number;
   date_from: string;
   date_to: string;
-  impact_analysis: string;
   summary: string;
   details: Array<{
     summary: string;
     url: string;
     emoji: string;
+    source_name?: string;
   }>;
   key_attributes: string[];
   created_at: string;
@@ -468,14 +470,11 @@ export function BriefingNotes({
   }
 
   function copyToClipboard(briefing: Briefing) {
-    const content = `Environment Briefing Note
+    const content = `Environment Briefing Note for ${ideaName}
 Date Range: ${new Date(briefing.date_from).toLocaleDateString()} - ${new Date(
       briefing.date_to
     ).toLocaleDateString()}
 Created: ${new Date(briefing.created_at).toLocaleDateString()}
-
-Impact on Idea Conviction:
-${briefing.impact_analysis}
 
 Summary:
 ${briefing.summary}
@@ -484,7 +483,7 @@ Details:
 ${briefing.details
   .map(
     (detail) => `${detail.emoji} - ${detail.summary}
-Source: ${detail.url}`
+Source: ${detail.source_name || extractDomainFromUrl(detail.url)} (${detail.url})`
   )
   .join("\n\n")}
 
@@ -507,6 +506,21 @@ ${briefing.key_attributes.join(", ")}`;
         });
       });
   }
+
+  const extractDomainFromUrl = (url: string): string => {
+    try {
+      const urlObj = new URL(url);
+      const domain = urlObj.hostname.replace(/^www\./, "").split(".");
+      if (domain.length >= 2) {
+        // Capitalize first letter of domain name
+        return domain[domain.length - 2].charAt(0).toUpperCase() + 
+               domain[domain.length - 2].slice(1);
+      }
+      return urlObj.hostname.replace(/^www\./, "");
+    } catch (e) {
+      return "Source";
+    }
+  };
 
   async function addSignalToIdea(signal: string) {
     try {
@@ -588,6 +602,34 @@ ${briefing.key_attributes.join(", ")}`;
     return `https://www.google.com/s2/favicons?domain=${encodedDomain}&sz=32`;
   };
 
+  // Helper function to render favicon with fallback
+  const renderFavicon = (domain: string) => {
+    return (
+      <div className="relative flex-none">
+        <div className="relative overflow-hidden rounded-full">
+          <div className="rounded-inherit absolute inset-0 bg-white"></div>
+          <img
+            className="relative block w-4 h-4 z-10"
+            alt={`${domain} favicon`}
+            src={getFaviconUrl(domain)}
+            style={{ objectFit: "contain" }}
+            onError={(e) => {
+              // If favicon fails to load, show the fallback icon
+              const target = e.target as HTMLImageElement;
+              target.style.display = "none";
+              target.nextElementSibling?.classList.remove("hidden");
+            }}
+          />
+          {/* Fallback icon for when favicon fails to load */}
+          <div className="absolute inset-0 bg-gray-500 text-white items-center justify-center hidden">
+            <Globe2 className="w-3 h-3" />
+          </div>
+          <div className="rounded-inherit absolute inset-0 border border-[rgba(0,0,0,0.1)] dark:border-transparent"></div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -659,6 +701,9 @@ ${briefing.key_attributes.join(", ")}`;
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-gray-400" />
                   <h4 className="font-medium">
+                    <span className="inline-flex items-center bg-green-500/10 text-green-400 border border-green-900 px-2 py-0.5 rounded-md text-sm mr-2">
+                      {ideaName}
+                    </span>
                     Environment Briefing Note:{" "}
                     <span className="text-gray-400">
                       {new Date(briefing.date_from).toLocaleDateString()} -{" "}
@@ -697,15 +742,6 @@ ${briefing.key_attributes.join(", ")}`;
 
               <div className="space-y-4">
                 <div>
-                  <h5 className="text-sm font-medium mb-2">
-                    Impact on Idea Conviction
-                  </h5>
-                  <div className="bg-accent-1/50 rounded p-3 text-sm text-gray-300 selectable-text">
-                    {briefing.impact_analysis}
-                  </div>
-                </div>
-
-                <div>
                   <h5 className="text-sm font-medium mb-2">Summary</h5>
                   <div className="bg-accent-1/50 rounded p-3 text-sm text-gray-300 selectable-text">
                     {briefing.summary}
@@ -724,33 +760,45 @@ ${briefing.key_attributes.join(", ")}`;
                           <span>{detail.emoji}</span>
                           <div>
                             <p>{detail.summary}</p>
-                            <a
-                              href={detail.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-green-400 hover:text-green-300 text-sm mt-1 inline-block"
-                            >
-                              Read More
-                            </a>
+                            <div className="mt-1 flex items-center gap-1">
+                              <span className="text-xs text-gray-400">Source:</span>
+                              <a
+                                href={detail.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-400 hover:text-green-300 text-sm inline-flex items-center gap-1"
+                              >
+                                {(() => {
+                                  // Extract domain name from URL to use as fallback source name
+                                  let sourceName = "Read More";
+                                  try {
+                                    if (detail.url) {
+                                      // Use source_name if available, otherwise extract from URL
+                                      if (detail.source_name) {
+                                        sourceName = detail.source_name;
+                                      } else {
+                                        const urlObj = new URL(detail.url);
+                                        const domain = urlObj.hostname
+                                          .replace(/^www\./, "")
+                                          .split(".");
+                                        if (domain.length >= 2) {
+                                          // Capitalize first letter of domain name
+                                          sourceName = domain[domain.length - 2].charAt(0).toUpperCase() + 
+                                                      domain[domain.length - 2].slice(1);
+                                        }
+                                      }
+                                    }
+                                  } catch (e) {
+                                    console.error("Error extracting domain:", e);
+                                  }
+                                  return sourceName;
+                                })()}
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h5 className="text-sm font-medium mb-2">
-                    Key Attributes Used
-                  </h5>
-                  <div className="flex flex-wrap gap-2">
-                    {briefing.key_attributes.map((attribute, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center bg-green-500/20 text-green-400 border border-green-900 px-2 py-1 rounded-md text-sm"
-                      >
-                        {attribute}
-                      </span>
                     ))}
                   </div>
                 </div>
@@ -761,11 +809,11 @@ ${briefing.key_attributes.join(", ")}`;
                   <div className="mt-6 pt-4 border-t border-accent-2">
                     <h5 className="text-base font-medium mb-2 flex items-center gap-2">
                       <Lightbulb className="w-4 h-4 text-yellow-500" />
-                      Suggested New Market Signals
+                      Suggested New Idea Attributes
                     </h5>
                     <p className="text-sm text-gray-400 mb-3">
-                      These signals were identified as potentially relevant to
-                      your idea. Click to add them to your idea attributes.
+                      These attributes were identified as relevant to your idea.
+                      Click them to your inform your next briefing.
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {suggestedSignals.map((signal, index) => (
@@ -782,6 +830,22 @@ ${briefing.key_attributes.join(", ")}`;
                     </div>
                   </div>
                 )}
+              {/* Key Attributes section moved here and styled with gray instead of green */}
+              <div className="mt-4">
+                <h5 className="text-xs font-medium mb-2 text-gray-400">
+                  Key Attributes Used for This Briefing
+                </h5>
+                <div className="flex flex-wrap gap-2">
+                  {briefing.key_attributes.map((attribute, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center bg-gray-500/10 text-gray-400 border border-gray-700 px-2 py-0.5 rounded-md text-xs"
+                    >
+                      {attribute}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -793,6 +857,7 @@ ${briefing.key_attributes.join(", ")}`;
           <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] max-h-[80vh] overflow-y-auto bg-background border border-accent-2 rounded-lg shadow-lg p-4">
             <div className="flex justify-between items-center mb-4">
               <Dialog.Title className="text-lg font-medium">
+
                 Generate Briefing Note
               </Dialog.Title>
               <Dialog.Close className="text-gray-400 hover:text-gray-300">
@@ -847,35 +912,7 @@ ${briefing.key_attributes.join(", ")}`;
                           className="py-1 pl-1.5 pr-2.5 rounded-lg bg-accent-1/50 hover:bg-accent-1/70 transition-colors duration-300"
                         >
                           <div className="flex items-center gap-1.5">
-                            <div className="relative flex-none">
-                              <div className="relative overflow-hidden rounded-full">
-                                <div className="rounded-inherit absolute inset-0 bg-white"></div>
-                                <img
-                                  className="relative block w-4 h-4 z-10"
-                                  alt={`${urlStatus.domain} favicon`}
-                                  src={getFaviconUrl(urlStatus.domain)}
-                                  style={{ objectFit: "contain" }}
-                                  onError={(e) => {
-                                    // Try a direct favicon.ico approach as fallback
-                                    const target = e.target as HTMLImageElement;
-                                    const domain = urlStatus.domain;
-                                    target.onerror = () => {
-                                      // If that fails too, use a text fallback or local favicon
-                                      target.style.display = "none";
-                                      target.nextElementSibling?.classList.remove(
-                                        "hidden"
-                                      );
-                                    };
-                                    target.src = `https://${domain}/favicon.ico`;
-                                  }}
-                                />
-                                {/* Text fallback for when image fails */}
-                                <div className="absolute inset-0 bg-gray-500 text-[8px] font-semibold text-white uppercase items-center justify-center hidden">
-                                  {urlStatus.domain.charAt(0)}
-                                </div>
-                                <div className="rounded-inherit absolute inset-0 border border-[rgba(0,0,0,0.1)] dark:border-transparent"></div>
-                              </div>
-                            </div>
+                            {renderFavicon(urlStatus.domain)}
                             <div className="line-clamp-1 break-all text-[0.7rem] font-mono">
                               {urlStatus.domain}
                             </div>
