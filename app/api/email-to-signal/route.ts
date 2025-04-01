@@ -3,6 +3,7 @@ import { getServerSupabase } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 import Groq from "groq-sdk";
 import { parse } from "node-html-parser";
+import { convert } from "html-to-text";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -97,66 +98,109 @@ export async function POST(request: Request) {
     const textUrls = payload.text.match(urlRegex) || [];
     urls = [...textUrls];
 
-    // If HTML is available, extract URLs and potentially more text
+    // If HTML is available, extract URLs and rich content
     if (payload.html) {
       const root = parse(payload.html);
-      
+
       // Extract URLs from anchor tags properly
-      const anchorTags = root.querySelectorAll('a');
+      const anchorTags = root.querySelectorAll("a");
       const anchorUrls = anchorTags
-        .map(a => a.getAttribute('href'))
+        .map((a) => a.getAttribute("href"))
         .filter((href): href is string => href !== null && href !== undefined);
-      
+
       // Also look for URLs in text
       const htmlUrls = payload.html.match(urlRegex) || [];
-      
+
       // Combine all URLs and deduplicate
-      urls = [...new Set([...urls, ...anchorUrls, ...htmlUrls])]; 
-    }
-    
-    // Clean and normalize URLs
-    urls = urls.map(url => {
-      // First remove any HTML tags completely
-      let cleanUrl = url.replace(/<[^>]*>/g, '');
-      
-      // Remove closing quotes, parentheses, etc.
-      cleanUrl = cleanUrl.replace(/["')\]}>]+$/g, '');
-      
-      // Add http:// prefix to www. URLs if missing
-      if (cleanUrl.startsWith('www.') && !cleanUrl.match(/^https?:\/\//)) {
-        cleanUrl = 'http://' + cleanUrl;
+      urls = [...new Set([...urls, ...anchorUrls, ...htmlUrls])];
+
+      // Extract rich content from HTML using html-to-text conversion
+      // This will preserve important content from forwarded emails and newsletters
+      const htmlContent = convert(payload.html, {
+        wordwrap: 130,
+        selectors: [
+          { selector: "img", format: "skip" },
+          { selector: "a", options: { hideLinkHrefIfSameAsText: true } },
+        ],
+        // Preserve formatting of paragraphs, lists, headers
+        preserveNewlines: true,
+        // Decode entities for proper text representation
+        decodeEntities: true,
+      });
+
+      // Combine the plain text and HTML content
+      // If HTML content is substantially longer, it likely contains more information
+      if (htmlContent.length > content.length * 1.5) {
+        content = htmlContent;
+      } else {
+        // If the HTML doesn't add much, keep the original but append any additional content
+        const plainTextLines = new Set(
+          content.split("\n").map((line) => line.trim())
+        );
+        const htmlContentLines = htmlContent.split("\n");
+
+        // Add lines from HTML that aren't in the plain text
+        for (const line of htmlContentLines) {
+          const trimmedLine = line.trim();
+          if (trimmedLine.length > 20 && !plainTextLines.has(trimmedLine)) {
+            content += "\n" + trimmedLine;
+          }
+        }
       }
-      
+    }
+
+    // Clean and normalize URLs
+    urls = urls.map((url) => {
+      // First remove any HTML tags completely
+      let cleanUrl = url.replace(/<[^>]*>/g, "");
+
+      // Remove closing quotes, parentheses, etc.
+      cleanUrl = cleanUrl.replace(/["')\]}>]+$/g, "");
+
+      // Add http:// prefix to www. URLs if missing
+      if (cleanUrl.startsWith("www.") && !cleanUrl.match(/^https?:\/\//)) {
+        cleanUrl = "http://" + cleanUrl;
+      }
+
       // Fix common URL issues
       // Remove duplicated protocol (https://www.example.com/https://www.example.com)
-      const protocolMatch = cleanUrl.match(/^(https?:\/\/[^\/]+)\/(https?:\/\/)/i);
+      const protocolMatch = cleanUrl.match(
+        /^(https?:\/\/[^\/]+)\/(https?:\/\/)/i
+      );
       if (protocolMatch) {
-        cleanUrl = protocolMatch[2] + cleanUrl.substring(protocolMatch[1].length + protocolMatch[2].length + 1);
+        cleanUrl =
+          protocolMatch[2] +
+          cleanUrl.substring(
+            protocolMatch[1].length + protocolMatch[2].length + 1
+          );
       }
-      
+
       // Remove any trailing HTML content
-      cleanUrl = cleanUrl.split('<')[0];
-      
+      cleanUrl = cleanUrl.split("<")[0];
+
       // Remove trailing punctuation
-      cleanUrl = cleanUrl.replace(/[,.;:!?]+$/, '');
-      
+      cleanUrl = cleanUrl.replace(/[,.;:!?]+$/, "");
+
       return cleanUrl;
     });
-    
-    // Filter out non-web URLs and duplicates
-    const webUrls = [...new Set(
-      urls.filter(url => 
-        (url.startsWith('http://') || url.startsWith('https://')) &&
-        !url.startsWith('mailto:')
-      )
-    )];
 
     // Clean the email content - focus on keeping it simple
     // 1. Remove any quoted reply text (common in email replies)
     const cleanedContent = content
-      .replace(/^\s*>.*$/gm, '') // Remove lines starting with >
-      .replace(/\n{3,}/g, '\n\n') // Normalize multiple newlines
+      .replace(/^\s*>.*$/gm, "") // Remove lines starting with >
+      .replace(/\n{3,}/g, "\n\n") // Normalize multiple newlines
       .trim();
+
+    // Filter out non-web URLs and duplicates
+    const webUrls = [
+      ...new Set(
+        urls.filter(
+          (url) =>
+            (url.startsWith("http://") || url.startsWith("https://")) &&
+            !url.startsWith("mailto:")
+        )
+      ),
+    ];
 
     // Create a signals array to process
     const signalsToProcess = [];
@@ -164,16 +208,19 @@ export async function POST(request: Request) {
     // Generate a single signal from the email content with included URLs
     signalsToProcess.push({
       title: payload.subject,
-      description: cleanedContent.substring(0, 500), // Just the cleaned email body, no links appended
+      description: cleanedContent, // Use the full cleaned content without truncation
       source: payload.from,
-      url: webUrls.length > 0 ? webUrls[0] : "email://" + payload.subject.replace(/\s+/g, "-"),
+      url:
+        webUrls.length > 0
+          ? webUrls[0]
+          : "email://" + payload.subject.replace(/\s+/g, "-"),
       date: new Date().toISOString(),
       type: "news", // Default type
       isUserSubmitted: true,
       sentiment: "neutral", // Default sentiment
       impactLevel: "medium", // Default impact level
     });
-    
+
     // Skip URL content fetching and processing - we're only keeping the original email
 
     // Save signals to the knowledge base
