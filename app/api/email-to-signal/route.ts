@@ -149,6 +149,71 @@ export async function POST(request: Request) {
       }
     }
 
+    // Clean the email content - focus on keeping it simple
+    // 1. Remove any quoted reply text (common in email replies)
+    const cleanedContent = content
+      .replace(/^\s*>.*$/gm, "") // Remove lines starting with >
+      .replace(/\n{3,}/g, "\n\n") // Normalize multiple newlines
+      .trim();
+
+    // Determine if content is too long and needs summarization
+    const EMAIL_LENGTH_THRESHOLD = 1000; // Characters
+    let contentToStore = cleanedContent;
+    let summarized = false;
+
+    // For long emails, generate a summary using LLM
+    if (cleanedContent.length > EMAIL_LENGTH_THRESHOLD) {
+      try {
+        console.log(
+          `Email content is ${cleanedContent.length} characters, generating summary...`
+        );
+        const completion = await groq.chat.completions.create({
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a helpful assistant that summarizes email content. Extract the most important information, key points, and any actionable items. Keep your summary concise (300-500 words).",
+            },
+            {
+              role: "user",
+              content: `Subject: ${
+                payload.subject
+              }\n\nContent:\n${cleanedContent.substring(0, 15000)}`,
+            },
+          ],
+          model: "gemma2-9b-it",
+          temperature: 0.3,
+          max_tokens: 1000,
+        });
+
+        const summary = completion.choices[0]?.message?.content || "";
+
+        if (summary && summary.length > 100) {
+          contentToStore = summary;
+          summarized = true;
+          console.log(`Generated summary of ${summary.length} characters`);
+        } else {
+          // Fallback if summary generation fails
+          contentToStore =
+            cleanedContent.substring(0, 2000) +
+            (cleanedContent.length > 2000
+              ? " [Content truncated due to length...]"
+              : "");
+          console.log(
+            "Summary generation failed or returned poor results, using truncated content"
+          );
+        }
+      } catch (error) {
+        console.error("Error generating summary:", error);
+        // Fallback to truncation if summarization fails
+        contentToStore =
+          cleanedContent.substring(0, 2000) +
+          (cleanedContent.length > 2000
+            ? " [Content truncated due to length...]"
+            : "");
+      }
+    }
+
     // Clean and normalize URLs
     urls = urls.map((url) => {
       // First remove any HTML tags completely
@@ -184,13 +249,6 @@ export async function POST(request: Request) {
       return cleanUrl;
     });
 
-    // Clean the email content - focus on keeping it simple
-    // 1. Remove any quoted reply text (common in email replies)
-    const cleanedContent = content
-      .replace(/^\s*>.*$/gm, "") // Remove lines starting with >
-      .replace(/\n{3,}/g, "\n\n") // Normalize multiple newlines
-      .trim();
-
     // Filter out non-web URLs and duplicates
     const webUrls = [
       ...new Set(
@@ -208,7 +266,7 @@ export async function POST(request: Request) {
     // Generate a single signal from the email content with included URLs
     signalsToProcess.push({
       title: payload.subject,
-      description: cleanedContent, // Use the full cleaned content without truncation
+      description: contentToStore, // Use the summary or full content depending on length
       source: payload.from,
       url:
         webUrls.length > 0
@@ -268,7 +326,7 @@ export async function POST(request: Request) {
             {
               idea_id: ideaId,
               title: signal.title,
-              content: signal.description, // Just the cleaned email body
+              content: signal.description, // Now this contains the summary for long emails
               source_url: signal.url,
               source_type: mapSourceType(signal.type),
               source_name: signal.source,
@@ -281,6 +339,8 @@ export async function POST(request: Request) {
                 email_subject: payload.subject,
                 from_email: payload.from,
                 web_urls: webUrls, // Store URLs in metadata instead
+                original_content: summarized ? cleanedContent : undefined, // Store original content if summarized
+                was_summarized: summarized,
               },
               last_analyzed: new Date().toISOString(),
             },
