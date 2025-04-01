@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { Upload, File, Trash2, Newspaper, Book, Lightbulb } from "lucide-react";
+import {
+  Upload,
+  File,
+  Trash2,
+  Newspaper,
+  Book,
+  Lightbulb,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Document } from "./types";
 import { DocumentPreview } from "./DocumentPreview";
@@ -29,6 +38,9 @@ export function IdeaKnowledgeBase({ ideaId, onDocumentAdded }: Props) {
   const [activeTab, setActiveTab] = useState<"all" | "documents" | "signals">(
     "all"
   );
+  const [expandedSignals, setExpandedSignals] = useState<{
+    [key: number]: boolean;
+  }>({});
 
   // Combine fetch functions into one
   const fetchData = async () => {
@@ -175,6 +187,13 @@ export function IdeaKnowledgeBase({ ideaId, onDocumentAdded }: Props) {
     }
   };
 
+  const toggleExpandSignal = (signalId: number) => {
+    setExpandedSignals((prev) => ({
+      ...prev,
+      [signalId]: !prev[signalId],
+    }));
+  };
+
   return (
     <div className="space-y-4" data-component="knowledge-base">
       <div className="flex items-center justify-between">
@@ -278,7 +297,34 @@ export function IdeaKnowledgeBase({ ideaId, onDocumentAdded }: Props) {
                     {signal.title}
                   </a>
                 </div>
-                <p className="text-sm text-gray-400">{signal.content}</p>
+                {signal.metadata?.is_user_submitted &&
+                signal.content.length > 200 ? (
+                  <div className="text-sm text-gray-400">
+                    <p>
+                      {expandedSignals[signal.id]
+                        ? signal.content
+                        : signal.content.substring(0, 200) + "..."}
+                    </p>
+                    <button
+                      onClick={() => toggleExpandSignal(signal.id)}
+                      className="flex items-center gap-1 mt-1 text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      {expandedSignals[signal.id] ? (
+                        <>
+                          <EyeOff className="w-3 h-3" />
+                          <span className="text-xs">Show less</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3 h-3" />
+                          <span className="text-xs">Show more</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">{signal.content}</p>
+                )}
                 <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
                   <span>{signal.source_name}</span>
                   <span>•</span>
