@@ -483,7 +483,9 @@ Details:
 ${briefing.details
   .map(
     (detail) => `${detail.emoji} - ${detail.summary}
-Source: ${detail.source_name || extractDomainFromUrl(detail.url)} (${detail.url})`
+Source: ${detail.source_name || extractDomainFromUrl(detail.url)} (${
+      detail.url
+    })`
   )
   .join("\n\n")}
 
@@ -513,8 +515,10 @@ ${briefing.key_attributes.join(", ")}`;
       const domain = urlObj.hostname.replace(/^www\./, "").split(".");
       if (domain.length >= 2) {
         // Capitalize first letter of domain name
-        return domain[domain.length - 2].charAt(0).toUpperCase() + 
-               domain[domain.length - 2].slice(1);
+        return (
+          domain[domain.length - 2].charAt(0).toUpperCase() +
+          domain[domain.length - 2].slice(1)
+        );
       }
       return urlObj.hostname.replace(/^www\./, "");
     } catch (e) {
@@ -700,16 +704,20 @@ ${briefing.key_attributes.join(", ")}`;
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-gray-400" />
-                  <h4 className="font-medium">
-                    <span className="inline-flex items-center bg-green-500/10 text-green-400 border border-green-900 px-2 py-0.5 rounded-md text-sm mr-2">
-                      {ideaName}
-                    </span>
-                    Environment Briefing Note:{" "}
-                    <span className="text-gray-400">
-                      {new Date(briefing.date_from).toLocaleDateString()} -{" "}
-                      {new Date(briefing.date_to).toLocaleDateString()}
-                    </span>
-                  </h4>
+                  <div>
+                    <h4 className="font-medium">
+                      Environment Briefing Note:{" "}
+                      <span className="text-gray-400">
+                        {new Date(briefing.date_from).toLocaleDateString()} -{" "}
+                        {new Date(briefing.date_to).toLocaleDateString()}
+                      </span>
+                    </h4>
+                    <div className="mt-1">
+                      <span className="inline-flex items-center bg-green-500/10 text-green-400 border border-green-900 px-2 py-0.5 rounded-md text-sm">
+                        {ideaName}
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -761,7 +769,9 @@ ${briefing.key_attributes.join(", ")}`;
                           <div>
                             <p>{detail.summary}</p>
                             <div className="mt-1 flex items-center gap-1">
-                              <span className="text-xs text-gray-400">Source:</span>
+                              <span className="text-xs text-gray-400">
+                                Source:
+                              </span>
                               <a
                                 href={detail.url}
                                 target="_blank"
@@ -783,13 +793,19 @@ ${briefing.key_attributes.join(", ")}`;
                                           .split(".");
                                         if (domain.length >= 2) {
                                           // Capitalize first letter of domain name
-                                          sourceName = domain[domain.length - 2].charAt(0).toUpperCase() + 
-                                                      domain[domain.length - 2].slice(1);
+                                          sourceName =
+                                            domain[domain.length - 2]
+                                              .charAt(0)
+                                              .toUpperCase() +
+                                            domain[domain.length - 2].slice(1);
                                         }
                                       }
                                     }
                                   } catch (e) {
-                                    console.error("Error extracting domain:", e);
+                                    console.error(
+                                      "Error extracting domain:",
+                                      e
+                                    );
                                   }
                                   return sourceName;
                                 })()}
@@ -857,7 +873,6 @@ ${briefing.key_attributes.join(", ")}`;
           <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] max-h-[80vh] overflow-y-auto bg-background border border-accent-2 rounded-lg shadow-lg p-4">
             <div className="flex justify-between items-center mb-4">
               <Dialog.Title className="text-lg font-medium">
-
                 Generate Briefing Note
               </Dialog.Title>
               <Dialog.Close className="text-gray-400 hover:text-gray-300">
