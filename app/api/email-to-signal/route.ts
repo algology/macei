@@ -167,51 +167,97 @@ export async function POST(request: Request) {
         console.log(
           `Email content is ${cleanedContent.length} characters, generating summary...`
         );
+        // Note: We're only summarizing the email body here, not the content from URLs
         const completion = await groq.chat.completions.create({
           messages: [
             {
               role: "system",
               content:
-                "You are a helpful assistant that summarizes email content. Extract the most important information, key points, and any actionable items. Keep your summary concise (300-500 words).",
+                "You are a precise, concise assistant that summarizes email content. Extract only the most important information and key points. DO NOT be repetitive. Avoid generic statements and focus on specific, unique details. Your summary should be 300-500 words, well-structured, and contain NO repetition. Present information in a clear, organized way.",
             },
             {
               role: "user",
-              content: `Subject: ${
+              content: `Please summarize this email in a clear, concise way. Extract the key facts, details, and any actionable items. Be specific and avoid repetition.\n\nSubject: ${
                 payload.subject
               }\n\nContent:\n${cleanedContent.substring(0, 15000)}`,
             },
           ],
           model: "gemma2-9b-it",
-          temperature: 0.3,
-          max_tokens: 1000,
+          temperature: 0.1, // Lower temperature for more deterministic output
+          max_tokens: 800, // Slightly shorter summary
+          top_p: 0.9, // Add top_p to reduce randomness
         });
 
         const summary = completion.choices[0]?.message?.content || "";
 
-        if (summary && summary.length > 100) {
+        // Check for summary quality
+        const isRepetitive = checkForRepetitiveContent(summary);
+        const hasSufficientContent = summary.length > 100;
+
+        if (summary && hasSufficientContent && !isRepetitive) {
           contentToStore = summary;
           summarized = true;
           console.log(`Generated summary of ${summary.length} characters`);
         } else {
-          // Fallback if summary generation fails
+          // Fallback if summary generation fails or produces poor quality
           contentToStore =
-            cleanedContent.substring(0, 2000) +
-            (cleanedContent.length > 2000
+            cleanedContent.substring(0, 1500) +
+            (cleanedContent.length > 1500
               ? " [Content truncated due to length...]"
               : "");
           console.log(
-            "Summary generation failed or returned poor results, using truncated content"
+            "Summary generation failed or returned poor quality results, using truncated content"
           );
+          if (isRepetitive) {
+            console.log("Detected repetitive content in summary");
+          }
         }
       } catch (error) {
         console.error("Error generating summary:", error);
         // Fallback to truncation if summarization fails
         contentToStore =
-          cleanedContent.substring(0, 2000) +
-          (cleanedContent.length > 2000
+          cleanedContent.substring(0, 1500) +
+          (cleanedContent.length > 1500
             ? " [Content truncated due to length...]"
             : "");
       }
+    }
+
+    // Helper function to detect repetitive content in summaries
+    function checkForRepetitiveContent(text: string): boolean {
+      if (!text) return true;
+
+      // Check for repeated phrases (4+ words)
+      const phrases = text.match(/\b(\w+\s+\w+\s+\w+\s+\w+\s+\w+)\b/g) || [];
+      const phraseCounts: Record<string, number> = {};
+
+      for (const phrase of phrases) {
+        phraseCounts[phrase] = (phraseCounts[phrase] || 0) + 1;
+        // If any phrase appears more than 3 times, it's likely repetitive
+        if (phraseCounts[phrase] > 3) {
+          return true;
+        }
+      }
+
+      // Check for repeated lines
+      const lines = text.split("\n").filter((line) => line.trim().length > 0);
+      const lineCounts: Record<string, number> = {};
+
+      for (const line of lines) {
+        lineCounts[line] = (lineCounts[line] || 0) + 1;
+        // If any line appears more than 2 times, it's repetitive
+        if (lineCounts[line] > 2) {
+          return true;
+        }
+      }
+
+      // Check for pattern of incomplete sentences ending with the same word
+      const incompleteSentences = text.match(/\w+\s+\w+\s+\w+\s*$/gm) || [];
+      if (incompleteSentences.length > 3) {
+        return true;
+      }
+
+      return false;
     }
 
     // Clean and normalize URLs
