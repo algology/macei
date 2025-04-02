@@ -16,6 +16,9 @@ import {
   Clock,
   Plus,
   ExternalLink,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -29,6 +32,8 @@ interface Props {
 interface SavedEntry {
   source_url: string;
 }
+
+type DateFilter = "24h" | "7d" | "30d" | "90d" | "1y" | "all";
 
 export function MarketSignalsSection({
   ideaDetails,
@@ -61,6 +66,8 @@ export function MarketSignalsSection({
     {}
   );
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
 
   async function checkSavedSignals(signals: MarketSignal[]) {
     try {
@@ -347,24 +354,83 @@ export function MarketSignalsSection({
     return category in signals;
   };
 
-  // Filter signals based only on active tab
+  // Add this new function to filter signals by date
+  const filterSignalsByDate = (
+    signals: MarketSignal[],
+    filter: DateFilter
+  ): MarketSignal[] => {
+    if (filter === "all") return signals;
+
+    const now = new Date();
+    const filterDate = new Date();
+
+    switch (filter) {
+      case "24h":
+        filterDate.setHours(now.getHours() - 24);
+        break;
+      case "7d":
+        filterDate.setDate(now.getDate() - 7);
+        break;
+      case "30d":
+        filterDate.setDate(now.getDate() - 30);
+        break;
+      case "90d":
+        filterDate.setDate(now.getDate() - 90);
+        break;
+      case "1y":
+        filterDate.setFullYear(now.getFullYear() - 1);
+        break;
+    }
+
+    return signals.filter((signal) => {
+      if (signal.date === "N/A") return false;
+      const signalDate = new Date(signal.date);
+      return signalDate >= filterDate;
+    });
+  };
+
+  // Modify the existing filteredSignals to include date filtering
   const filteredSignals = Object.fromEntries(
     Object.entries(signals).map(([category, items]) => {
-      // Filter by active tab
+      // First filter by date
+      const dateFilteredItems = filterSignalsByDate(items, dateFilter);
+
+      // Then filter by active tab
       if (activeTab !== "all") {
-        // If the active tab is one of the signal types, only show those items
         if (category === activeTab) {
-          return [category, items];
-        }
-        // If the active tab is a signal type, but not this category, return empty
-        else if (tabs.some((tab) => tab.id === activeTab)) {
+          return [category, dateFilteredItems];
+        } else if (tabs.some((tab) => tab.id === activeTab)) {
           return [category, []];
         }
       }
 
-      return [category, items];
+      return [category, dateFilteredItems];
     })
   );
+
+  // Add date filter options
+  const dateFilterOptions = [
+    { value: "24h", label: "Last 24 hours" },
+    { value: "7d", label: "Last week" },
+    { value: "30d", label: "Last month" },
+    { value: "90d", label: "Last 3 months" },
+    { value: "1y", label: "Last year" },
+    { value: "all", label: "All time" },
+  ];
+
+  const toggleDateDropdown = () => setIsDateDropdownOpen(!isDateDropdownOpen);
+
+  const selectDateFilter = (filter: DateFilter) => {
+    setDateFilter(filter);
+    setIsDateDropdownOpen(false);
+  };
+
+  const getDateFilterLabel = () => {
+    const option = dateFilterOptions.find(
+      (option) => option.value === dateFilter
+    );
+    return option ? option.label : "All time";
+  };
 
   const isValidUrl = (url: string) => {
     try {
@@ -441,6 +507,68 @@ export function MarketSignalsSection({
         </div>
       </div>
 
+      {/* Filters and Actions Bar */}
+      <div className="flex items-center justify-between border-b border-accent-2 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={toggleDateDropdown}
+              className="flex items-center justify-between bg-accent-1 border border-accent-2 rounded-lg pl-3 pr-3 py-2 text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer min-w-[160px] hover:bg-accent-1/80 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <span>{getDateFilterLabel()}</span>
+              </div>
+              {isDateDropdownOpen ? (
+                <ChevronUp className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              )}
+            </button>
+
+            {isDateDropdownOpen && (
+              <div className="absolute z-10 mt-1 w-full bg-gray-800 border border-accent-2 rounded-lg shadow-lg overflow-hidden">
+                {dateFilterOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => selectDateFilter(option.value as DateFilter)}
+                    className={`w-full text-left px-3 py-2 text-sm ${
+                      dateFilter === option.value
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "text-gray-300 hover:bg-accent-1 hover:text-white"
+                    } transition-colors`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <span className="text-sm text-gray-500">
+            Showing {Object.values(filteredSignals).flat().length} signals
+          </span>
+        </div>
+        <button
+          onClick={fetchSignals}
+          disabled={isLoading}
+          data-refresh-signals
+          className="px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-900 rounded-lg hover:bg-blue-500/30 transition-colors text-sm inline-flex items-center gap-2"
+        >
+          {refreshing ? (
+            <>
+              <LoadingSpinner className="w-4 h-4" />
+              Refreshing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-4 h-4" />
+              Refresh Market Signals
+            </>
+          )}
+        </button>
+      </div>
+
       {isLoading ? (
         <div className="flex flex-col items-center justify-center p-10 border border-accent-2 rounded-lg bg-gradient-to-br from-accent-1/30 to-accent-1/10">
           <div className="flex flex-col items-center space-y-4">
@@ -462,26 +590,6 @@ export function MarketSignalsSection({
           ([_, items]) => items.length > 0
         ) ? (
         <div className="space-y-6">
-          <div className="flex justify-end">
-            <button
-              onClick={fetchSignals}
-              disabled={isLoading}
-              data-refresh-signals
-              className="px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-900 rounded-lg hover:bg-blue-500/30 transition-colors text-sm inline-flex items-center gap-2"
-            >
-              {refreshing ? (
-                <>
-                  <LoadingSpinner className="w-4 h-4" />
-                  Refreshing...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4" />
-                  Refresh Market Signals
-                </>
-              )}
-            </button>
-          </div>
           {Object.entries(filteredSignals).map(
             ([category, items]) =>
               items.length > 0 && (
