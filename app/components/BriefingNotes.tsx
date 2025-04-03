@@ -490,7 +490,14 @@ Source: ${detail.source_name || extractDomainFromUrl(detail.url)} (${
   .join("\n\n")}
 
 Key Attributes:
-${briefing.key_attributes.join(", ")}`;
+${briefing.key_attributes.join(", ")}${
+      briefing.suggested_signals && briefing.suggested_signals.length > 0
+        ? `
+
+Suggested New Idea Attributes:
+${briefing.suggested_signals.join(", ")}`
+        : ""
+    }`;
 
     navigator.clipboard
       .writeText(content)
