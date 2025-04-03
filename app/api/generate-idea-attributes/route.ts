@@ -4,58 +4,15 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-export async function POST(request: Request) {
+// Helper function to generate attributes with the LLM
+async function generateAttributesWithLLM(
+  prompt: string,
+  retryCount = 0
+): Promise<{
+  content: any;
+  thinking: string;
+}> {
   try {
-    const body = await request.json();
-    const { name, summary, mission, organization } = body;
-
-    if (!name || !summary) {
-      return Response.json(
-        { error: "Name and summary are required" },
-        { status: 400 }
-      );
-    }
-
-    const prompt = `You are an AI business analyst tasked with identifying key market signals to monitor for a business idea.
-
-Context:
-Organization: ${organization}
-Mission: ${mission}
-Idea Name: ${name}
-Idea Summary: ${summary}
-
-Instructions:
-1. First, think through what market developments would most impact this idea's success or failure. Prefix your thinking with <think> and end with </think>.
-
-2. Then, identify 3-5 key market signals that should be monitored. Each signal MUST be:
-   - Specific enough to be meaningful for this idea
-   - Broad enough to regularly find news and developments about
-   - Focused on external market developments rather than internal metrics
-   - Likely to appear in news articles, research papers, or patents
-   - A mix of technology trends, market movements, and industry developments
-
-Examples of BAD signals:
-- "Internal Process Efficiency" (not externally monitorable)
-- "Customer Satisfaction" (too internal)
-- "Market Size" (too vague)
-- "Revenue Growth" (not a market signal)
-
-Examples of GOOD signals:
-- "AI Chip Manufacturing Advances"
-- "Renewable Energy Storage Innovations"
-- "Supply Chain Digitalization Trends"
-- "Healthcare Data Privacy Regulations"
-- "Space Launch Cost Developments"
-
-After your thinking process, provide your final signals in this exact JSON format without any markdown formatting or code blocks:
-{
-  "attributes": [
-    "Signal 1",
-    "Signal 2",
-    "Signal 3"
-  ]
-}`;
-
     const completion = await groq.chat.completions.create({
       messages: [
         {
@@ -108,30 +65,125 @@ After your thinking process, provide your final signals in this exact JSON forma
         throw new Error("Invalid attribute format");
       }
 
-      return Response.json({
+      return {
         content: parsedAttributes,
         thinking: thinking,
-      });
-    } catch (parseError) {
+      };
+    } catch (parseError: any) {
       console.error(
         "Error parsing LLM response:",
         parseError,
         "Raw response:",
         response
       );
+
+      // If we've already retried the maximum number of times, rethrow the error
+      const MAX_RETRIES = 3;
+      if (retryCount >= MAX_RETRIES) {
+        throw new Error(
+          `Failed to parse attributes after ${MAX_RETRIES} attempts: ${parseError.message}`
+        );
+      }
+
+      // Otherwise, retry with an improved prompt
+      console.log(`Retry attempt ${retryCount + 1} of ${MAX_RETRIES}...`);
+
+      // Update the prompt to be more explicit about JSON format
+      const updatedPrompt =
+        prompt +
+        `\n\nIMPORTANT: Your response MUST be valid JSON conforming to this exact format without any markdown or text before or after:
+{
+  "attributes": [
+    "Signal 1",
+    "Signal 2",
+    "Signal 3"
+  ]
+}`;
+
+      // Recursive call with the updated prompt and incremented retry count
+      return generateAttributesWithLLM(updatedPrompt, retryCount + 1);
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { name, summary, mission, organization } = body;
+
+    if (!name || !summary) {
       return Response.json(
-        { error: "Failed to parse attributes from LLM response" },
+        { error: "Name and summary are required" },
+        { status: 400 }
+      );
+    }
+
+    const prompt = `You are an AI business analyst tasked with identifying key market signals to monitor for a business idea.
+
+Context:
+Organization: ${organization}
+Mission: ${mission}
+Idea Name: ${name}
+Idea Summary: ${summary}
+
+Instructions:
+1. First, think through what market developments would most impact this idea's success or failure. Prefix your thinking with <think> and end with </think>.
+
+2. Then, identify 3-5 key market signals that should be monitored. Each signal MUST be:
+   - Specific enough to be meaningful for this idea
+   - Broad enough to regularly find news and developments about
+   - Focused on external market developments rather than internal metrics
+   - Likely to appear in news articles, research papers, or patents
+   - A mix of technology trends, market movements, and industry developments
+
+Examples of BAD signals:
+- "Internal Process Efficiency" (not externally monitorable)
+- "Customer Satisfaction" (too internal)
+- "Market Size" (too vague)
+- "Revenue Growth" (not a market signal)
+
+Examples of GOOD signals:
+- "AI Chip Manufacturing Advances"
+- "Renewable Energy Storage Innovations"
+- "Supply Chain Digitalization Trends"
+- "Healthcare Data Privacy Regulations"
+- "Space Launch Cost Developments"
+
+After your thinking process, provide your final signals in this exact JSON format without any markdown formatting or code blocks:
+{
+  "attributes": [
+    "Signal 1",
+    "Signal 2",
+    "Signal 3"
+  ]
+}`;
+
+    try {
+      const result = await generateAttributesWithLLM(prompt);
+      return Response.json({
+        content: result.content,
+        thinking: result.thinking,
+      });
+    } catch (error) {
+      console.error("Error generating attributes:", error);
+      return Response.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to generate attributes",
+        },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error("Error generating idea attributes:", error);
+    console.error("Error processing request:", error);
     return Response.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to generate attributes",
+          error instanceof Error ? error.message : "Failed to process request",
       },
       { status: 500 }
     );

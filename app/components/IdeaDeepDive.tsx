@@ -1450,25 +1450,93 @@ export function IdeaDeepDive({ ideaId }: Props) {
                         setSuggestedAttributes([]);
                         setAttributeThinking("");
 
-                        const response = await fetch(
-                          "/api/generate-idea-attributes",
-                          {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              name: editedIdea.name,
-                              summary: editedIdea.summary,
-                              mission: missionData?.name,
-                              organization: missionData?.organization?.name,
-                            }),
+                        // Maximum number of retries for 500 errors
+                        const MAX_RETRIES = 3;
+                        let retryCount = 0;
+                        let success = false;
+                        let responseData;
+
+                        while (!success && retryCount <= MAX_RETRIES) {
+                          try {
+                            const response = await fetch(
+                              "/api/generate-idea-attributes",
+                              {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  name: editedIdea.name,
+                                  summary: editedIdea.summary,
+                                  mission: missionData?.name,
+                                  organization: missionData?.organization?.name,
+                                }),
+                              }
+                            );
+
+                            responseData = await response.json();
+
+                            if (response.status === 500) {
+                              // Only retry on 500 server errors
+                              retryCount++;
+                              if (retryCount <= MAX_RETRIES) {
+                                console.log(
+                                  `Retrying generate attributes (${retryCount}/${MAX_RETRIES})...`
+                                );
+                                // Exponential backoff: 1s, 2s, 4s
+                                await new Promise((resolve) =>
+                                  setTimeout(
+                                    resolve,
+                                    1000 * Math.pow(2, retryCount - 1)
+                                  )
+                                );
+                                continue;
+                              }
+                            }
+
+                            if (!response.ok) {
+                              throw new Error(
+                                responseData.error ||
+                                  `HTTP error! status: ${response.status}`
+                              );
+                            }
+
+                            // If we get here, the request was successful
+                            success = true;
+                          } catch (fetchError) {
+                            // If it's the last retry or not a server error, rethrow
+                            if (retryCount >= MAX_RETRIES) {
+                              throw fetchError;
+                            }
+                            // Otherwise, continue to the next retry
+                            retryCount++;
+                            console.log(
+                              `Fetch error, retrying (${retryCount}/${MAX_RETRIES})...`,
+                              fetchError
+                            );
+                            // Exponential backoff: 1s, 2s, 4s
+                            await new Promise((resolve) =>
+                              setTimeout(
+                                resolve,
+                                1000 * Math.pow(2, retryCount - 1)
+                              )
+                            );
                           }
-                        );
+                        }
 
-                        const data = await response.json();
-                        if (data.error) throw new Error(data.error);
+                        if (responseData.error)
+                          throw new Error(responseData.error);
 
-                        setSuggestedAttributes(data.content.attributes);
-                        setAttributeThinking(data.thinking);
+                        // Validate response format
+                        if (
+                          !responseData.content?.attributes ||
+                          !Array.isArray(responseData.content.attributes)
+                        ) {
+                          throw new Error(
+                            "Invalid response format from server"
+                          );
+                        }
+
+                        setSuggestedAttributes(responseData.content.attributes);
+                        setAttributeThinking(responseData.thinking || "");
                       } catch (error) {
                         console.error("Error suggesting attributes:", error);
                         alert(

@@ -113,35 +113,82 @@ export function IdeaAttributesDialog({
         );
       }
 
-      const response = await fetch("/api/generate-idea-attributes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: idea.name,
-          summary: idea.summary,
-          mission: missionData?.name,
-          organization: missionData?.organization?.name,
-        }),
-      });
+      // Maximum number of retries for 500 errors
+      const MAX_RETRIES = 3;
+      let retryCount = 0;
+      let success = false;
+      let responseData;
 
-      const data = await response.json();
+      while (!success && retryCount <= MAX_RETRIES) {
+        try {
+          const response = await fetch("/api/generate-idea-attributes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: idea.name,
+              summary: idea.summary,
+              mission: missionData?.name,
+              organization: missionData?.organization?.name,
+            }),
+          });
 
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+          responseData = await response.json();
+
+          if (response.status === 500) {
+            // Only retry on 500 server errors
+            retryCount++;
+            if (retryCount <= MAX_RETRIES) {
+              console.log(
+                `Retrying generate attributes (${retryCount}/${MAX_RETRIES})...`
+              );
+              // Exponential backoff: 1s, 2s, 4s
+              await new Promise((resolve) =>
+                setTimeout(resolve, 1000 * Math.pow(2, retryCount - 1))
+              );
+              continue;
+            }
+          }
+
+          if (!response.ok) {
+            throw new Error(
+              responseData.error || `HTTP error! status: ${response.status}`
+            );
+          }
+
+          // If we get here, the request was successful
+          success = true;
+        } catch (fetchError) {
+          // If it's the last retry or not a server error, rethrow
+          if (retryCount >= MAX_RETRIES) {
+            throw fetchError;
+          }
+          // Otherwise, continue to the next retry
+          retryCount++;
+          console.log(
+            `Fetch error, retrying (${retryCount}/${MAX_RETRIES})...`,
+            fetchError
+          );
+          // Exponential backoff: 1s, 2s, 4s
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * Math.pow(2, retryCount - 1))
+          );
+        }
       }
 
+      // Validate the response data
       if (
-        !data.content?.attributes ||
-        !Array.isArray(data.content.attributes)
+        !responseData ||
+        !responseData.content?.attributes ||
+        !Array.isArray(responseData.content.attributes)
       ) {
         throw new Error("Invalid response format from server");
       }
 
       // Store the full thinking text and attributes
-      if (data.thinking) {
-        setFullThinking(data.thinking);
+      if (responseData.thinking) {
+        setFullThinking(responseData.thinking);
       }
-      setAttributes(data.content.attributes);
+      setAttributes(responseData.content.attributes);
       setLoading(false);
     } catch (error) {
       console.error("Error generating attributes:", error);
