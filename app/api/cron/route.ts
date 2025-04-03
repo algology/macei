@@ -4,9 +4,15 @@ import { generateAllIdeaBriefings } from "@/lib/scheduled-tasks";
 // This API endpoint is for manual or automated triggering of the scheduled task
 export async function GET(request: Request) {
   try {
-    // Check for API key for security
+    // Check for API key for security (either in query params or in Authorization header)
     const { searchParams } = new URL(request.url);
-    const apiKey = searchParams.get("key");
+    const queryApiKey = searchParams.get("key");
+    const authHeader = request.headers.get("Authorization");
+    const headerApiKey = authHeader?.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : null;
+
+    const apiKey = queryApiKey || headerApiKey;
 
     // Validate API key
     if (apiKey !== process.env.CRON_API_KEY) {
