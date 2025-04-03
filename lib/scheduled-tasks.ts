@@ -4,8 +4,9 @@ import { sendEmail, generateBriefingEmail } from "./emailService";
 
 // Function to initialize cron jobs
 export function initScheduledTasks() {
-  // Weekly briefing generation - runs every Sunday at 1:00 AM
-  const weeklyBriefingJob = cron.schedule("0 1 * * 0", async () => {
+  // Weekly briefing generation - runs every Thursday at 5:00 PM Adelaide time
+  // (7:30 AM UTC during standard time or 6:30 AM UTC during daylight saving time)
+  const weeklyBriefingJob = cron.schedule("0 7 * * 4", async () => {
     console.log(
       "Running weekly briefing generation job:",
       new Date().toISOString()
