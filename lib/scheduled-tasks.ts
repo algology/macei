@@ -20,7 +20,10 @@ export function initScheduledTasks() {
 }
 
 // Function to generate briefings for all active ideas
-export async function generateAllIdeaBriefings(userId?: string) {
+export async function generateAllIdeaBriefings(
+  userId?: string,
+  sendUserEmails: boolean = false
+) {
   try {
     const supabase = getServerSupabase();
     const processedIdeas: Array<{
@@ -147,82 +150,111 @@ export async function generateAllIdeaBriefings(userId?: string) {
           userIdeasMap.get(idea.userId)!.push(idea);
         }
 
-        // Fetch user emails from Supabase
-        for (const [userId, userIdeas] of userIdeasMap.entries()) {
-          try {
-            // First get profile info which might have user data
-            const { data: profile, error: profileError } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", userId)
-              .single();
+        // Send user emails if explicitly requested or if it's a production run (not testing)
+        if (sendUserEmails || !userId) {
+          console.log("Sending user briefing notification emails...");
+          // Fetch user emails from Supabase
+          for (const [userId, userIdeas] of userIdeasMap.entries()) {
+            try {
+              // First get profile info which might have user data
+              const { data: profile, error: profileError } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", userId)
+                .single();
 
-            if (profileError) {
+              if (profileError) {
+                console.error(
+                  `Error fetching profile for user ${userId}:`,
+                  profileError
+                );
+              }
+
+              // We need to get email directly from auth - but auth.users can't be accessed directly
+              // Try a few approaches
+              let userData = null;
+              let userEmail = null;
+              let userName = "MACY User";
+
+              // Try to get profile first, which could have the email
+              if (profile && profile.email) {
+                userEmail = profile.email;
+                userName = profile.full_name || "MACY User";
+              } 
+              
+              // If no email in profile, try to use admin-level direct access
+              if (!userEmail) {
+                console.log(`Trying admin access to retrieve email for user ${userId}`);
+                
+                // Attempt to get it via the service role API (should work in production)
+                const adminSupabase = getServerSupabase();
+                const { data: users, error: usersError } = await adminSupabase.auth.admin.getUserById(userId);
+                
+                if (!usersError && users && users.user) {
+                  console.log("Successfully retrieved user via admin API");
+                  userEmail = users.user.email;
+                  userName = profile?.full_name || users.user.user_metadata?.full_name || "MACY User";
+                } else {
+                  console.error("Error getting user via admin API:", usersError);
+                }
+              }
+              
+              // As a last resort, try to look up the user's email from the ideas table
+              if (!userEmail) {
+                console.log("Trying to retrieve email from creator_email in ideas table");
+                
+                const { data: userIdeas, error: ideasError } = await supabase
+                  .from("ideas")
+                  .select("creator_email")
+                  .eq("user_id", userId)
+                  .limit(1);
+                  
+                if (!ideasError && userIdeas && userIdeas.length > 0 && userIdeas[0].creator_email) {
+                  userEmail = userIdeas[0].creator_email;
+                }
+              }
+
+              if (!userEmail) {
+                console.error(
+                  `No email found for user ${userId} after multiple attempts, skipping email notification`
+                );
+                continue;
+              }
+
+              // For each idea, send a personalized notification email
+              for (const idea of userIdeas) {
+                // Generate email HTML
+                const siteUrl =
+                  process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+                // Use profile name if available, otherwise use metadata from auth.users
+                const emailHtml = generateBriefingEmail(
+                  userName,
+                  idea.name,
+                  idea.briefingId,
+                  idea.briefingSummary,
+                  siteUrl
+                );
+
+                // Send the email
+                await sendEmail({
+                  to: userEmail,
+                  subject: `New Briefing for ${idea.name}`,
+                  html: emailHtml,
+                });
+
+                console.log(
+                  `Email notification sent to ${userEmail} for idea ${idea.name}`
+                );
+              }
+            } catch (userEmailError) {
               console.error(
-                `Error fetching profile for user ${userId}:`,
-                profileError
+                `Error sending email to user ${userId}:`,
+                userEmailError
               );
             }
-
-            // Get user email directly from auth.users table using service role
-            const { data: userData, error: userError } = await supabase
-              .from("auth.users")
-              .select("email, raw_user_meta_data")
-              .eq("id", userId)
-              .single();
-
-            if (userError || !userData) {
-              console.error(
-                `Error fetching user ${userId} for email notification:`,
-                userError
-              );
-              continue;
-            }
-
-            const userEmail = userData.email;
-            if (!userEmail) {
-              console.error(
-                `No email found for user ${userId}, skipping email notification`
-              );
-              continue;
-            }
-
-            // For each idea, send a personalized notification email
-            for (const idea of userIdeas) {
-              // Generate email HTML
-              const siteUrl =
-                process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-              // Use profile name if available, otherwise use metadata from auth.users
-              const userName =
-                profile?.full_name ||
-                userData.raw_user_meta_data?.full_name ||
-                "MACY User";
-
-              const emailHtml = generateBriefingEmail(
-                userName,
-                idea.name,
-                idea.briefingId,
-                idea.briefingSummary,
-                siteUrl
-              );
-
-              // Send the email
-              await sendEmail({
-                to: userEmail,
-                subject: `New Briefing for ${idea.name}`,
-                html: emailHtml,
-              });
-
-              console.log(
-                `Email notification sent to ${userEmail} for idea ${idea.name}`
-              );
-            }
-          } catch (userEmailError) {
-            console.error(
-              `Error sending email to user ${userId}:`,
-              userEmailError
-            );
           }
+        } else {
+          console.log("Skipping user emails (testing mode without sendUserEmails flag)");
         }
 
         // Send summary email to admin as before
@@ -237,97 +269,97 @@ export async function generateAllIdeaBriefings(userId?: string) {
 
         // Generate HTML content for the admin email
         const html = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <title>Weekly Briefing Generation Summary</title>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
-              .header { background-color: #213547; color: white; padding: 20px; border-radius: 5px 5px 0 0; }
-              .content { background-color: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; }
-              .success { color: #22c55e; }
-              .error { color: #ef4444; }
-              table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-              th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-              th { background-color: #213547; color: white; }
-              .footer { margin-top: 20px; font-size: 12px; color: #666; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h1>Weekly Briefing Generation Summary</h1>
-              <p>${date}</p>
-            </div>
-            <div class="content">
-              <h2>Summary</h2>
-              <p>The weekly briefing generation job has completed.</p>
-              <p><span class="success">${
-                processedIdeas.length
-              }</span> briefings were successfully generated.</p>
-              ${
-                errors.length > 0
-                  ? `<p><span class="error">${errors.length}</span> ideas encountered errors during processing.</p>`
-                  : ""
-              }
-              
-              <h3>Successfully Generated Briefings</h3>
-              <table>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Weekly Briefing Generation Summary</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #213547; color: white; padding: 20px; border-radius: 5px 5px 0 0; }
+          .content { background-color: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; }
+          .success { color: #22c55e; }
+          .error { color: #ef4444; }
+          table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+          th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+          th { background-color: #213547; color: white; }
+          .footer { margin-top: 20px; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Weekly Briefing Generation Summary</h1>
+          <p>${date}</p>
+        </div>
+        <div class="content">
+          <h2>Summary</h2>
+          <p>The weekly briefing generation job has completed.</p>
+          <p><span class="success">${
+            processedIdeas.length
+          }</span> briefings were successfully generated.</p>
+          ${
+            errors.length > 0
+              ? `<p><span class="error">${errors.length}</span> ideas encountered errors during processing.</p>`
+              : ""
+          }
+          
+          <h3>Successfully Generated Briefings</h3>
+          <table>
+            <tr>
+              <th>Idea ID</th>
+              <th>Idea Name</th>
+              <th>User ID</th>
+            </tr>
+            ${processedIdeas
+              .map(
+                (idea) => `
+              <tr>
+                <td>${idea.id}</td>
+                <td>${idea.name}</td>
+                <td>${idea.userId}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </table>
+          
+          ${
+            errors.length > 0
+              ? `
+            <h3>Errors</h3>
+            <table>
+              <tr>
+                <th>Idea ID</th>
+                <th>Idea Name</th>
+                <th>Error</th>
+              </tr>
+              ${errors
+                .map(
+                  (error) => `
                 <tr>
-                  <th>Idea ID</th>
-                  <th>Idea Name</th>
-                  <th>User ID</th>
+                  <td>${error.ideaId}</td>
+                  <td>${error.ideaName}</td>
+                  <td>${error.error}</td>
                 </tr>
-                ${processedIdeas
-                  .map(
-                    (idea) => `
-                  <tr>
-                    <td>${idea.id}</td>
-                    <td>${idea.name}</td>
-                    <td>${idea.userId}</td>
-                  </tr>
-                `
-                  )
-                  .join("")}
-              </table>
-              
-              ${
-                errors.length > 0
-                  ? `
-                <h3>Errors</h3>
-                <table>
-                  <tr>
-                    <th>Idea ID</th>
-                    <th>Idea Name</th>
-                    <th>Error</th>
-                  </tr>
-                  ${errors
-                    .map(
-                      (error) => `
-                    <tr>
-                      <td>${error.ideaId}</td>
-                      <td>${error.ideaName}</td>
-                      <td>${error.error}</td>
-                    </tr>
-                  `
-                    )
-                    .join("")}
-                </table>
               `
-                  : ""
-              }
-              
-              <p>You can view these briefings in the dashboard.</p>
-              <p><a href="${
-                process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
-              }/dashboard" style="display: inline-block; background-color: #213547; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px;">Go to Dashboard</a></p>
-            </div>
-            <div class="footer">
-              <p>This is an automated email from MACY. Please do not reply to this email.</p>
-            </div>
-          </body>
-          </html>
-        `;
+                )
+                .join("")}
+            </table>
+          `
+              : ""
+          }
+          
+          <p>You can view these briefings in the dashboard.</p>
+          <p><a href="${
+            process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+          }/dashboard" style="display: inline-block; background-color: #213547; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px;">Go to Dashboard</a></p>
+        </div>
+        <div class="footer">
+          <p>This is an automated email from MACY. Please do not reply to this email.</p>
+        </div>
+      </body>
+      </html>
+    `;
 
         // Send the summary email
         await sendEmail({

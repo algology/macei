@@ -19,6 +19,13 @@ export async function sendEmail({
     const apiKey = process.env.MAILGUN_API_KEY;
     const domain = process.env.MAILGUN_DOMAIN;
 
+    console.log("Email sending attempt:");
+    console.log("- To:", to);
+    console.log("- Subject:", subject);
+    console.log("- Mailgun Domain:", domain || "MISSING");
+    console.log("- Mailgun API Key:", apiKey ? "Present (hidden)" : "MISSING");
+    console.log("- From:", `${process.env.EMAIL_FROM_NAME || "MISSING"} <${process.env.EMAIL_FROM_ADDRESS || "MISSING"}>`);
+
     if (!apiKey || !domain) {
       console.error(
         "Missing Mailgun API key or domain in environment variables"
@@ -45,6 +52,7 @@ export async function sendEmail({
     // Send the request to Mailgun API
     const auth = Buffer.from(`api:${apiKey}`).toString("base64");
 
+    console.log("Sending request to Mailgun API...");
     const response = await fetch(
       `https://api.mailgun.net/v3/${domain}/messages`,
       {
@@ -57,13 +65,16 @@ export async function sendEmail({
       }
     );
 
+    const statusCode = response.status;
+    console.log("Mailgun API response status:", statusCode);
+
     if (!response.ok) {
       const result = await response.json().catch(() => ({}));
       console.error("Mailgun API error:", result);
       return false;
     }
 
-    console.log(`Email sent to ${to} via Mailgun API`);
+    console.log(`Email sent successfully to ${to} via Mailgun API`);
     return true;
   } catch (error) {
     console.error("Error sending via Mailgun API:", error);
