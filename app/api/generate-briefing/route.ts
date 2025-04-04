@@ -512,13 +512,13 @@ function selectAppropriateModel(contextSize: number) {
   // Model selection logic
   if (estimatedTokens < 8000) {
     // For smaller contexts, gemma2-9b-it is fast and efficient
-    return "gemma2-9b-it";
+    return "deepseek-r1-distill-qwen-32b";
   } else if (estimatedTokens < 16000) {
     // For medium contexts, llama3-70b-8192 provides good quality
-    return "llama3-70b-8192";
+    return "deepseek-r1-distill-qwen-32b";
   } else {
     // For larger contexts, use the model with largest context window
-    return "llama-3.3-70b-versatile";
+    return "deepseek-r1-distill-qwen-32b";
   }
 }
 

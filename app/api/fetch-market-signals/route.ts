@@ -110,8 +110,8 @@ export async function POST(request: Request) {
           content: searchPrompt,
         },
       ],
-      model: "gemma2-9b-it", // Using llama3-70b, which is better for JSON generation
-      temperature: 0, // Zero temperature for deterministic output
+      model: "deepseek-r1-distill-qwen-32b", // Using llama3-70b, which is better for JSON generation
+      temperature: 0.7, // Zero temperature for deterministic output
       max_tokens: 1024,
       response_format: { type: "json_object" },
     });
@@ -236,21 +236,21 @@ export async function POST(request: Request) {
       fetch(
         `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
           searchQueries.newsQuery
-        )}&api_key=${SERP_API_KEY}&num=15&tbm=nws&hl=en`
+        )}&api_key=${SERP_API_KEY}&num=30&tbm=nws&hl=en`
       ).then((res) => res.json()),
 
       // Google Scholar (via SerpAPI) with enhanced query
       fetch(
         `https://serpapi.com/search.json?engine=google_scholar&q=${encodeURIComponent(
           searchQueries.academicQuery
-        )}&api_key=${SERP_API_KEY}&num=5`
+        )}&api_key=${SERP_API_KEY}&num=10`
       ).then((res) => res.json()),
 
       // Google Patents (via SerpAPI) with enhanced query
       fetch(
         `https://serpapi.com/search.json?engine=google_patents&q=${encodeURIComponent(
           searchQueries.patentQuery
-        )}&api_key=${SERP_API_KEY}&num=10&language=ENGLISH&has_abstract=true`
+        )}&api_key=${SERP_API_KEY}&num=20&language=ENGLISH&has_abstract=true`
       ).then((res) => res.json()),
     ]);
 
