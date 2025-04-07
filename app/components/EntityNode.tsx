@@ -141,22 +141,7 @@ function EntityNode({ data }: { data: EntityNodeData }) {
               </div>
             )}
             
-            {data.relatedIdeasCount !== undefined && (
-              <div className="flex items-center gap-1">
-                <LineChart className="w-3 h-3" />
-                <span>{data.relatedIdeasCount} related ideas</span>
-              </div>
-            )}
-            
-            {data.description && (
-              <div className="flex items-start gap-1 mt-1">
-                <span className="truncate max-w-[170px] text-xs italic">
-                  {data.description}
-                </span>
-              </div>
-            )}
-            
-            {!data.url && !data.source_name && !data.description && (
+            {!data.url && !data.source_name && !formattedPublicationDate && !data.relevance_score && (
               <div className="flex items-center gap-1">
                 <LineChart className="w-3 h-3" />
                 <span>Market signal</span>
