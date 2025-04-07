@@ -206,6 +206,11 @@ THE RESPONSE MUST BE A VALID JSON OBJECT WITH THIS EXACT STRUCTURE:
     "carbon pricing policy changes",
     "oil and gas industry transition strategies",
     "corporate carbon neutrality commitments"
+  ],
+  "next_steps": [
+    "Specific recommended action to take based on market signals",
+    "Another concrete next step that would advance this idea",
+    "Research suggestion based on identified gaps"
   ]
 }
 `;
@@ -241,6 +246,7 @@ IMPORTANT BRIEFING GUIDELINES:
      * Use 📧 for email content or user-submitted information
      * Use relevant emojis for other categories
    - Include working URLs to the original sources
+   - IMPORTANT: ONLY use URLs that come from the provided context or market signals
    - IMPORTANT: Ensure any content from emails or user submissions uses the 📧 emoji
 
 3. KEY ATTRIBUTES SECTION:
@@ -255,15 +261,23 @@ IMPORTANT BRIEFING GUIDELINES:
    - DO NOT use placeholders - suggest real, meaningful signals based on gaps in the current market research
    - Examples: "carbon capture efficiency improvements", "corporate ESG investment trends", "renewable energy storage costs"
 
+5. NEXT STEPS SECTION:
+   - Provide 3-5 specific, actionable next steps based on the market signals
+   - Include concrete recommendations for how to move forward with the idea
+   - These should be tactical, specific actions that can be taken immediately
+   - Examples: "Conduct competitor analysis of XYZ company's recent product launch", "Research patent #12345 for potential licensing opportunities", "Contact industry expert Dr. Smith for collaboration on specific use case"
+   - Each next step should directly relate to insights from the market signals analyzed
+
 ${createJsonStructurePrompt()}
 
 OUTPUT REQUIREMENTS:
 1. ONLY output valid JSON - no markdown, no explanations
 2. Ensure all URLs in the details section are real URLs from the provided context
 3. Use appropriate thematic emojis instead of flag emojis
-4. The details section should contain exactly 5 items
+4. The details section should contain exactly 5 items, each with an authentic source URL from the actual market signals
 5. The suggested_signals section must contain 5-8 meaningful, specific market signals to track (not placeholders)
-6. For any emailed content or user-submitted information, ensure the emoji is 📧`;
+6. For any emailed content or user-submitted information, ensure the emoji is 📧
+7. The next_steps section must contain 3-5 concrete, actionable recommendations`;
 }
 
 // Helper function to prepare URL content in a more structured format
@@ -1042,8 +1056,36 @@ export async function POST(request: Request) {
       ];
     }
 
+    // Validate all URLs to ensure they're properly formatted
+    allUrls = allUrls.filter(url => {
+      try {
+        // Just trying to construct a URL object will validate it
+        new URL(url);
+        // Also exclude example.com URLs which might be placeholders
+        return !url.includes("example.com");
+      } catch (e) {
+        console.log(`Filtering out invalid URL: ${url}`);
+        return false;
+      }
+    });
+
+    // Add a few fallback URLs if we don't have enough valid ones
+    if (allUrls.length < 5) {
+      const defaultUrls = [
+        "https://www.reuters.com/business/",
+        "https://www.bloomberg.com/markets",
+        "https://techcrunch.com/",
+        "https://www.wsj.com/news/business",
+        "https://www.economist.com/business/"
+      ];
+      
+      // Add enough default URLs to reach at least 5
+      const urlsToAdd = Math.max(0, 5 - allUrls.length);
+      allUrls = [...allUrls, ...defaultUrls.slice(0, urlsToAdd)];
+    }
+
     console.log(
-      `Collected ${allUrls.length} URLs for potential use in briefing`
+      `Collected ${allUrls.length} valid URLs for potential use in briefing`
     );
 
     // Parse the signals from the idea so it's available throughout the function
@@ -1221,6 +1263,12 @@ export async function POST(request: Request) {
                 }`,
                 `competitive landscape analysis`,
               ],
+              next_steps: [
+                `Research current ${idea.category || "industry"} leaders`,
+                `Identify key differentiators for ${idea.name}`,
+                `Develop prototype for proof of concept`,
+                `Analyze potential partnerships in the ${idea.category || "industry"} space`
+              ],
             };
           }
         }
@@ -1244,18 +1292,53 @@ export async function POST(request: Request) {
             source_name: extractSourceNameFromUrl(url)
           }));
       } else {
-        // Ensure each detail has a valid URL
+        // Ensure each detail has a valid URL sourced from our actual market signals
         parsedBriefing.details = parsedBriefing.details.map(
           (detail: any, index: number) => {
-            if (!detail.url || !detail.url.startsWith("http")) {
-              // Replace invalid URL with one from our collection
-              const validUrl =
-                allUrls[index % allUrls.length] ||
-                `https://example.com/${index}`;
+            let urlIsValid = false;
+            if (detail.url && detail.url.startsWith("http") && !detail.url.includes("example.com")) {
+              try {
+                // Check if the URL matches any of our real market signal URLs
+                urlIsValid = allUrls.some(u => {
+                  try {
+                    const detailHost = new URL(detail.url).hostname;
+                    const signalHost = new URL(u).hostname;
+                    return u === detail.url || detailHost === signalHost;
+                  } catch (e) {
+                    return false;
+                  }
+                });
+              } catch (e) {
+                console.error("Error validating URL:", e);
+                urlIsValid = false;
+              }
+            }
+            
+            if (!urlIsValid) {
+              console.log(`Replacing invalid URL: ${detail.url}`);
+              // Find an appropriate URL from our collection that matches our market signals
+              let bestMatchUrl = allUrls[index % allUrls.length] || `https://example.com/${index}`;
+              
+              // Try to find URL with similar domain/topic as the summary if possible
+              const summaryWords = detail.summary.toLowerCase().split(/\s+/);
+              // Look for key terms in the summary and try to match them to URLs
+              for (const url of allUrls) {
+                try {
+                  const domain = new URL(url).hostname;
+                  if (summaryWords.some(word => domain.includes(word) || word.length > 5 && domain.includes(word.substring(0, 5)))) {
+                    bestMatchUrl = url;
+                    break;
+                  }
+                } catch (e) {
+                  // Skip malformed URLs
+                  continue;
+                }
+              }
+              
               return {
                 ...detail,
-                url: validUrl,
-                source_name: extractSourceNameFromUrl(validUrl)
+                url: bestMatchUrl,
+                source_name: extractSourceNameFromUrl(bestMatchUrl)
               };
             }
             return detail;
@@ -1300,6 +1383,7 @@ export async function POST(request: Request) {
             details: parsedBriefing.details,
             key_attributes: parsedBriefing.key_attributes,
             suggested_signals: parsedBriefing.suggested_signals,
+            next_steps: parsedBriefing.next_steps || [],
           },
         ])
         .select()
@@ -1504,6 +1588,12 @@ export async function POST(request: Request) {
                 }`,
                 `competitive landscape analysis`,
               ],
+              next_steps: [
+                `Research current ${idea.category || "industry"} leaders`,
+                `Identify key differentiators for ${idea.name}`,
+                `Develop prototype for proof of concept`,
+                `Analyze potential partnerships in the ${idea.category || "industry"} space`
+              ],
             };
           }
         }
@@ -1514,10 +1604,39 @@ export async function POST(request: Request) {
         // Always use the idea's existing key attributes for consistency
         parsedFallback.key_attributes = ideaSignals;
 
-        // Ensure all details have source_name field
+        // Ensure all details have source_name field and valid URLs from market signals
         if (Array.isArray(parsedFallback.details)) {
-          parsedFallback.details = parsedFallback.details.map((detail: any) => {
-            if (!detail.source_name && detail.url) {
+          parsedFallback.details = parsedFallback.details.map((detail: any, index: number) => {
+            // First check if URL is valid and from our market signals
+            let urlIsValid = false;
+            if (detail.url && detail.url.startsWith("http") && !detail.url.includes("example.com")) {
+              try {
+                // Check if the URL matches any of our real market signal URLs
+                urlIsValid = allUrls.some(u => {
+                  try {
+                    const detailHost = new URL(detail.url).hostname;
+                    const signalHost = new URL(u).hostname;
+                    return u === detail.url || detailHost === signalHost;
+                  } catch (e) {
+                    return false;
+                  }
+                });
+              } catch (e) {
+                console.error("Error validating URL in fallback:", e);
+                urlIsValid = false;
+              }
+            }
+            
+            if (!urlIsValid) {
+              console.log(`Replacing invalid URL in fallback: ${detail.url}`);
+              // Use a URL from our actual market signals
+              const validUrl = allUrls[index % allUrls.length] || `https://example.com/${index}`;
+              return {
+                ...detail,
+                url: validUrl,
+                source_name: extractSourceNameFromUrl(validUrl)
+              };
+            } else if (!detail.source_name && detail.url) {
               return {
                 ...detail,
                 source_name: extractSourceNameFromUrl(detail.url)
@@ -1539,6 +1658,7 @@ export async function POST(request: Request) {
               details: parsedFallback.details,
               key_attributes: parsedFallback.key_attributes,
               suggested_signals: parsedFallback.suggested_signals,
+              next_steps: parsedFallback.next_steps || [],
             },
           ])
           .select()

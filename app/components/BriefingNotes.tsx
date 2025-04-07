@@ -15,6 +15,8 @@ import {
   Search,
   ExternalLink,
   Globe2,
+  ListChecks,
+  ChevronRight,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -44,6 +46,7 @@ interface Briefing {
   key_attributes: string[];
   created_at: string;
   suggested_signals?: string[];
+  next_steps?: string[];
 }
 
 interface UrlStatus {
@@ -497,6 +500,13 @@ ${briefing.key_attributes.join(", ")}${
 Suggested New Idea Attributes:
 ${briefing.suggested_signals.join(", ")}`
         : ""
+    }${
+      briefing.next_steps && briefing.next_steps.length > 0
+        ? `
+
+Recommended Next Steps:
+${briefing.next_steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`
+        : ""
     }`;
 
     navigator.clipboard
@@ -826,6 +836,27 @@ ${briefing.suggested_signals.join(", ")}`
                   </div>
                 </div>
               </div>
+
+              {/* Next Steps Section */}
+              {briefing.next_steps && briefing.next_steps.length > 0 && (
+                <div className="mt-6">
+                  <h5 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <ListChecks className="w-4 h-4 text-blue-400" />
+                    Recommended Next Steps
+                  </h5>
+                  <div className="space-y-2">
+                    {briefing.next_steps.map((step, index) => (
+                      <div
+                        key={index}
+                        className="bg-blue-900/10 text-blue-200 border border-blue-800/30 rounded-lg p-3 text-sm flex items-start gap-2.5 group transition-colors hover:bg-blue-900/20"
+                      >
+                        <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5 group-hover:translate-x-1 transition-transform" />
+                        <span>{step}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {suggestedSignals.length > 0 &&
                 briefings[0]?.id === briefing.id && (
