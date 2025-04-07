@@ -10,6 +10,7 @@ interface EntityNodeData {
   document_count?: number;
   briefing_count?: number;
   signals?: string[];
+  market_signal_count?: number;
   last_briefing_date?: string;
   // Signal specific properties
   url?: string;
@@ -47,9 +48,11 @@ function EntityNode({ data }: { data: EntityNodeData }) {
 
   // Create a summary string for signals
   const signalsSummary =
-    data.signals && data.signals.length > 0
-      ? `${data.signals.length} signals`
+    data.market_signal_count && data.market_signal_count > 0
+      ? `${data.market_signal_count} Saved Market signals`
       : null;
+  
+  const signalsCount = data.signals?.length || 0;
   
   return (
     <div className="px-4 py-2 shadow-lg rounded-lg border border-accent-2 bg-background">
@@ -82,6 +85,12 @@ function EntityNode({ data }: { data: EntityNodeData }) {
             {signalsSummary && (
               <div className="flex items-center gap-1">
                 <span className="text-xs">📊 {signalsSummary}</span>
+              </div>
+            )}
+            {signalsCount > 0 && (
+              <div className="flex items-center gap-1">
+                <LineChart className="w-3 h-3" />
+                <span>{signalsCount} Idea attributes</span>
               </div>
             )}
           </div>

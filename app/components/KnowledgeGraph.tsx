@@ -381,6 +381,11 @@ export function KnowledgeGraph() {
       
       // Create idea nodes and edges
       data.ideas?.forEach(idea => {
+        // Count market signals (ones with relevance scores)
+        const marketSignalCount = (data.signals || [])
+          .filter(signal => signal.relatedIdeas.includes(idea.id) && signal.relevance_score !== undefined)
+          .length;
+          
         nodes.push({
           id: `idea-${idea.id}`,
           data: {
@@ -390,6 +395,7 @@ export function KnowledgeGraph() {
             document_count: idea.document_count,
             briefing_count: idea.briefing_count,
             signals: idea.signals,
+            market_signal_count: marketSignalCount,
             last_briefing_date: idea.last_briefing_date,
           },
           position: {
