@@ -2,8 +2,7 @@
   "crons": [
     {
       "path": "/api/cron?key=ad7f8ae9c2b35e64d1f87b36e9a8f2c1&sendUserEmails=true",
-      "schedule": "0 1 * * 0",
-      "timeout": 300
+      "schedule": "0 1 * * 0"
     }
   ]
 }
