@@ -17,6 +17,7 @@ import {
   Globe2,
   ListChecks,
   ChevronRight,
+  Download,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -80,6 +81,7 @@ export function BriefingNotes({
   const [addingSignal, setAddingSignal] = useState(false);
   const [urlsBeingProcessed, setUrlsBeingProcessed] = useState<UrlStatus[]>([]);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
+  const [savingPdfId, setSavingPdfId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchBriefings();
@@ -651,6 +653,81 @@ ${briefing.next_steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`
     );
   };
 
+  // Function to save a specific briefing note as PDF (server-side)
+  async function saveAsPdf(briefingId: number) {
+    try {
+      setSavingPdfId(briefingId);
+      
+      // Get the current session to include the access token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("You must be logged in to generate a PDF");
+      }
+      
+      // Call the server-side API route to generate the PDF
+      const response = await fetch('/api/generate-briefing-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ briefingId }),
+        credentials: 'include', // Include cookies for authentication
+      });
+      
+      if (!response.ok) {
+        // If unauthorized, show a more specific error
+        if (response.status === 401) {
+          throw new Error("Authentication failed. Please try logging in again.");
+        }
+        
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to generate PDF');
+      }
+
+      // Get the blob from the response
+      const blob = await response.blob();
+      
+      // Create a download link and click it
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      
+      // Get filename from Content-Disposition header if available
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'briefing.pdf';
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success("Briefing note saved as PDF.", {
+        description: "The PDF contains selectable text and proper formatting.",
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to save briefing note as PDF.", {
+        description: error instanceof Error ? error.message : "Please try again.",
+        icon: <AlertCircle className="w-4 h-4" />,
+      });
+    } finally {
+      setSavingPdfId(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -716,6 +793,7 @@ ${briefing.next_steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`
           {briefings.map((briefing) => (
             <div
               key={briefing.id}
+              id={`briefing-note-${briefing.id}`}
               className="bg-accent-1/30 rounded-lg border border-accent-2 p-6 space-y-6"
             >
               <div className="flex items-center justify-between">
@@ -741,13 +819,25 @@ ${briefing.next_steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`
                     <Calendar className="w-4 h-4" />
                     {new Date(briefing.created_at).toLocaleDateString()}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => copyToClipboard(briefing)}
                       className="p-2 text-blue-400 hover:text-blue-300 transition-colors"
                       title="Copy to clipboard"
                     >
                       <ClipboardCopy className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => saveAsPdf(briefing.id)}
+                      disabled={savingPdfId === briefing.id}
+                      className="p-2 text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+                      title="Save as PDF"
+                    >
+                      {savingPdfId === briefing.id ? (
+                        <LoadingSpinner className="w-4 h-4" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
                     </button>
                     <button
                       onClick={() => deleteBriefing(briefing.id)}

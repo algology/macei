@@ -1299,7 +1299,7 @@ export async function POST(request: Request) {
             if (detail.url && detail.url.startsWith("http") && !detail.url.includes("example.com")) {
               try {
                 // Check if the URL matches any of our real market signal URLs
-                urlIsValid = allUrls.some(u => {
+                urlIsValid = allUrls.some((u: string) => {
                   try {
                     const detailHost = new URL(detail.url).hostname;
                     const signalHost = new URL(u).hostname;
@@ -1325,7 +1325,7 @@ export async function POST(request: Request) {
               for (const url of allUrls) {
                 try {
                   const domain = new URL(url).hostname;
-                  if (summaryWords.some(word => domain.includes(word) || word.length > 5 && domain.includes(word.substring(0, 5)))) {
+                  if (summaryWords.some((word: string) => domain.includes(word) || word.length > 5 && domain.includes(word.substring(0, 5)))) {
                     bestMatchUrl = url;
                     break;
                   }
@@ -1612,7 +1612,7 @@ export async function POST(request: Request) {
             if (detail.url && detail.url.startsWith("http") && !detail.url.includes("example.com")) {
               try {
                 // Check if the URL matches any of our real market signal URLs
-                urlIsValid = allUrls.some(u => {
+                urlIsValid = allUrls.some((u: string) => {
                   try {
                     const detailHost = new URL(detail.url).hostname;
                     const signalHost = new URL(u).hostname;
