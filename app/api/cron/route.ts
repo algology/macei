@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { generateAllIdeaBriefings } from "@/lib/scheduled-tasks";
 import { getServerSupabase } from "@/lib/supabase";
 
+// Set the maximum duration for this function
+export const maxDuration = 300; // 5 minutes
+
 // This API endpoint is for manual or automated triggering of the scheduled task
 export async function GET(request: Request) {
   try {
