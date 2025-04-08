@@ -29,7 +29,6 @@ interface Props {
   onInsightAdded?: () => void;
   onSwitchToInsights?: () => void;
   onIdeaUpdated?: () => void;
-  onSwitchToAttributes?: () => void;
 }
 
 interface Briefing {
@@ -62,7 +61,6 @@ export function BriefingNotes({
   onInsightAdded,
   onSwitchToInsights,
   onIdeaUpdated,
-  onSwitchToAttributes,
 }: Props) {
   const [briefings, setBriefings] = useState<Briefing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -600,12 +598,6 @@ ${briefing.next_steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`
         if (onIdeaUpdated) {
           onIdeaUpdated();
         }
-
-        // Navigate to the attributes tab instead of insights
-        // Check if parent has defined a way to navigate to attributes tab
-        if (onSwitchToAttributes) {
-          onSwitchToAttributes();
-        }
       } else {
         toast.info(`"${signal}" is already in your idea attributes`);
       }
@@ -657,70 +649,75 @@ ${briefing.next_steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`
   async function saveAsPdf(briefingId: number) {
     try {
       setSavingPdfId(briefingId);
-      
+
       // Get the current session to include the access token
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
         throw new Error("You must be logged in to generate a PDF");
       }
-      
+
       // Call the server-side API route to generate the PDF
-      const response = await fetch('/api/generate-briefing-pdf', {
-        method: 'POST',
+      const response = await fetch("/api/generate-briefing-pdf", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ briefingId }),
-        credentials: 'include', // Include cookies for authentication
+        credentials: "include", // Include cookies for authentication
       });
-      
+
       if (!response.ok) {
         // If unauthorized, show a more specific error
         if (response.status === 401) {
-          throw new Error("Authentication failed. Please try logging in again.");
+          throw new Error(
+            "Authentication failed. Please try logging in again."
+          );
         }
-        
+
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to generate PDF');
+        throw new Error(errorData.error || "Failed to generate PDF");
       }
 
       // Get the blob from the response
       const blob = await response.blob();
-      
+
       // Create a download link and click it
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
+      const a = document.createElement("a");
+      a.style.display = "none";
       a.href = url;
-      
+
       // Get filename from Content-Disposition header if available
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = 'briefing.pdf';
-      
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = "briefing.pdf";
+
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);
         if (filenameMatch && filenameMatch[1]) {
           filename = filenameMatch[1];
         }
       }
-      
+
       a.download = filename;
       document.body.appendChild(a);
       a.click();
-      
+
       // Clean up
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       toast.success("Briefing note saved as PDF.", {
         description: "The PDF contains selectable text and proper formatting.",
       });
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast.error("Failed to save briefing note as PDF.", {
-        description: error instanceof Error ? error.message : "Please try again.",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
         icon: <AlertCircle className="w-4 h-4" />,
       });
     } finally {

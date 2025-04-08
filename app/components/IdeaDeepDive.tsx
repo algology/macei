@@ -1033,7 +1033,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
                 ideaName={editedIdea.name}
                 onInsightAdded={fetchInsights}
                 onSwitchToInsights={() => setActiveTab("insights")}
-                onSwitchToAttributes={() => setActiveTab("attributes")}
                 onIdeaUpdated={fetchIdea}
               />
             </div>
