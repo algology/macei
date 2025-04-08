@@ -94,9 +94,9 @@ async function generateAttributesWithLLM(
         `\n\nIMPORTANT: Your response MUST be valid JSON conforming to this exact format without any markdown or text before or after:
 {
   "attributes": [
-    "Signal 1",
-    "Signal 2",
-    "Signal 3"
+    "Idea Attribute 1",
+    "Idea Attribute 2",
+    "Idea Attribute 3"
   ]
 }`;
 
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const prompt = `You are an AI business analyst tasked with identifying key market signals to monitor for a business idea.
+    const prompt = `You are an AI business analyst tasked with identifying key idea attributes to monitor for a business idea.
 
 Context:
 Organization: ${organization}
@@ -131,32 +131,32 @@ Idea Summary: ${summary}
 Instructions:
 1. First, think through what market developments would most impact this idea's success or failure. Prefix your thinking with <think> and end with </think>.
 
-2. Then, identify 3-5 key market signals that should be monitored. Each signal MUST be:
+2. Then, identify 3-5 key idea attributes that should be monitored. Each idea attribute MUST be:
    - Specific enough to be meaningful for this idea
    - Broad enough to regularly find news and developments about
    - Focused on external market developments rather than internal metrics
    - Likely to appear in news articles, research papers, or patents
    - A mix of technology trends, market movements, and industry developments
 
-Examples of BAD signals:
+Examples of BAD idea attributes:
 - "Internal Process Efficiency" (not externally monitorable)
 - "Customer Satisfaction" (too internal)
 - "Market Size" (too vague)
 - "Revenue Growth" (not a market signal)
 
-Examples of GOOD signals:
+Examples of GOOD idea attributes:
 - "AI Chip Manufacturing Advances"
 - "Renewable Energy Storage Innovations"
 - "Supply Chain Digitalization Trends"
 - "Healthcare Data Privacy Regulations"
 - "Space Launch Cost Developments"
 
-After your thinking process, provide your final signals in this exact JSON format without any markdown formatting or code blocks:
+After your thinking process, provide your final idea attributes in this exact JSON format without any markdown formatting or code blocks:
 {
   "attributes": [
-    "Signal 1",
-    "Signal 2",
-    "Signal 3"
+    "Idea Attribute 1",
+    "Idea Attribute 2",
+    "Idea Attribute 3"
   ]
 }`;
 

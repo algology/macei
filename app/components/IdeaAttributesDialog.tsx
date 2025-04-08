@@ -208,7 +208,7 @@ export function IdeaAttributesDialog({
       const { error: supabaseError } = await supabase
         .from("ideas")
         .update({
-          signals: JSON.stringify(attributes), // Explicitly stringify the array
+          signals: JSON.stringify(attributes), // Explicitly stringify the array (db field still named signals)
         })
         .eq("id", idea.id);
 
@@ -254,8 +254,8 @@ export function IdeaAttributesDialog({
 
           <Dialog.Description className="text-sm text-gray-400 mb-4">
             {showAttributes
-              ? "Here are the key attributes we've identified for your idea. Feel free to tweak them until they're just right."
-              : "Analyzing your idea to identify key attributes..."}
+              ? "Here are the key idea attributes we've identified for your idea. Feel free to tweak them until they're just right."
+              : "Analyzing your idea to identify key idea attributes..."}
           </Dialog.Description>
 
           {error && (

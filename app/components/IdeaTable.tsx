@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Lightbulb, Plus, MoreHorizontal, Trash2 } from "lucide-react";
+import { Lightbulb, Plus, MoreHorizontal, Trash2, FileText } from "lucide-react";
 import type { Idea, Mission, Organization } from "./types";
 import { CreateIdeaDialog } from "./CreateIdeaDialog";
+import { DocumentIdeaGenerator } from "./DocumentIdeaGenerator";
 import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
@@ -23,6 +24,7 @@ export function IdeaCards({ missionId }: Props) {
   const [ideas, setIdeas] = useState<ExtendedIdea[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -83,6 +85,30 @@ export function IdeaCards({ missionId }: Props) {
     setIdeas([...ideas, extendedIdea]);
   };
 
+  const handleIdeasCreated = async (newIdeas: Idea[]) => {
+    // Fetch the mission data with organization
+    const { data: missionData } = await supabase
+      .from("missions")
+      .select(
+        `
+        *,
+        organization:organizations(*)
+      `
+      )
+      .eq("id", missionId)
+      .single();
+
+    const extendedIdeas: ExtendedIdea[] = newIdeas.map(idea => ({
+      ...idea,
+      organization: missionData?.organization,
+      mission: missionData,
+      status: idea.status || "ideation",
+      signals: idea.signals || "No signals yet",
+    }));
+
+    setIdeas([...ideas, ...extendedIdeas]);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "validated":
@@ -126,6 +152,15 @@ export function IdeaCards({ missionId }: Props) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Ideas</h1>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsDocumentDialogOpen(true)}
+            className="px-3 py-1.5 bg-accent-1 border border-accent-2 text-gray-300 rounded-md hover:bg-accent-2 font-medium text-sm flex items-center gap-1.5"
+          >
+            <FileText className="w-4 h-4" />
+            From Document
+          </button>
+        </div>
       </div>
 
       <div className="w-full border border-gray-800 rounded-lg overflow-hidden bg-[#101618]">
@@ -214,6 +249,13 @@ export function IdeaCards({ missionId }: Props) {
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onIdeaCreated={handleIdeaCreated}
+      />
+
+      <DocumentIdeaGenerator
+        missionId={missionId}
+        isOpen={isDocumentDialogOpen}
+        onOpenChange={setIsDocumentDialogOpen}
+        onIdeasCreated={handleIdeasCreated}
       />
     </div>
   );
