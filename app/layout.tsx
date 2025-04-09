@@ -3,21 +3,8 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/react";
 
-// This needs to be imported only on the server side
-import { initScheduledTasks } from "@/lib/scheduled-tasks";
-
 // Start scheduled tasks, but only on the server
-let scheduledTasks: { weeklyBriefingJob: any } | null = null;
-
-// Initialize cron jobs on the server only - not client
-if (typeof window === "undefined") {
-  try {
-    console.log("Initializing scheduled tasks");
-    scheduledTasks = initScheduledTasks();
-  } catch (error) {
-    console.error("Failed to initialize scheduled tasks:", error);
-  }
-}
+// NOTE: Node-cron scheduling has been removed in favor of Vercel cron
 
 export const metadata: Metadata = {
   title: "MACY - Market Analysis & Context Enhancement Intelligence",

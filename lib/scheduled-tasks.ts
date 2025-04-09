@@ -2,7 +2,9 @@ import cron from "node-cron";
 import { getServerSupabase } from "./supabase";
 import { sendEmail, generateBriefingEmail } from "./emailService";
 
+// DEPRECATED: This function is no longer used - we're using Vercel Cron instead
 // Function to initialize cron jobs
+/*
 export function initScheduledTasks() {
   // Weekly briefing generation - runs every Thursday at 5:00 PM Adelaide time
   // (7:30 AM UTC during standard time or 6:30 AM UTC during daylight saving time)
@@ -18,6 +20,7 @@ export function initScheduledTasks() {
     weeklyBriefingJob,
   };
 }
+*/
 
 // Function to generate briefings for all active ideas
 export async function generateAllIdeaBriefings(
@@ -180,36 +183,52 @@ export async function generateAllIdeaBriefings(
               if (profile && profile.email) {
                 userEmail = profile.email;
                 userName = profile.full_name || "MACY User";
-              } 
-              
+              }
+
               // If no email in profile, try to use admin-level direct access
               if (!userEmail) {
-                console.log(`Trying admin access to retrieve email for user ${userId}`);
-                
+                console.log(
+                  `Trying admin access to retrieve email for user ${userId}`
+                );
+
                 // Attempt to get it via the service role API (should work in production)
                 const adminSupabase = getServerSupabase();
-                const { data: users, error: usersError } = await adminSupabase.auth.admin.getUserById(userId);
-                
+                const { data: users, error: usersError } =
+                  await adminSupabase.auth.admin.getUserById(userId);
+
                 if (!usersError && users && users.user) {
                   console.log("Successfully retrieved user via admin API");
                   userEmail = users.user.email;
-                  userName = profile?.full_name || users.user.user_metadata?.full_name || "MACY User";
+                  userName =
+                    profile?.full_name ||
+                    users.user.user_metadata?.full_name ||
+                    "MACY User";
                 } else {
-                  console.error("Error getting user via admin API:", usersError);
+                  console.error(
+                    "Error getting user via admin API:",
+                    usersError
+                  );
                 }
               }
-              
+
               // As a last resort, try to look up the user's email from the ideas table
               if (!userEmail) {
-                console.log("Trying to retrieve email from creator_email in ideas table");
-                
+                console.log(
+                  "Trying to retrieve email from creator_email in ideas table"
+                );
+
                 const { data: userIdeas, error: ideasError } = await supabase
                   .from("ideas")
                   .select("creator_email")
                   .eq("user_id", userId)
                   .limit(1);
-                  
-                if (!ideasError && userIdeas && userIdeas.length > 0 && userIdeas[0].creator_email) {
+
+                if (
+                  !ideasError &&
+                  userIdeas &&
+                  userIdeas.length > 0 &&
+                  userIdeas[0].creator_email
+                ) {
                   userEmail = userIdeas[0].creator_email;
                 }
               }
@@ -254,7 +273,9 @@ export async function generateAllIdeaBriefings(
             }
           }
         } else {
-          console.log("Skipping user emails (testing mode without sendUserEmails flag)");
+          console.log(
+            "Skipping user emails (testing mode without sendUserEmails flag)"
+          );
         }
 
         // Send summary email to admin as before

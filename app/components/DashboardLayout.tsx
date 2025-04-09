@@ -29,6 +29,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { LogOut } from "lucide-react";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { FeedbackWidget } from "./FeedbackWidget";
+import { CustomDashboard } from "./CustomDashboard";
 
 type BreadcrumbItem = {
   id: string;
@@ -436,7 +437,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     }
 
     if (breadcrumbs.length === 0) {
-      return <OrganizationCards onSelect={handleOrganizationSelect} />;
+      return <CustomDashboard />;
     }
 
     if (breadcrumbs.length === 1) {

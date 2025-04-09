@@ -541,7 +541,7 @@ function extractSourceNameFromUrl(url: string): string {
   try {
     const urlObj = new URL(url);
     const hostname = urlObj.hostname.replace(/^www\./, "");
-    
+
     // Special case handling for common domains
     if (hostname.includes("github.com")) return "GitHub";
     if (hostname.includes("medium.com")) return "Medium";
@@ -563,7 +563,7 @@ function extractSourceNameFromUrl(url: string): string {
     if (hostname.includes("aljazeera.com")) return "Al Jazeera";
     if (hostname.includes("morningstar.com")) return "Morningstar";
     if (hostname.includes("fortuneindia.com")) return "Fortune India";
-    
+
     // For domains with multiple parts, use the second-to-last part (typically the main domain name)
     const domainParts = hostname.split(".");
     if (domainParts.length >= 2) {
@@ -571,7 +571,7 @@ function extractSourceNameFromUrl(url: string): string {
       const mainName = domainParts[domainParts.length - 2];
       return mainName.charAt(0).toUpperCase() + mainName.slice(1);
     }
-    
+
     // Default fallback
     return hostname;
   } catch (e) {
@@ -693,6 +693,44 @@ export async function POST(request: Request) {
     }
 
     console.log("Fetched idea:", idea.name);
+
+    // Add check for recent briefings to prevent duplicate generations
+    // Check if a briefing was already generated recently to prevent duplicates
+    const { data: recentBriefings, error: recentBriefingsError } =
+      await supabase
+        .from("briefings")
+        .select("id, created_at")
+        .eq("idea_id", ideaId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+    if (recentBriefingsError) {
+      console.error(
+        "Error checking for recent briefings:",
+        recentBriefingsError
+      );
+      // Continue despite the error - don't block generation
+    } else if (recentBriefings && recentBriefings.length > 0) {
+      const mostRecentBriefing = recentBriefings[0];
+      const lastBriefingTime = new Date(
+        mostRecentBriefing.created_at
+      ).getTime();
+      const currentTime = new Date().getTime();
+      const timeDiffMinutes = (currentTime - lastBriefingTime) / (1000 * 60);
+
+      if (timeDiffMinutes < 30) {
+        console.log(
+          `DUPLICATE PREVENTION: Briefing for idea ${ideaId} was already generated ${timeDiffMinutes.toFixed(
+            1
+          )} minutes ago. Skipping.`
+        );
+        return NextResponse.json({
+          id: mostRecentBriefing.id,
+          message: "Briefing was recently generated",
+          timeSinceLastBriefing: `${timeDiffMinutes.toFixed(1)} minutes`,
+        });
+      }
+    }
 
     // Validate that the idea has sufficient information for generating a briefing
     if (
@@ -1057,7 +1095,7 @@ export async function POST(request: Request) {
     }
 
     // Validate all URLs to ensure they're properly formatted
-    allUrls = allUrls.filter(url => {
+    allUrls = allUrls.filter((url) => {
       try {
         // Just trying to construct a URL object will validate it
         new URL(url);
@@ -1076,9 +1114,9 @@ export async function POST(request: Request) {
         "https://www.bloomberg.com/markets",
         "https://techcrunch.com/",
         "https://www.wsj.com/news/business",
-        "https://www.economist.com/business/"
+        "https://www.economist.com/business/",
       ];
-      
+
       // Add enough default URLs to reach at least 5
       const urlsToAdd = Math.max(0, 5 - allUrls.length);
       allUrls = [...allUrls, ...defaultUrls.slice(0, urlsToAdd)];
@@ -1250,7 +1288,7 @@ export async function POST(request: Request) {
                   summary: `Market signal related to ${idea.name}.`,
                   url: url,
                   emoji: selectedEmoji,
-                  source_name: extractSourceNameFromUrl(url)
+                  source_name: extractSourceNameFromUrl(url),
                 };
               }),
               key_attributes: ideaSignals,
@@ -1267,7 +1305,9 @@ export async function POST(request: Request) {
                 `Research current ${idea.category || "industry"} leaders`,
                 `Identify key differentiators for ${idea.name}`,
                 `Develop prototype for proof of concept`,
-                `Analyze potential partnerships in the ${idea.category || "industry"} space`
+                `Analyze potential partnerships in the ${
+                  idea.category || "industry"
+                } space`,
               ],
             };
           }
@@ -1289,14 +1329,18 @@ export async function POST(request: Request) {
             summary: `Market signal related to ${idea.name}.`,
             url: url,
             emoji: ["📊", "🔬", "🏭", "💡", "🌱"][index % 5],
-            source_name: extractSourceNameFromUrl(url)
+            source_name: extractSourceNameFromUrl(url),
           }));
       } else {
         // Ensure each detail has a valid URL sourced from our actual market signals
         parsedBriefing.details = parsedBriefing.details.map(
           (detail: any, index: number) => {
             let urlIsValid = false;
-            if (detail.url && detail.url.startsWith("http") && !detail.url.includes("example.com")) {
+            if (
+              detail.url &&
+              detail.url.startsWith("http") &&
+              !detail.url.includes("example.com")
+            ) {
               try {
                 // Check if the URL matches any of our real market signal URLs
                 urlIsValid = allUrls.some((u: string) => {
@@ -1313,19 +1357,28 @@ export async function POST(request: Request) {
                 urlIsValid = false;
               }
             }
-            
+
             if (!urlIsValid) {
               console.log(`Replacing invalid URL: ${detail.url}`);
               // Find an appropriate URL from our collection that matches our market signals
-              let bestMatchUrl = allUrls[index % allUrls.length] || `https://example.com/${index}`;
-              
+              let bestMatchUrl =
+                allUrls[index % allUrls.length] ||
+                `https://example.com/${index}`;
+
               // Try to find URL with similar domain/topic as the summary if possible
               const summaryWords = detail.summary.toLowerCase().split(/\s+/);
               // Look for key terms in the summary and try to match them to URLs
               for (const url of allUrls) {
                 try {
                   const domain = new URL(url).hostname;
-                  if (summaryWords.some((word: string) => domain.includes(word) || word.length > 5 && domain.includes(word.substring(0, 5)))) {
+                  if (
+                    summaryWords.some(
+                      (word: string) =>
+                        domain.includes(word) ||
+                        (word.length > 5 &&
+                          domain.includes(word.substring(0, 5)))
+                    )
+                  ) {
                     bestMatchUrl = url;
                     break;
                   }
@@ -1334,11 +1387,11 @@ export async function POST(request: Request) {
                   continue;
                 }
               }
-              
+
               return {
                 ...detail,
                 url: bestMatchUrl,
-                source_name: extractSourceNameFromUrl(bestMatchUrl)
+                source_name: extractSourceNameFromUrl(bestMatchUrl),
               };
             }
             return detail;
@@ -1364,7 +1417,7 @@ export async function POST(request: Request) {
           if (!detail.source_name && detail.url) {
             return {
               ...detail,
-              source_name: extractSourceNameFromUrl(detail.url)
+              source_name: extractSourceNameFromUrl(detail.url),
             };
           }
           return detail;
@@ -1575,7 +1628,7 @@ export async function POST(request: Request) {
                   summary: `Market signal related to ${idea.name}.`,
                   url: url,
                   emoji: selectedEmoji,
-                  source_name: extractSourceNameFromUrl(url)
+                  source_name: extractSourceNameFromUrl(url),
                 };
               }),
               key_attributes: ideaSignals,
@@ -1592,7 +1645,9 @@ export async function POST(request: Request) {
                 `Research current ${idea.category || "industry"} leaders`,
                 `Identify key differentiators for ${idea.name}`,
                 `Develop prototype for proof of concept`,
-                `Analyze potential partnerships in the ${idea.category || "industry"} space`
+                `Analyze potential partnerships in the ${
+                  idea.category || "industry"
+                } space`,
               ],
             };
           }
@@ -1606,44 +1661,52 @@ export async function POST(request: Request) {
 
         // Ensure all details have source_name field and valid URLs from market signals
         if (Array.isArray(parsedFallback.details)) {
-          parsedFallback.details = parsedFallback.details.map((detail: any, index: number) => {
-            // First check if URL is valid and from our market signals
-            let urlIsValid = false;
-            if (detail.url && detail.url.startsWith("http") && !detail.url.includes("example.com")) {
-              try {
-                // Check if the URL matches any of our real market signal URLs
-                urlIsValid = allUrls.some((u: string) => {
-                  try {
-                    const detailHost = new URL(detail.url).hostname;
-                    const signalHost = new URL(u).hostname;
-                    return u === detail.url || detailHost === signalHost;
-                  } catch (e) {
-                    return false;
-                  }
-                });
-              } catch (e) {
-                console.error("Error validating URL in fallback:", e);
-                urlIsValid = false;
+          parsedFallback.details = parsedFallback.details.map(
+            (detail: any, index: number) => {
+              // First check if URL is valid and from our market signals
+              let urlIsValid = false;
+              if (
+                detail.url &&
+                detail.url.startsWith("http") &&
+                !detail.url.includes("example.com")
+              ) {
+                try {
+                  // Check if the URL matches any of our real market signal URLs
+                  urlIsValid = allUrls.some((u: string) => {
+                    try {
+                      const detailHost = new URL(detail.url).hostname;
+                      const signalHost = new URL(u).hostname;
+                      return u === detail.url || detailHost === signalHost;
+                    } catch (e) {
+                      return false;
+                    }
+                  });
+                } catch (e) {
+                  console.error("Error validating URL in fallback:", e);
+                  urlIsValid = false;
+                }
               }
+
+              if (!urlIsValid) {
+                console.log(`Replacing invalid URL in fallback: ${detail.url}`);
+                // Use a URL from our actual market signals
+                const validUrl =
+                  allUrls[index % allUrls.length] ||
+                  `https://example.com/${index}`;
+                return {
+                  ...detail,
+                  url: validUrl,
+                  source_name: extractSourceNameFromUrl(validUrl),
+                };
+              } else if (!detail.source_name && detail.url) {
+                return {
+                  ...detail,
+                  source_name: extractSourceNameFromUrl(detail.url),
+                };
+              }
+              return detail;
             }
-            
-            if (!urlIsValid) {
-              console.log(`Replacing invalid URL in fallback: ${detail.url}`);
-              // Use a URL from our actual market signals
-              const validUrl = allUrls[index % allUrls.length] || `https://example.com/${index}`;
-              return {
-                ...detail,
-                url: validUrl,
-                source_name: extractSourceNameFromUrl(validUrl)
-              };
-            } else if (!detail.source_name && detail.url) {
-              return {
-                ...detail,
-                source_name: extractSourceNameFromUrl(detail.url)
-              };
-            }
-            return detail;
-          });
+          );
         }
 
         // Insert the fallback briefing
