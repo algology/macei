@@ -82,29 +82,50 @@ export async function POST(request: NextRequest) {
     // 5. Create HTML content with styling
     const htmlContent = generateHtml(briefing, logoBase64);
 
-    // 6. Generate PDF using Puppeteer
-    // Updated configuration for Vercel serverless environment
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-gpu'
-      ],
-      // Explicitly install Chrome browser - needed for Vercel deployment
-      ignoreDefaultArgs: ['--disable-extensions']
-    });
+    console.log("Launching Puppeteer with enhanced configuration...");
     
+    // 6. Generate PDF using Puppeteer with robust configuration for serverless
     try {
+      // Install Chrome during runtime if needed
+      try {
+        console.log("Installing Chrome for Puppeteer if needed...");
+        await import('child_process').then(childProcess => {
+          childProcess.execSync('npx puppeteer browsers install chrome', { stdio: 'inherit' });
+        });
+        console.log("Chrome installation completed");
+      } catch (installError) {
+        console.error("Error during Chrome installation:", installError);
+        // Continue anyway, as Chrome might already be installed
+      }
+      
+      // Advanced configuration for Puppeteer in serverless
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote', 
+          '--single-process',
+          '--disable-gpu'
+        ],
+        ignoreDefaultArgs: ['--disable-extensions'],
+        // Tell Puppeteer to use bundled Chromium instead of system Chrome
+        executablePath: process.env.NODE_ENV === 'production' 
+          ? puppeteer.executablePath() 
+          : undefined
+      });
+      
+      console.log("Browser launched successfully");
+      
       const page = await browser.newPage();
+      console.log("Browser page created");
       
       // Set the content of the page
       await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      console.log("Page content set");
       
       // Generate PDF buffer
       const pdfBuffer = await page.pdf({
@@ -117,11 +138,16 @@ export async function POST(request: NextRequest) {
           left: '20px'
         }
       });
+      console.log("PDF generated successfully");
       
       // 7. Create a filename for the PDF download
       const ideaName = briefing.idea?.name || 'Briefing';
       const safeIdeaName = ideaName.replace(/[^a-zA-Z0-9]/g, '_');
       const fileName = `Briefing_Note_${safeIdeaName}_${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      // Make sure to close the browser to free resources
+      await browser.close();
+      console.log("Browser closed");
       
       // 8. Return the PDF with appropriate headers for download
       return new NextResponse(pdfBuffer, {
@@ -131,10 +157,12 @@ export async function POST(request: NextRequest) {
           'Content-Length': pdfBuffer.length.toString(),
         },
       });
-      
-    } finally {
-      // Make sure to close the browser to free resources
-      await browser.close();
+    } catch (puppeteerError: any) {
+      console.error("Puppeteer specific error:", puppeteerError);
+      return NextResponse.json(
+        { error: `Puppeteer error: ${puppeteerError.message}` },
+        { status: 500 }
+      );
     }
     
   } catch (error) {
