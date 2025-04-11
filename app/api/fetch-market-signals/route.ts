@@ -84,6 +84,7 @@ export async function POST(request: Request) {
     AI Analysis: ${aiAnalysis || ""}
     
     Create SPECIFIC and TARGETED search queries that will yield highly relevant results. Focus on the core concepts and avoid generic terms.
+    Use the current year (${new Date().getFullYear()}) if including a year in queries, or prefer timeless queries without specific years.
     
     For example, if this is about "content moderation with AI", use specific terms like "AI content moderation tools", "machine learning toxic content detection", "automated moderation systems".
     
