@@ -316,88 +316,107 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
         </div>
       </div>
 
-      {/* Ideas and Briefings Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Ideas by Mission */}
-        <div className="bg-accent-1/30 rounded-xl border border-accent-2 p-6">
-          <h3 className="text-xl font-medium mb-4 flex items-center">
-            <Lightbulb className="w-5 h-5 text-blue-400 mr-2" />
-            Ideas by Mission
-          </h3>
+      {/* Combined Ideas, Briefings, and Next Steps Section - Full width */}
+      <div className="bg-accent-1/30 rounded-xl border border-accent-2 p-6 flex-1 flex flex-col min-h-[70vh]">
+        <div className="flex items-center gap-2 mb-6">
+          <Lightbulb className="w-6 h-6 text-blue-400" />
+          <h3 className="text-xl font-medium">Ideas by Mission & Organization</h3>
+        </div>
 
-          {loading ? (
-            <div className="text-gray-400 h-40 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                <span>Loading ideas...</span>
-              </div>
+        {loading ? (
+          <div className="text-gray-400 h-60 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              <span>Loading ideas and briefings...</span>
             </div>
-          ) : ideas.length === 0 ? (
-            <div className="text-gray-400 h-40 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <span>No ideas found</span>
-                <button
-                  onClick={handleCreateIdea}
-                  className="px-3 py-1.5 bg-blue-500/20 text-blue-400 border border-blue-900 rounded-lg hover:bg-blue-500/30 transition-colors"
-                >
-                  Create your first idea
-                </button>
-              </div>
+          </div>
+        ) : ideas.length === 0 ? (
+          <div className="text-gray-400 h-60 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <span>No ideas found</span>
+              <button
+                onClick={handleCreateIdea}
+                className="px-3 py-1.5 bg-blue-500/20 text-blue-400 border border-blue-900 rounded-lg hover:bg-blue-500/30 transition-colors"
+              >
+                Create your first idea
+              </button>
             </div>
-          ) : (
-            <div className="space-y-4 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-accent-2 scrollbar-track-transparent pr-1">
-              {ideas.map((mission) => (
-                <div
-                  key={mission.id}
-                  className="border-b border-accent-2 pb-4 last:border-0 last:pb-0"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-medium text-white">
-                      {mission.name}
-                    </span>
-                    <span className="text-sm text-gray-400">
-                      ({mission.organization?.name})
-                    </span>
+          </div>
+        ) : (
+          <div className="space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-accent-2 scrollbar-track-transparent pr-1 flex-1">
+            {ideas.map((mission) => (
+              <div
+                key={mission.id}
+                className="border border-accent-2 rounded-lg p-4 bg-accent-1/40"
+              >
+                {/* Mission header with organization */}
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-accent-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-900/30 flex items-center justify-center text-blue-400">
+                      {mission.name.substring(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-white">{mission.name}</h4>
+                      <p className="text-sm text-gray-400">
+                        {mission.organization?.name || "No Organization"}
+                      </p>
+                    </div>
                   </div>
+                </div>
 
-                  {mission.ideas && mission.ideas.length > 0 ? (
-                    <div className="space-y-2">
-                      {mission.ideas.map((idea: any) => (
+                {/* Ideas list with nested briefings and next steps */}
+                {mission.ideas && mission.ideas.length > 0 ? (
+                  <div className="space-y-4">
+                    {mission.ideas.map((idea: any) => {
+                      // Find the latest briefing for this idea
+                      const latestBriefing = briefings.find(
+                        (b) => b.idea_id === idea.id
+                      );
+                      
+                      // Find next steps for this idea
+                      const nextSteps = latestBriefing?.next_steps || [];
+                      
+                      return (
                         <div
                           key={idea.id}
-                          onClick={() =>
-                            navigateToIdea(
-                              mission.organization?.id,
-                              mission.id,
-                              idea.id
-                            )
-                          }
-                          className="flex items-center justify-between p-3 rounded-lg bg-accent-1/40 hover:bg-accent-1/70 cursor-pointer transition-colors border border-transparent hover:border-accent-2"
+                          className="border border-accent-2/50 rounded-lg p-4 hover:bg-accent-1/50 transition-colors"
                         >
-                          <div className="flex flex-col w-full">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-white font-medium">
-                                  {idea.name}
-                                </span>
-                                <span
-                                  className={`px-2 py-0.5 rounded-full text-xs ${getStatusColor(
-                                    idea.status || "ideation"
-                                  )}`}
-                                >
-                                  {idea.status || "ideation"}
-                                </span>
+                          {/* Idea header and basic info */}
+                          <div 
+                            className="flex items-center justify-between cursor-pointer"
+                            onClick={() =>
+                              navigateToIdea(
+                                mission.organization?.id,
+                                mission.id,
+                                idea.id
+                              )
+                            }
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-400 text-xs">
+                                <Lightbulb className="w-3 h-3" />
                               </div>
-                              <ChevronRight className="w-4 h-4 text-gray-400" />
+                              <h5 className="font-medium text-white">{idea.name}</h5>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-xs ${getStatusColor(
+                                  idea.status || "ideation"
+                                )}`}
+                              >
+                                {idea.status || "ideation"}
+                              </span>
                             </div>
-
+                            <ChevronRight className="w-4 h-4 text-gray-400" />
+                          </div>
+                          
+                          {/* Idea description and metadata */}
+                          <div className="pl-8 mt-2">
                             {idea.summary && (
-                              <p className="text-xs text-gray-400 mt-1 line-clamp-1">
+                              <p className="text-sm text-gray-300 mt-1 mb-2">
                                 {idea.summary}
                               </p>
                             )}
-
-                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                            
+                            <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
                               {idea.category && (
                                 <span className="flex items-center gap-1">
                                   <span className="w-2 h-2 rounded-full bg-purple-500"></span>
@@ -408,177 +427,61 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                               {idea.created_at && (
                                 <span className="flex items-center gap-1">
                                   <span className="w-2 h-2 rounded-full bg-gray-500"></span>
-                                  {new Date(
-                                    idea.created_at
-                                  ).toLocaleDateString()}
+                                  Created: {new Date(idea.created_at).toLocaleDateString()}
                                 </span>
                               )}
                             </div>
+                            
+                            {/* Latest briefing if available */}
+                            {latestBriefing && (
+                              <div className="mb-3 bg-accent-1/40 rounded-lg p-3 border-l-2 border-purple-500">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <FileText className="w-4 h-4 text-purple-400" />
+                                  <h6 className="text-sm font-medium text-purple-300">Latest Briefing</h6>
+                                  <span className="text-xs text-gray-400">
+                                    {new Date(latestBriefing.created_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-300 line-clamp-2">
+                                  {latestBriefing.summary}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {/* Next steps if available */}
+                            {nextSteps.length > 0 && (
+                              <div className="mb-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <ListChecks className="w-4 h-4 text-blue-400" />
+                                  <h6 className="text-sm font-medium text-blue-300">Next Steps</h6>
+                                </div>
+                                <ul className="space-y-1 pl-6">
+                                  {nextSteps.slice(0, 3).map((step: string, idx: number) => (
+                                    <li key={idx} className="text-xs text-gray-300 flex items-start">
+                                      <ArrowRight className="w-3 h-3 text-blue-400 mr-1 flex-shrink-0 mt-0.5" />
+                                      <span>{step}</span>
+                                    </li>
+                                  ))}
+                                  {nextSteps.length > 3 && (
+                                    <li className="text-xs text-gray-400">
+                                      +{nextSteps.length - 3} more steps
+                                    </li>
+                                  )}
+                                </ul>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-400 p-3 rounded-lg bg-accent-1/40 text-center">
-                      No ideas in this mission
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Latest Briefings - Non-clickable */}
-        <div className="bg-accent-1/30 rounded-xl border border-accent-2 p-6">
-          <h3 className="text-xl font-medium mb-4 flex items-center">
-            <FileText className="w-5 h-5 text-purple-400 mr-2" />
-            Latest Briefings
-          </h3>
-
-          {loading ? (
-            <div className="text-gray-400 h-40 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                <span>Loading briefings...</span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-400 p-3 rounded-lg bg-accent-1/40 text-center">
+                    No ideas in this mission
+                  </div>
+                )}
               </div>
-            </div>
-          ) : briefings.length === 0 ? (
-            <div className="text-gray-400 h-40 flex items-center justify-center">
-              No briefings found
-            </div>
-          ) : (
-            <div className="space-y-4 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-accent-2 scrollbar-track-transparent pr-1">
-              {briefings.map((briefing) => (
-                <div
-                  key={briefing.id}
-                  className="p-4 border border-accent-2 rounded-lg bg-accent-1/40"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-                      {briefing.idea?.name || "Unnamed Idea"}
-                    </h4>
-                    <span className="text-xs text-gray-400 bg-accent-1/50 px-2 py-1 rounded-full">
-                      {new Date(briefing.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-300 line-clamp-2 mt-1">
-                    {briefing.summary}
-                  </p>
-                  <div className="flex items-center text-xs text-gray-400 mt-3 bg-accent-1/30 rounded-lg p-2">
-                    {briefing.idea?.mission?.name && (
-                      <>
-                        <span>{briefing.idea.mission.name}</span>
-                        <span className="mx-1">•</span>
-                      </>
-                    )}
-                    <span>
-                      {briefing.idea?.mission?.organization?.name ||
-                        "Unknown Organization"}
-                    </span>
-                  </div>
-
-                  {/* Show key attributes if available */}
-                  {briefing.key_attributes &&
-                    briefing.key_attributes.length > 0 && (
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        {briefing.key_attributes
-                          .slice(0, 3)
-                          .map((attr: string, idx: number) => (
-                            <span
-                              key={idx}
-                              className="text-xs bg-purple-900/20 text-purple-300 px-2 py-0.5 rounded-full"
-                            >
-                              {attr}
-                            </span>
-                          ))}
-                        {briefing.key_attributes.length > 3 && (
-                          <span className="text-xs text-gray-400">
-                            +{briefing.key_attributes.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Suggested Next Steps Section - Non-clickable */}
-      <div className="bg-accent-1/30 rounded-xl border border-accent-2 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <ListChecks className="w-5 h-5 text-blue-400" />
-          <h3 className="text-xl font-medium">Suggested Next Steps</h3>
-        </div>
-
-        {loading ? (
-          <div className="text-gray-400 h-40 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-              <span>Loading suggested steps...</span>
-            </div>
-          </div>
-        ) : briefings.length === 0 ? (
-          <div className="text-gray-400 h-40 flex items-center justify-center">
-            No suggested steps found
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {briefings
-              .filter((b) => b.next_steps && b.next_steps.length > 0)
-              .flatMap((briefing) =>
-                briefing.next_steps.map((step: string, idx: number) => ({
-                  step,
-                  ideaName: briefing.idea?.name || "Unnamed Idea",
-                  missionName: briefing.idea?.mission?.name,
-                  orgName: briefing.idea?.mission?.organization?.name,
-                  id: `${briefing.id}-${idx}`,
-                  date: briefing.created_at,
-                }))
-              )
-              .slice(0, 6)
-              .map((step: any) => (
-                <div
-                  key={step.id}
-                  className="bg-blue-900/10 text-blue-200 border border-blue-800/30 rounded-lg p-4"
-                >
-                  <div className="flex items-start gap-3">
-                    <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0 mt-1" />
-                    <div className="w-full">
-                      <p className="text-sm">{step.step}</p>
-
-                      <div className="flex justify-between items-center mt-3">
-                        <p className="text-xs text-blue-400">
-                          From: {step.ideaName}
-                        </p>
-                        <span className="text-xs text-gray-400">
-                          {new Date(step.date).toLocaleDateString()}
-                        </span>
-                      </div>
-
-                      {/* Show mission & org if available */}
-                      {(step.missionName || step.orgName) && (
-                        <div className="mt-1 text-xs text-gray-500 flex items-center gap-1">
-                          {step.missionName && (
-                            <span className="max-w-[100px] truncate">
-                              {step.missionName}
-                            </span>
-                          )}
-                          {step.missionName && step.orgName && <span>•</span>}
-                          {step.orgName && (
-                            <span className="max-w-[100px] truncate">
-                              {step.orgName}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+            ))}
           </div>
         )}
       </div>
