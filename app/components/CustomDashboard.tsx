@@ -85,6 +85,7 @@ export function CustomDashboard() {
             created_at,
             mission_id,
             auto_briefing_enabled,
+            signals,
             mission:missions(
               id,
               name,
@@ -134,6 +135,7 @@ export function CustomDashboard() {
                 created_at: idea.created_at,
                 mission_id: idea.mission_id,
                 auto_briefing_enabled: idea.auto_briefing_enabled,
+                signals: idea.signals,
               });
             }
           });
@@ -259,6 +261,30 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
         return "bg-blue-500/20 text-blue-400 border-blue-900";
       default:
         return "bg-gray-500/20 text-gray-400 border-gray-900";
+    }
+  };
+
+  const parseIdeaAttributes = (signals: string | undefined | null): string[] => {
+    if (!signals) return [];
+    
+    try {
+      // Try parsing as JSON array
+      if (signals.trim().startsWith('[') || signals.trim().startsWith('{')) {
+        const parsed = JSON.parse(signals);
+        
+        if (Array.isArray(parsed)) {
+          return parsed;
+        } else if (typeof parsed === 'object' && parsed !== null) {
+          // Handle object with categories
+          return Object.values(parsed).flat() as string[];
+        }
+      }
+      
+      // Handle comma-separated string
+      return signals.split(',').map(s => s.trim()).filter(Boolean);
+    } catch (error) {
+      // If parsing fails, try as comma-separated string
+      return signals.split(',').map(s => s.trim()).filter(Boolean);
     }
   };
 
@@ -439,7 +465,7 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                     
                                     {/* Idea header and basic info */}
                                     <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex items-center flex-wrap gap-2">
                                         <div className="w-6 h-6 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-400 text-xs border border-purple-900/50">
                                           <Lightbulb className="w-3 h-3" />
                                         </div>
@@ -456,7 +482,7 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                         </span>
                                         
                                         {/* Auto-briefing indicator */}
-                                        <span className="ml-1" title={idea.auto_briefing_enabled === false ? "Automatic briefings disabled" : "Automatic briefings enabled"}>
+                                        <span title={idea.auto_briefing_enabled === false ? "Automatic briefings disabled" : "Automatic briefings enabled"}>
                                           {idea.auto_briefing_enabled === false ? (
                                             <BellOff className="w-3.5 h-3.5 text-gray-400" />
                                           ) : (
@@ -490,6 +516,23 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                           </span>
                                         )}
                                       </div>
+                                      
+                                      {/* Display all idea attributes */}
+                                      {idea.signals && parseIdeaAttributes(idea.signals).length > 0 && (
+                                        <div className="mb-3">
+                                          <div className="text-xs text-gray-400 mb-1">Attributes:</div>
+                                          <div className="flex flex-wrap gap-1 mb-2">
+                                            {parseIdeaAttributes(idea.signals).map((attribute, idx) => (
+                                              <span 
+                                                key={idx}
+                                                className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-900"
+                                              >
+                                                {attribute}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
                                       
                                       {/* Latest briefing if available */}
                                       {latestBriefing && (
