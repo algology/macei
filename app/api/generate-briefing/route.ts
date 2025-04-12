@@ -211,7 +211,8 @@ THE RESPONSE MUST BE A VALID JSON OBJECT WITH THIS EXACT STRUCTURE:
     "Specific recommended action to take based on market signals",
     "Another concrete next step that would advance this idea",
     "Research suggestion based on identified gaps"
-  ]
+  ],
+  "conviction": "Compelling" (or one of: "Conditional", "Postponed", "Unfeasible")
 }
 `;
 }
@@ -268,6 +269,15 @@ IMPORTANT BRIEFING GUIDELINES:
    - Examples: "Conduct competitor analysis of XYZ company's recent product launch", "Research patent #12345 for potential licensing opportunities", "Contact industry expert Dr. Smith for collaboration on specific use case"
    - Each next step should directly relate to insights from the market signals analyzed
 
+6. IDEA CONVICTION SECTION:
+   - Based on your comprehensive analysis of all available market signals and data, assess the overall conviction level for this idea
+   - Choose EXACTLY ONE of these values: "Compelling", "Conditional", "Postponed", or "Unfeasible"
+   - Here's what each value means:
+     * "Compelling" - The idea shows strong potential with clear market validation and few significant obstacles
+     * "Conditional" - The idea has merit but faces important challenges that need to be addressed 
+     * "Postponed" - The market timing isn't right, despite the idea having potential merit
+     * "Unfeasible" - The idea faces fundamental challenges that make it difficult to succeed in the current market
+
 ${createJsonStructurePrompt()}
 
 OUTPUT REQUIREMENTS:
@@ -277,7 +287,8 @@ OUTPUT REQUIREMENTS:
 4. The details section should contain exactly 5 items, each with an authentic source URL from the actual market signals
 5. The suggested_signals section must contain 5-8 meaningful, specific market signals to track (not placeholders)
 6. For any emailed content or user-submitted information, ensure the emoji is 📧
-7. The next_steps section must contain 3-5 concrete, actionable recommendations`;
+7. The next_steps section must contain 3-5 concrete, actionable recommendations
+8. INCLUDE the conviction field in your response with EXACTLY one of the allowed values: "Compelling", "Conditional", "Postponed", "Unfeasible"`;
 }
 
 // Helper function to prepare URL content in a more structured format
@@ -364,11 +375,17 @@ IMPORTANT GUIDELINES:
 2. Details: Include 5 items with appropriate thematic emojis (📊 for data, 🏭 for industry, 🔬 for research, etc.)
 3. Key Attributes: These will be taken from the existing idea, just include placeholders
 4. Suggested Signals: Provide 5-8 SPECIFIC new market signals to track based on the idea - these must be concrete terms, not placeholders
+5. Conviction Assessment: Evaluate the overall viability of the idea and include ONE conviction value from: "Compelling", "Conditional", "Postponed", or "Unfeasible"
+   - "Compelling" = strong market validation and potential
+   - "Conditional" = promising but with important challenges
+   - "Postponed" = timing isn't right for this idea
+   - "Unfeasible" = idea faces fundamental challenges
 
 ${createJsonStructurePrompt()}
 
 CRITICAL: Your entire response must be ONLY valid JSON with no additional text.
-CRITICAL: The suggested_signals must be actual specific market signals (like "hydrogen fuel cell efficiency improvements"), not placeholders like "string1".`;
+CRITICAL: The suggested_signals must be actual specific market signals (like "hydrogen fuel cell efficiency improvements"), not placeholders like "string1".
+CRITICAL: INCLUDE the "conviction" field with EXACTLY one of these values: "Compelling", "Conditional", "Postponed", "Unfeasible"`;
 }
 
 // Helper function to ensure proper thematic emojis in details
@@ -1449,6 +1466,33 @@ export async function POST(request: Request) {
 
       console.log("Successfully inserted briefing");
 
+      // Update the idea conviction field if the LLM provided a valid value
+      const validConvictionValues = [
+        "Compelling",
+        "Conditional",
+        "Postponed",
+        "Unfeasible",
+      ];
+      const conviction = parsedBriefing.conviction;
+
+      if (conviction && validConvictionValues.includes(conviction)) {
+        console.log(`Updating idea conviction to: ${conviction}`);
+
+        const { error: updateError } = await supabase
+          .from("ideas")
+          .update({ conviction: conviction })
+          .eq("id", ideaId);
+
+        if (updateError) {
+          console.error("Error updating idea conviction:", updateError);
+          // Continue with the process even if updating conviction fails
+        } else {
+          console.log("Successfully updated idea conviction");
+        }
+      } else {
+        console.warn("No valid conviction value provided by LLM:", conviction);
+      }
+
       // Add detailed debugging for all parameters being received
       console.log("=== DETAILED REQUEST DEBUG ===");
       console.log("ideaId:", ideaId, "type:", typeof ideaId);
@@ -1733,6 +1777,42 @@ export async function POST(request: Request) {
         }
 
         console.log("Successfully inserted fallback briefing");
+
+        // Update the idea conviction field if the LLM provided a valid value in fallback
+        const validConvictionValues = [
+          "Compelling",
+          "Conditional",
+          "Postponed",
+          "Unfeasible",
+        ];
+        const conviction = parsedFallback.conviction;
+
+        if (conviction && validConvictionValues.includes(conviction)) {
+          console.log(
+            `Updating idea conviction to: ${conviction} (from fallback)`
+          );
+
+          const { error: updateError } = await supabase
+            .from("ideas")
+            .update({ conviction: conviction })
+            .eq("id", ideaId);
+
+          if (updateError) {
+            console.error(
+              "Error updating idea conviction (fallback):",
+              updateError
+            );
+            // Continue with the process even if updating conviction fails
+          } else {
+            console.log("Successfully updated idea conviction (fallback)");
+          }
+        } else {
+          console.warn(
+            "No valid conviction value provided by LLM in fallback:",
+            conviction
+          );
+        }
+
         return NextResponse.json(insertedFallback);
       } catch (fallbackError) {
         console.error("Fallback generation failed:", fallbackError);

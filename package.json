@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npx puppeteer browsers install chrome && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate:conviction": "ts-node scripts/execute-idea-conviction-migration.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
@@ -49,11 +50,13 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/typography": "^0.5.16",
+    "@types/dotenv": "^8.2.3",
     "@types/node": "^20",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^6.4.14",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.5.0",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "postcss": "^8",

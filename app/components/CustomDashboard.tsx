@@ -35,7 +35,9 @@ export function CustomDashboard() {
   const [ideas, setIdeas] = useState<any[]>([]);
   const [briefings, setBriefings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [collapsedMissions, setCollapsedMissions] = useState<Set<string | number>>(new Set());
+  const [collapsedMissions, setCollapsedMissions] = useState<
+    Set<string | number>
+  >(new Set());
 
   // Chat related state - simplified
   const [isChatExpanded, setIsChatExpanded] = useState(false);
@@ -44,9 +46,12 @@ export function CustomDashboard() {
   const router = useRouter();
 
   // Toggle mission collapse state
-  const toggleMissionCollapse = (missionId: string | number, e: React.MouseEvent) => {
+  const toggleMissionCollapse = (
+    missionId: string | number,
+    e: React.MouseEvent
+  ) => {
     e.stopPropagation();
-    
+
     const newCollapsed = new Set(collapsedMissions);
     if (newCollapsed.has(missionId)) {
       newCollapsed.delete(missionId);
@@ -86,6 +91,7 @@ export function CustomDashboard() {
             mission_id,
             auto_briefing_enabled,
             signals,
+            conviction,
             mission:missions(
               id,
               name,
@@ -136,6 +142,7 @@ export function CustomDashboard() {
                 mission_id: idea.mission_id,
                 auto_briefing_enabled: idea.auto_briefing_enabled,
                 signals: idea.signals,
+                conviction: idea.conviction,
               });
             }
           });
@@ -154,33 +161,37 @@ export function CustomDashboard() {
           // Get idea IDs for briefings query
           const ideaIds = userIdeas.map((idea) => idea.id);
 
-          // Approach: 
+          // Approach:
           // 1. First get all distinct idea_ids from briefings
           // 2. For each idea_id, get the most recent briefing
           // 3. Combine results
 
           // Get all briefing idea_ids
           const { data: briefingIdeaIds, error: ideaIdError } = await supabase
-            .from('briefings')
-            .select('idea_id')
-            .in('idea_id', ideaIds)
-            .order('created_at', { ascending: false });
+            .from("briefings")
+            .select("idea_id")
+            .in("idea_id", ideaIds)
+            .order("created_at", { ascending: false });
 
           if (ideaIdError) {
             console.error("Error fetching briefing idea IDs:", ideaIdError);
             setBriefings([]);
           } else {
             // Get unique idea IDs that have briefings
-            const uniqueIdeaIds = Array.from(new Set(briefingIdeaIds.map((b: any) => b.idea_id)));
+            const uniqueIdeaIds = Array.from(
+              new Set(briefingIdeaIds.map((b: any) => b.idea_id))
+            );
             console.log("Ideas with briefings:", uniqueIdeaIds.length);
-            
+
             // For each idea, fetch its latest briefing
             const latestBriefings = [];
-            
+
             for (const ideaId of uniqueIdeaIds) {
-              const { data: ideaBriefings, error: briefingError } = await supabase
-                .from('briefings')
-                .select(`
+              const { data: ideaBriefings, error: briefingError } =
+                await supabase
+                  .from("briefings")
+                  .select(
+                    `
                   id,
                   idea_id,
                   summary,
@@ -198,26 +209,32 @@ export function CustomDashboard() {
                       organization:organizations(name)
                     )
                   )
-                `)
-                .eq('idea_id', ideaId)
-                .order('created_at', { ascending: false })
-                .limit(1);
-                
+                `
+                  )
+                  .eq("idea_id", ideaId)
+                  .order("created_at", { ascending: false })
+                  .limit(1);
+
               if (briefingError) {
-                console.error(`Error fetching briefing for idea ${ideaId}:`, briefingError);
+                console.error(
+                  `Error fetching briefing for idea ${ideaId}:`,
+                  briefingError
+                );
               } else if (ideaBriefings && ideaBriefings.length > 0) {
                 latestBriefings.push(ideaBriefings[0]);
               }
             }
-            
+
             console.log("Latest briefings found:", latestBriefings.length);
             setBriefings(latestBriefings);
-            
+
             // Debug which ideas have briefings and which don't
             const ideasWithBriefings = new Set(uniqueIdeaIds);
-            const ideasWithoutBriefings = ideaIds.filter(id => !ideasWithBriefings.has(id));
+            const ideasWithoutBriefings = ideaIds.filter(
+              (id) => !ideasWithBriefings.has(id)
+            );
             console.log("Ideas without briefings:", ideasWithoutBriefings);
-            
+
             // Create context string for the chat
             if (userIdeas && userIdeas.length > 0) {
               // Create a string of all ideas and their data for the knowledge base chat
@@ -294,27 +311,50 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
     }
   };
 
-  const parseIdeaAttributes = (signals: string | undefined | null): string[] => {
+  const getConvictionColor = (conviction?: string) => {
+    switch (conviction) {
+      case "Compelling":
+        return "bg-green-500/20 text-green-400 border-green-900";
+      case "Conditional":
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-900";
+      case "Postponed":
+        return "bg-purple-500/20 text-purple-400 border-purple-900";
+      case "Unfeasible":
+        return "bg-red-500/20 text-red-400 border-red-900";
+      default:
+        return "bg-gray-500/20 text-gray-400 border-gray-900";
+    }
+  };
+
+  const parseIdeaAttributes = (
+    signals: string | undefined | null
+  ): string[] => {
     if (!signals) return [];
-    
+
     try {
       // Try parsing as JSON array
-      if (signals.trim().startsWith('[') || signals.trim().startsWith('{')) {
+      if (signals.trim().startsWith("[") || signals.trim().startsWith("{")) {
         const parsed = JSON.parse(signals);
-        
+
         if (Array.isArray(parsed)) {
           return parsed;
-        } else if (typeof parsed === 'object' && parsed !== null) {
+        } else if (typeof parsed === "object" && parsed !== null) {
           // Handle object with categories
           return Object.values(parsed).flat() as string[];
         }
       }
-      
+
       // Handle comma-separated string
-      return signals.split(',').map(s => s.trim()).filter(Boolean);
+      return signals
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
     } catch (error) {
       // If parsing fails, try as comma-separated string
-      return signals.split(',').map(s => s.trim()).filter(Boolean);
+      return signals
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
     }
   };
 
@@ -369,27 +409,28 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
       ) : (
         <div className="space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-accent-2 scrollbar-track-transparent pr-1 flex-1">
           {/* Group missions by organization first */}
-          {(function() {
+          {(function () {
             // Create organization map
             const orgMap = new Map();
-            
+
             // Group missions by organization
             ideas.forEach((mission: MissionData) => {
-              const orgId = mission.organization?.id || 'unknown';
-              const orgName = mission.organization?.name || 'Unknown Organization';
-              
+              const orgId = mission.organization?.id || "unknown";
+              const orgName =
+                mission.organization?.name || "Unknown Organization";
+
               if (!orgMap.has(orgId)) {
                 orgMap.set(orgId, {
                   id: orgId,
                   name: orgName,
-                  missions: []
+                  missions: [],
                 });
               }
-              
+
               orgMap.get(orgId).missions.push(mission);
             });
-            
-            return Array.from(orgMap.values()).map(org => (
+
+            return Array.from(orgMap.values()).map((org) => (
               <div key={org.id} className="mb-10">
                 {/* Organization Header */}
                 <div className="flex items-center mb-4 relative">
@@ -398,22 +439,25 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                   </div>
                   <h3 className="text-xl font-bold text-white">{org.name}</h3>
                 </div>
-                
+
                 {/* Missions under this organization */}
                 <div className="pl-5 space-y-6 relative">
                   {/* Vertical connecting line for all missions under this org - centered on the org avatar */}
                   <div className="absolute w-[1px] bg-gray-600/50 h-full left-5 top-0"></div>
-                  
+
                   {org.missions.map((mission: MissionData) => (
                     <div
                       key={mission.id}
                       className="rounded-lg p-4 bg-accent-1/40 relative"
                     >
                       {/* Horizontal connection line from vertical line to mission circle */}
-                      <div className="absolute h-[1px] bg-gray-600/50 w-[15px] top-8" style={{ left: "1px" }}></div>
-                      
+                      <div
+                        className="absolute h-[1px] bg-gray-600/50 w-[15px] top-8"
+                        style={{ left: "1px" }}
+                      ></div>
+
                       {/* Mission header */}
-                      <div 
+                      <div
                         className="flex items-center justify-between cursor-pointer"
                         onClick={(e) => toggleMissionCollapse(mission.id, e)}
                       >
@@ -424,14 +468,18 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                           <div>
                             <h4 className="font-medium text-white flex items-center gap-2">
                               <span>Mission:</span>
-                              <span className="text-blue-300">{mission.name}</span>
+                              <span className="text-blue-300">
+                                {mission.name}
+                              </span>
                             </h4>
                           </div>
                         </div>
-                        
+
                         {/* Collapse/expand toggle */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400">{mission.ideas?.length || 0} ideas</span>
+                          <span className="text-xs text-gray-400">
+                            {mission.ideas?.length || 0} ideas
+                          </span>
                           {collapsedMissions.has(mission.id) ? (
                             <ChevronDown className="w-4 h-4 text-gray-400" />
                           ) : (
@@ -441,18 +489,20 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                       </div>
 
                       {/* Ideas list with nested briefings and next steps */}
-                      {mission.ideas && mission.ideas.length > 0 && !collapsedMissions.has(mission.id) ? (
+                      {mission.ideas &&
+                      mission.ideas.length > 0 &&
+                      !collapsedMissions.has(mission.id) ? (
                         <div className="pl-4 mt-4 relative">
                           {/* Vertical connecting line for all ideas under this mission - centered on mission avatar */}
-                          <div className="absolute w-[1px] bg-gray-600/50 h-full"  />
-                          
+                          <div className="absolute w-[1px] bg-gray-600/50 h-full" />
+
                           <div className="space-y-4 ml-4">
                             {mission.ideas.map((idea: any) => {
                               // Find the latest briefing for this idea
                               const latestBriefing = briefings.find(
                                 (b) => b.idea_id === idea.id
                               );
-                              
+
                               return (
                                 <div
                                   key={idea.id}
@@ -466,16 +516,24 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                   }
                                 >
                                   {/* Horizontal connecting line from vertical line to idea circle */}
-                                  <div className="absolute h-[1px] bg-gray-600/50 w-[15px] top-7" style={{ left: "-15px" }}></div>
-                                  
+                                  <div
+                                    className="absolute h-[1px] bg-gray-600/50 w-[15px] top-7"
+                                    style={{ left: "-15px" }}
+                                  ></div>
+
                                   {/* Idea header and basic info */}
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center flex-wrap gap-2">
-                                      <div className="w-6 h-6 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-400 text-xs border border-purple-900/50 relative" style={{ marginLeft: "-3px" }}>
+                                      <div
+                                        className="w-6 h-6 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-400 text-xs border border-purple-900/50 relative"
+                                        style={{ marginLeft: "-3px" }}
+                                      >
                                         <Lightbulb className="w-3 h-3" />
                                       </div>
                                       <h5 className="font-medium text-white flex items-center gap-2">
-                                        <span className="text-xs text-gray-400">Idea:</span>
+                                        <span className="text-xs text-gray-400">
+                                          Idea:
+                                        </span>
                                         <span>{idea.name}</span>
                                       </h5>
                                       <span
@@ -485,10 +543,26 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                       >
                                         {idea.status || "ideation"}
                                       </span>
-                                      
+
+                                      {/* Conviction badge */}
+                                      <span
+                                        className={`px-2 py-0.5 rounded-full text-xs ${getConvictionColor(
+                                          idea.conviction
+                                        )}`}
+                                      >
+                                        {idea.conviction || "Undetermined"}
+                                      </span>
+
                                       {/* Auto-briefing indicator */}
-                                      <span title={idea.auto_briefing_enabled === false ? "Automatic briefings disabled" : "Automatic briefings enabled"}>
-                                        {idea.auto_briefing_enabled === false ? (
+                                      <span
+                                        title={
+                                          idea.auto_briefing_enabled === false
+                                            ? "Automatic briefings disabled"
+                                            : "Automatic briefings enabled"
+                                        }
+                                      >
+                                        {idea.auto_briefing_enabled ===
+                                        false ? (
                                           <BellOff className="w-3.5 h-3.5 text-gray-400" />
                                         ) : (
                                           <Bell className="w-3.5 h-3.5 text-blue-400" />
@@ -497,7 +571,7 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                     </div>
                                     <ChevronRight className="w-4 h-4 text-gray-400" />
                                   </div>
-                                  
+
                                   {/* Idea description and metadata */}
                                   <div className="pl-8 mt-2">
                                     {idea.summary && (
@@ -505,7 +579,7 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                         {idea.summary}
                                       </p>
                                     )}
-                                    
+
                                     <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
                                       {idea.category && (
                                         <span className="flex items-center gap-1">
@@ -517,28 +591,37 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                       {idea.created_at && (
                                         <span className="flex items-center gap-1">
                                           <span className="w-2 h-2 rounded-full bg-gray-500"></span>
-                                          Created: {new Date(idea.created_at).toLocaleDateString()}
+                                          Created:{" "}
+                                          {new Date(
+                                            idea.created_at
+                                          ).toLocaleDateString()}
                                         </span>
                                       )}
                                     </div>
-                                    
+
                                     {/* Display all idea attributes */}
-                                    {idea.signals && parseIdeaAttributes(idea.signals).length > 0 && (
-                                      <div className="mb-3">
-                                        <div className="text-xs text-gray-400 mb-1">Attributes:</div>
-                                        <div className="flex flex-wrap gap-1 mb-2">
-                                          {parseIdeaAttributes(idea.signals).map((attribute, idx) => (
-                                            <span 
-                                              key={idx}
-                                              className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-900"
-                                            >
-                                              {attribute}
-                                            </span>
-                                          ))}
+                                    {idea.signals &&
+                                      parseIdeaAttributes(idea.signals).length >
+                                        0 && (
+                                        <div className="mb-3">
+                                          <div className="text-xs text-gray-400 mb-1">
+                                            Attributes:
+                                          </div>
+                                          <div className="flex flex-wrap gap-1 mb-2">
+                                            {parseIdeaAttributes(
+                                              idea.signals
+                                            ).map((attribute, idx) => (
+                                              <span
+                                                key={idx}
+                                                className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-900"
+                                              >
+                                                {attribute}
+                                              </span>
+                                            ))}
+                                          </div>
                                         </div>
-                                      </div>
-                                    )}
-                                    
+                                      )}
+
                                     {/* Briefing section */}
                                     <div className="mb-3">
                                       {/* Latest briefing if available */}
@@ -547,55 +630,87 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                           <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center gap-2">
                                               <FileText className="w-4 h-4 text-purple-400" />
-                                              <h6 className="text-sm font-medium text-purple-300">Briefing</h6>
+                                              <h6 className="text-sm font-medium text-purple-300">
+                                                Briefing
+                                              </h6>
                                             </div>
                                             <div className="flex items-center gap-2">
                                               <span className="text-xs text-gray-400">
                                                 {(() => {
                                                   try {
-                                                    return new Date(latestBriefing.created_at).toLocaleDateString();
+                                                    return new Date(
+                                                      latestBriefing.created_at
+                                                    ).toLocaleDateString();
                                                   } catch (e) {
                                                     return "Unknown date";
                                                   }
                                                 })()}
                                               </span>
-                                              <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">Latest</span>
+                                              <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
+                                                Latest
+                                              </span>
                                             </div>
                                           </div>
                                           <p className="text-xs text-gray-300 mb-3">
-                                            {latestBriefing.summary || "No summary available"}
+                                            {latestBriefing.summary ||
+                                              "No summary available"}
                                           </p>
-                                          
+
                                           {/* Next steps if available */}
-                                          {latestBriefing.next_steps && Array.isArray(latestBriefing.next_steps) && latestBriefing.next_steps.length > 0 && (
-                                            <div className="mt-3 pt-3 border-t border-accent-2">
-                                              <div className="flex items-center gap-2 mb-1">
-                                                <ListChecks className="w-3 h-3 text-blue-400" />
-                                                <h6 className="text-xs font-medium text-blue-300">Next Steps</h6>
+                                          {latestBriefing.next_steps &&
+                                            Array.isArray(
+                                              latestBriefing.next_steps
+                                            ) &&
+                                            latestBriefing.next_steps.length >
+                                              0 && (
+                                              <div className="mt-3 pt-3 border-t border-accent-2">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                  <ListChecks className="w-3 h-3 text-blue-400" />
+                                                  <h6 className="text-xs font-medium text-blue-300">
+                                                    Next Steps
+                                                  </h6>
+                                                </div>
+                                                <ul className="space-y-1 pl-4">
+                                                  {latestBriefing.next_steps
+                                                    .slice(0, 3)
+                                                    .map(
+                                                      (
+                                                        step: string,
+                                                        idx: number
+                                                      ) => (
+                                                        <li
+                                                          key={idx}
+                                                          className="text-xs text-gray-300 flex items-start"
+                                                        >
+                                                          <ArrowRight className="w-3 h-3 text-blue-400 mr-1 flex-shrink-0 mt-0.5" />
+                                                          <span>{step}</span>
+                                                        </li>
+                                                      )
+                                                    )}
+                                                  {latestBriefing.next_steps
+                                                    .length > 3 && (
+                                                    <li className="text-xs text-gray-400">
+                                                      +
+                                                      {latestBriefing.next_steps
+                                                        .length - 3}{" "}
+                                                      more steps
+                                                    </li>
+                                                  )}
+                                                </ul>
                                               </div>
-                                              <ul className="space-y-1 pl-4">
-                                                {latestBriefing.next_steps.slice(0, 3).map((step: string, idx: number) => (
-                                                  <li key={idx} className="text-xs text-gray-300 flex items-start">
-                                                    <ArrowRight className="w-3 h-3 text-blue-400 mr-1 flex-shrink-0 mt-0.5" />
-                                                    <span>{step}</span>
-                                                  </li>
-                                                ))}
-                                                {latestBriefing.next_steps.length > 3 && (
-                                                  <li className="text-xs text-gray-400">
-                                                    +{latestBriefing.next_steps.length - 3} more steps
-                                                  </li>
-                                                )}
-                                              </ul>
-                                            </div>
-                                          )}
+                                            )}
                                         </div>
                                       ) : (
                                         <div className="bg-accent-1/30 rounded-lg p-4 border border-accent-2 shadow-[inset_0_1px_3px_rgba(0,0,0,0.1)] text-center">
                                           <div className="flex items-center justify-center gap-2 mb-2">
                                             <FileText className="w-4 h-4 text-gray-400" />
-                                            <h6 className="text-sm font-medium text-gray-400">Briefing</h6>
+                                            <h6 className="text-sm font-medium text-gray-400">
+                                              Briefing
+                                            </h6>
                                           </div>
-                                          <span className="text-xs text-gray-500">No briefings yet for this idea</span>
+                                          <span className="text-xs text-gray-500">
+                                            No briefings yet for this idea
+                                          </span>
                                         </div>
                                       )}
                                     </div>
@@ -605,16 +720,16 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                             })}
                           </div>
                         </div>
+                      ) : mission.ideas &&
+                        mission.ideas.length > 0 &&
+                        collapsedMissions.has(mission.id) ? (
+                        <div className="text-sm text-gray-400 p-3 text-center mt-2">
+                          {mission.ideas.length} ideas hidden
+                        </div>
                       ) : (
-                        mission.ideas && mission.ideas.length > 0 && collapsedMissions.has(mission.id) ? (
-                          <div className="text-sm text-gray-400 p-3 text-center mt-2">
-                            {mission.ideas.length} ideas hidden
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-400 p-3 text-center mt-2">
-                            No ideas in this mission
-                          </div>
-                        )
+                        <div className="text-sm text-gray-400 p-3 text-center mt-2">
+                          No ideas in this mission
+                        </div>
                       )}
                     </div>
                   ))}

@@ -80,6 +80,7 @@ export function BriefingNotes({
   const [urlsBeingProcessed, setUrlsBeingProcessed] = useState<UrlStatus[]>([]);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [savingPdfId, setSavingPdfId] = useState<number | null>(null);
+  const [ideaConviction, setIdeaConviction] = useState<string>("Undetermined");
 
   useEffect(() => {
     fetchBriefings();
@@ -207,6 +208,21 @@ export function BriefingNotes({
   async function fetchBriefings() {
     try {
       setError(null);
+
+      // First fetch the idea to get the conviction
+      const { data: ideaData, error: ideaError } = await supabase
+        .from("ideas")
+        .select("conviction")
+        .eq("id", ideaId)
+        .single();
+
+      if (ideaError) {
+        console.error("Error fetching idea conviction:", ideaError);
+      } else {
+        setIdeaConviction(ideaData.conviction || "Undetermined");
+      }
+
+      // Then fetch the briefings
       const { data, error } = await supabase
         .from("briefings")
         .select("*")
@@ -725,6 +741,21 @@ ${briefing.next_steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`
     }
   }
 
+  const getConvictionColor = (conviction?: string) => {
+    switch (conviction) {
+      case "Compelling":
+        return "bg-green-500/20 text-green-400 border-green-900";
+      case "Conditional":
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-900";
+      case "Postponed":
+        return "bg-purple-500/20 text-purple-400 border-purple-900";
+      case "Unfeasible":
+        return "bg-red-500/20 text-red-400 border-red-900";
+      default:
+        return "bg-gray-500/20 text-gray-400 border-gray-900";
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -804,9 +835,16 @@ ${briefing.next_steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`
                         {new Date(briefing.date_to).toLocaleDateString()}
                       </span>
                     </h4>
-                    <div className="mt-1">
+                    <div className="mt-1 flex items-center gap-2">
                       <span className="inline-flex items-center bg-green-500/10 text-green-400 border border-green-900 px-2 py-0.5 rounded-md text-sm">
                         {ideaName}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-sm ${getConvictionColor(
+                          ideaConviction
+                        )}`}
+                      >
+                        Conviction: {ideaConviction}
                       </span>
                     </div>
                   </div>

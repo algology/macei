@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Lightbulb, Plus, MoreHorizontal, Trash2, FileText } from "lucide-react";
+import {
+  Lightbulb,
+  Plus,
+  MoreHorizontal,
+  Trash2,
+  FileText,
+} from "lucide-react";
 import type { Idea, Mission, Organization } from "./types";
 import { CreateIdeaDialog } from "./CreateIdeaDialog";
 import { DocumentIdeaGenerator } from "./DocumentIdeaGenerator";
@@ -18,6 +24,7 @@ interface ExtendedIdea extends Omit<Idea, "status" | "signals"> {
   mission?: Mission;
   status: "validated" | "in review" | "ideation";
   signals: string;
+  conviction?: string;
 }
 
 export function IdeaCards({ missionId }: Props) {
@@ -98,7 +105,7 @@ export function IdeaCards({ missionId }: Props) {
       .eq("id", missionId)
       .single();
 
-    const extendedIdeas: ExtendedIdea[] = newIdeas.map(idea => ({
+    const extendedIdeas: ExtendedIdea[] = newIdeas.map((idea) => ({
       ...idea,
       organization: missionData?.organization,
       mission: missionData,
@@ -117,6 +124,21 @@ export function IdeaCards({ missionId }: Props) {
         return "bg-yellow-500/20 text-yellow-400 border-yellow-900";
       case "ideation":
         return "bg-blue-500/20 text-blue-400 border-blue-900";
+      default:
+        return "bg-gray-500/20 text-gray-400 border-gray-900";
+    }
+  };
+
+  const getConvictionColor = (conviction?: string) => {
+    switch (conviction) {
+      case "Compelling":
+        return "bg-green-500/20 text-green-400 border-green-900";
+      case "Conditional":
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-900";
+      case "Postponed":
+        return "bg-purple-500/20 text-purple-400 border-purple-900";
+      case "Unfeasible":
+        return "bg-red-500/20 text-red-400 border-red-900";
       default:
         return "bg-gray-500/20 text-gray-400 border-gray-900";
     }
@@ -164,20 +186,21 @@ export function IdeaCards({ missionId }: Props) {
       </div>
 
       <div className="w-full border border-gray-800 rounded-lg overflow-hidden bg-[#101618]">
-        <div className="grid grid-cols-5 text-xs md:text-sm text-gray-400 bg-gray-900/50">
+        <div className="grid grid-cols-6 text-xs md:text-sm text-gray-400 bg-gray-900/50">
           <div className="p-2 md:p-3 border-r border-gray-800">
             Organization
           </div>
           <div className="p-2 md:p-3 border-r border-gray-800">Mission</div>
           <div className="p-2 md:p-3 border-r border-gray-800">Idea</div>
           <div className="p-2 md:p-3 border-r border-gray-800">Status</div>
+          <div className="p-2 md:p-3 border-r border-gray-800">Conviction</div>
           <div className="p-2 md:p-3">Summary</div>
         </div>
 
         {ideas.map((idea) => (
           <div
             key={idea.id}
-            className="grid grid-cols-5 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30 cursor-pointer group"
+            className="grid grid-cols-6 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30 cursor-pointer group"
             onClick={() =>
               router.push(
                 `/dashboard/org/${idea.organization?.id}/mission/${idea.mission_id}/idea/${idea.id}`
@@ -200,6 +223,15 @@ export function IdeaCards({ missionId }: Props) {
                 )}`}
               >
                 {idea.status}
+              </span>
+            </div>
+            <div className="p-2 md:p-3 border-r border-gray-800">
+              <span
+                className={`px-1.5 py-0.5 md:px-2 md:py-1 rounded-full text-[10px] md:text-xs border ${getConvictionColor(
+                  idea.conviction
+                )}`}
+              >
+                {idea.conviction || "Undetermined"}
               </span>
             </div>
             <div className="p-2 md:p-3 text-gray-400 relative">
@@ -233,10 +265,10 @@ export function IdeaCards({ missionId }: Props) {
         ))}
 
         <div
-          className="grid grid-cols-5 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30 cursor-pointer group"
+          className="grid grid-cols-6 text-xs md:text-sm border-t border-gray-800 hover:bg-gray-800/30 cursor-pointer group"
           onClick={() => setIsDialogOpen(true)}
         >
-          <div className="col-span-5 p-3 flex items-center justify-center">
+          <div className="col-span-6 p-3 flex items-center justify-center">
             <div className="p-2 rounded-full hover:bg-gray-700/50 transition-colors">
               <Plus className="w-5 h-5 text-gray-400 group-hover:text-gray-200" />
             </div>
