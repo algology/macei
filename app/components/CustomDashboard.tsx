@@ -541,17 +541,25 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                           idea.status || "ideation"
                                         )}`}
                                       >
+                                        <span className="opacity-70 mr-1">
+                                          Status:
+                                        </span>
                                         {idea.status || "ideation"}
                                       </span>
 
                                       {/* Conviction badge */}
-                                      <span
-                                        className={`px-2 py-0.5 rounded-full text-xs ${getConvictionColor(
-                                          idea.conviction
-                                        )}`}
-                                      >
-                                        {idea.conviction || "Undetermined"}
-                                      </span>
+                                      {idea.conviction && (
+                                        <span
+                                          className={`px-2 py-0.5 rounded-full text-xs ${getConvictionColor(
+                                            idea.conviction
+                                          )}`}
+                                        >
+                                          <span className="opacity-70 mr-1">
+                                            Conviction:
+                                          </span>
+                                          {idea.conviction}
+                                        </span>
+                                      )}
 
                                       {/* Auto-briefing indicator */}
                                       <span
@@ -626,7 +634,13 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                     <div className="mb-3">
                                       {/* Latest briefing if available */}
                                       {latestBriefing ? (
-                                        <div className="bg-accent-1/30 rounded-lg p-4 border border-accent-2 shadow-[inset_0_1px_3px_rgba(0,0,0,0.1)]">
+                                        <div
+                                          style={{
+                                            backgroundColor:
+                                              "rgba(15, 23, 42, 0.7)",
+                                          }}
+                                          className="rounded-lg p-4 border border-accent-2 shadow-sm"
+                                        >
                                           <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center gap-2">
                                               <FileText className="w-4 h-4 text-purple-400" />
@@ -701,13 +715,13 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                             )}
                                         </div>
                                       ) : (
-                                        <div className="bg-accent-1/30 rounded-lg p-4 border border-accent-2 shadow-[inset_0_1px_3px_rgba(0,0,0,0.1)] text-center">
-                                          <div className="flex items-center justify-center gap-2 mb-2">
-                                            <FileText className="w-4 h-4 text-gray-400" />
-                                            <h6 className="text-sm font-medium text-gray-400">
-                                              Briefing
-                                            </h6>
-                                          </div>
+                                        <div
+                                          style={{
+                                            backgroundColor:
+                                              "rgba(15, 23, 42, 0.7)",
+                                          }}
+                                          className="rounded-lg p-4 border border-accent-2 shadow-sm text-center"
+                                        >
                                           <span className="text-xs text-gray-500">
                                             No briefings yet for this idea
                                           </span>
