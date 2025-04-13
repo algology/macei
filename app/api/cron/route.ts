@@ -3,7 +3,7 @@ import { generateAllIdeaBriefings } from "@/lib/scheduled-tasks";
 import { getServerSupabase } from "@/lib/supabase";
 
 // Set the maximum duration for this function
-export const maxDuration = 300; // 5 minutes
+export const maxDuration = 600; // 5 minutes
 
 // This API endpoint is for manual or automated triggering of the scheduled task
 export async function GET(request: Request) {
@@ -17,15 +17,15 @@ export async function GET(request: Request) {
       : null;
 
     const apiKey = queryApiKey || headerApiKey;
-    
+
     console.log("Checking API key authorization...");
     console.log("Expected key:", process.env.CRON_API_KEY);
     console.log("Received key:", apiKey);
-    
+
     // For development, allow bypass of API key check with special dev mode
     const isDev = process.env.NODE_ENV === "development";
     const forceBypass = searchParams.get("dev") === "true" && isDev;
-    
+
     // Validate API key unless we're forcing bypass in dev mode
     if (!forceBypass && apiKey !== process.env.CRON_API_KEY) {
       console.error("Unauthorized attempt to access cron API");
@@ -43,37 +43,38 @@ export async function GET(request: Request) {
     if (testEmailAccess && userId) {
       console.log("Testing email access for user:", userId);
       const supabase = getServerSupabase();
-      
+
       // Try to get profile info
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
         .single();
-      
+
       if (profileError) {
         console.error("Error fetching profile:", profileError);
       } else {
         console.log("Profile data:", profile);
       }
-      
+
       // Try multiple approaches to get user email
       let userEmail = null;
       let userName = null;
-      
+
       // 1. Try profile (if it has email)
       if (profile && profile.email) {
         userEmail = profile.email;
         userName = profile.full_name;
         console.log("Found email in profile data");
       }
-      
+
       // 2. Try admin API (preferred method for production)
       if (!userEmail) {
         console.log("Trying admin API to get user email");
         try {
-          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-          
+          const { data: userData, error: userError } =
+            await supabase.auth.admin.getUserById(userId);
+
           if (userError) {
             console.error("Admin API error:", userError);
           } else if (userData && userData.user) {
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
           console.error("Exception using admin API:", err);
         }
       }
-      
+
       // 3. Try ideas table as fallback
       if (!userEmail) {
         console.log("Trying ideas table for creator_email");
@@ -94,7 +95,7 @@ export async function GET(request: Request) {
           .select("creator_email")
           .eq("user_id", userId)
           .limit(1);
-          
+
         if (ideasError) {
           console.error("Error fetching from ideas:", ideasError);
         } else if (ideas && ideas.length > 0 && ideas[0].creator_email) {
@@ -102,13 +103,16 @@ export async function GET(request: Request) {
           console.log("Found email in ideas table");
         }
       }
-      
+
       if (!userEmail) {
-        return NextResponse.json({
-          error: "Could not retrieve user email by any method",
-        }, { status: 404 });
+        return NextResponse.json(
+          {
+            error: "Could not retrieve user email by any method",
+          },
+          { status: 404 }
+        );
       }
-      
+
       return NextResponse.json({
         success: true,
         message: "Successfully retrieved user email",
