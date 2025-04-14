@@ -9,7 +9,7 @@ interface Props {
 
 export function EmailToSignalConfig({ ideaId, ideaName }: Props) {
   const [copied, setCopied] = useState(false);
-  const emailAddress = `idea-${ideaId}@sandboxee963e6b4e324ffc89506aff5caa9fba.mailgun.org`;
+  const emailAddress = `idea-${ideaId}@getmacy.com`;
 
   function copyEmailToClipboard() {
     navigator.clipboard.writeText(emailAddress).then(() => {

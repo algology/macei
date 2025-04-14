@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import FormData from "form-data";
 
-// Test Mailgun API directly instead of SMTP
+// Test Mailgun API directly
 export async function GET(request: Request) {
   try {
     // Check for an API key for security
@@ -26,6 +24,7 @@ export async function GET(request: Request) {
     // Prepare Mailgun API parameters
     const apiKey = process.env.MAILGUN_API_KEY;
     const domain = process.env.MAILGUN_DOMAIN;
+    const from = `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM_ADDRESS}>`;
 
     if (!apiKey || !domain) {
       return NextResponse.json(
@@ -37,13 +36,18 @@ export async function GET(request: Request) {
       );
     }
 
-    // Create multipart form data
-    const form = new FormData();
-    form.append("from", `MACEI Test <notifications@${domain}>`);
-    form.append("to", recipient);
-    form.append("subject", "Mailgun API Test");
-    form.append("text", "Testing Mailgun API directly from Next.js");
-    form.append(
+    console.log("Mailgun configuration:");
+    console.log("- Domain:", domain);
+    console.log("- From:", from);
+    console.log("- API Key:", apiKey ? "Present (hidden)" : "Missing");
+
+    // Create URLSearchParams for form data (simpler than FormData for fetch)
+    const formData = new URLSearchParams();
+    formData.append("from", from);
+    formData.append("to", recipient);
+    formData.append("subject", "Mailgun API Test");
+    formData.append("text", "Testing Mailgun API directly from Next.js");
+    formData.append(
       "html",
       `
       <h1>Mailgun API Test</h1>
@@ -61,9 +65,9 @@ export async function GET(request: Request) {
         method: "POST",
         headers: {
           Authorization: `Basic ${auth}`,
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-        // @ts-ignore - Type issues with FormData
-        body: form,
+        body: formData,
       }
     );
 
