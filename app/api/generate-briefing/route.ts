@@ -735,7 +735,7 @@ export async function POST(request: Request) {
       const currentTime = new Date().getTime();
       const timeDiffMinutes = (currentTime - lastBriefingTime) / (1000 * 60);
 
-      if (timeDiffMinutes < 30) {
+      if (timeDiffMinutes < 5) {
         console.log(
           `DUPLICATE PREVENTION: Briefing for idea ${ideaId} was already generated ${timeDiffMinutes.toFixed(
             1
