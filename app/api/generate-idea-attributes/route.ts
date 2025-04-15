@@ -25,7 +25,7 @@ async function generateAttributesWithLLM(
           content: prompt,
         },
       ],
-      model: "deepseek-r1-distill-qwen-32b",
+      model: "deepseek-r1-distill-llama-70b",
       temperature: 0.5,
       max_tokens: 2048,
       stream: false,

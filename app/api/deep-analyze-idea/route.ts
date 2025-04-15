@@ -63,7 +63,7 @@ Focus on attributes that are:
           content: prompt,
         },
       ],
-      model: "deepseek-r1-distill-qwen-32b",
+      model: "deepseek-r1-distill-llama-70b",
       temperature: 0.7,
       max_tokens: 2048,
     });

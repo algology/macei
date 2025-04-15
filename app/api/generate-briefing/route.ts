@@ -543,13 +543,13 @@ function selectAppropriateModel(contextSize: number) {
   // Model selection logic
   if (estimatedTokens < 8000) {
     // For smaller contexts, gemma2-9b-it is fast and efficient
-    return "deepseek-r1-distill-qwen-32b";
+    return "deepseek-r1-distill-llama-70b";
   } else if (estimatedTokens < 16000) {
     // For medium contexts, llama3-70b-8192 provides good quality
-    return "deepseek-r1-distill-qwen-32b";
+    return "deepseek-r1-distill-llama-70b";
   } else {
     // For larger contexts, use the model with largest context window
-    return "deepseek-r1-distill-qwen-32b";
+    return "deepseek-r1-distill-llama-70b";
   }
 }
 
@@ -1635,7 +1635,7 @@ export async function POST(request: Request) {
               content: fallbackPrompt,
             },
           ],
-          model: "llama3-70b-8192", // Larger context model
+          model: "llama-3.3-70b-versatile", // Larger context model
           temperature: 0.1,
           max_tokens: 2000,
           response_format: { type: "json_object" },

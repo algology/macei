@@ -165,7 +165,7 @@ export async function POST(request: Request) {
             content: extractIdeasPrompt,
           },
         ],
-        model: "deepseek-r1-distill-qwen-32b", // Use a more powerful model with longer context
+        model: "deepseek-r1-distill-llama-70b", // Use a more powerful model with longer context
         temperature: 0.1, // Lower temperature for factual extraction
         max_tokens: 32000, // Increased token limit to handle more ideas
         top_p: 0.95, // Slightly reduce variability for more focused results
@@ -183,7 +183,7 @@ export async function POST(request: Request) {
             content: suggestIdeasPrompt,
           },
         ],
-        model: "deepseek-r1-distill-qwen-32b",
+        model: "deepseek-r1-distill-llama-70b",
         temperature: 0.7,
         max_tokens: 32000,
       }),

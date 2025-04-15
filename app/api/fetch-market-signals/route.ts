@@ -111,7 +111,7 @@ export async function POST(request: Request) {
           content: searchPrompt,
         },
       ],
-      model: "deepseek-r1-distill-qwen-32b", // Using llama3-70b, which is better for JSON generation
+      model: "deepseek-r1-distill-llama-70b", // Using llama-3.3-70b-versatile for better JSON generation
       temperature: 0.7, // Zero temperature for deterministic output
       max_tokens: 1024,
       response_format: { type: "json_object" },
