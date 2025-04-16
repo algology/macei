@@ -38,14 +38,19 @@ export function KnowledgeBaseChat({ ideaDetails, documents, onFocus }: Props) {
     setIsLoading(true);
 
     try {
+      const payload = {
+        message: userMessage,
+        ideaDetails: {
+          ...ideaDetails,
+          conviction: ideaDetails.conviction,
+        },
+        documents,
+      };
+
       const response = await fetch("/api/chat-with-knowledge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMessage,
-          ideaDetails,
-          documents,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) throw new Error("Failed to get response");

@@ -164,6 +164,7 @@ export interface IdeaDetails {
   category: string;
   signals: string;
   created_at: string;
+  conviction?: string;
   ai_analysis?: string;
   last_analyzed?: string;
   detailed_analysis?: string;

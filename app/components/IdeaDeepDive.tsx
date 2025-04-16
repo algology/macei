@@ -61,6 +61,7 @@ interface IdeaDetails {
   detailed_analysis?: string;
   summary?: string;
   auto_briefing_enabled?: boolean;
+  conviction?: string;
 }
 
 interface CustomTag {
@@ -82,6 +83,21 @@ const defaultIdea: IdeaDetails = {
   last_analyzed: "",
   mission_id: "",
   auto_briefing_enabled: true,
+};
+
+const getConvictionColor = (conviction?: string) => {
+  switch (conviction) {
+    case "Compelling":
+      return "bg-green-500/20 text-green-400 border-green-900";
+    case "Conditional":
+      return "bg-yellow-500/20 text-yellow-400 border-yellow-900";
+    case "Postponed":
+      return "bg-purple-500/20 text-purple-400 border-purple-900";
+    case "Unfeasible":
+      return "bg-red-500/20 text-red-400 border-red-900";
+    default:
+      return "bg-gray-500/20 text-gray-400 border-gray-900";
+  }
 };
 
 export function IdeaDeepDive({ ideaId }: Props) {
@@ -215,7 +231,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
         .from("ideas")
         .select(
           `
-          *,
+          *, 
           mission:missions (
             *,
             organization:organizations (*)
@@ -277,28 +293,34 @@ export function IdeaDeepDive({ ideaId }: Props) {
       // Combine both sections
       const documentContext = `=== DOCUMENTS ===\n\n${documentsSection}\n\n=== MARKET SIGNALS ===\n\n${knowledgeBaseSection}`;
 
-      setIdea(data);
-      setEditedIdea(data);
-      setMissionData(data.mission);
+      // The 'data' variable already contains all fields due to select('*')
+      // including 'conviction' if it exists on the fetched idea.
+      const fetchedIdeaData = data as IdeaDetails; // Use the imported IdeaDetails type which now includes optional conviction
+
+      setIdea(fetchedIdeaData);
+      setEditedIdea(fetchedIdeaData);
+      setMissionData(fetchedIdeaData.mission);
       setDocuments(documentContents);
       setDocumentContext(documentContext);
 
       // Parse signals/keywords
-      if (data.signals) {
+      if (fetchedIdeaData.signals) {
         try {
           let parsed;
-          if (typeof data.signals === "string") {
+          if (typeof fetchedIdeaData.signals === "string") {
             if (
-              data.signals.trim().startsWith("[") ||
-              data.signals.trim().startsWith("{")
+              fetchedIdeaData.signals.trim().startsWith("[") ||
+              fetchedIdeaData.signals.trim().startsWith("{")
             ) {
-              parsed = JSON.parse(data.signals);
+              parsed = JSON.parse(fetchedIdeaData.signals);
             } else {
               // Handle comma-separated string
-              parsed = data.signals.split(",").map((s: string) => s.trim());
+              parsed = fetchedIdeaData.signals
+                .split(",")
+                .map((s: string) => s.trim());
             }
           } else {
-            parsed = data.signals;
+            parsed = fetchedIdeaData.signals;
           }
 
           let keywordsList: string[] = [];
@@ -354,6 +376,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
           signals: formattedSignals,
           summary: editedIdea.summary,
           auto_briefing_enabled: editedIdea.auto_briefing_enabled,
+          conviction: editedIdea.conviction,
         })
         .eq("id", ideaId);
 
@@ -761,10 +784,19 @@ export function IdeaDeepDive({ ideaId }: Props) {
       <div className="w-full">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-3xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-              Idea Deep Dive
-            </h2>
-            <p className="text-gray-400 mt-2">
+            <div className="flex items-center gap-3 mb-2">
+              <h2 className="text-3xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                {editedIdea.name || "Idea Details"}
+              </h2>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getConvictionColor(
+                  editedIdea.conviction
+                )}`}
+              >
+                {editedIdea.conviction || "Undetermined"}
+              </span>
+            </div>
+            <p className="text-gray-400">
               Analyze and validate your innovation ideas
             </p>
           </div>
@@ -919,6 +951,33 @@ export function IdeaDeepDive({ ideaId }: Props) {
                         <option value="ideation">Ideation</option>
                         <option value="in review">In Review</option>
                         <option value="validated">Validated</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">
+                      Conviction Level
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={editedIdea.conviction || "Undetermined"}
+                        onChange={(e) =>
+                          setEditedIdea({
+                            ...editedIdea,
+                            conviction: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-2 focus:ring-green-500/20 transition-all duration-200 appearance-none"
+                      >
+                        <option value="Undetermined">Undetermined</option>
+                        <option value="Compelling">Compelling</option>
+                        <option value="Conditional">Conditional</option>
+                        <option value="Postponed">Postponed</option>
+                        <option value="Unfeasible">Unfeasible</option>
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
                         <ChevronDown className="w-4 h-4" />

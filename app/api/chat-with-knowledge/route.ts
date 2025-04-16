@@ -24,6 +24,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { message, ideaDetails, documents } = body;
 
+    // Extract conviction from ideaDetails
+    const conviction = ideaDetails?.conviction || "Undetermined";
+
     // Fetch data from the database
     const [
       { data: briefings },
@@ -66,6 +69,7 @@ IDEA CONTEXT:
 Name: ${ideaDetails.name}
 Category: ${ideaDetails.category}
 Status: ${ideaDetails.status}
+Conviction: ${conviction}
 Summary: ${ideaDetails.summary || "Not specified"}
 Detailed Analysis: ${ideaDetails.detailed_analysis || "Not available"}
 Last Analyzed: ${ideaDetails.last_analyzed || "Not available"}
