@@ -62,6 +62,7 @@ interface IdeaDetails {
   summary?: string;
   auto_briefing_enabled?: boolean;
   conviction?: string;
+  conviction_rationale?: string;
 }
 
 interface CustomTag {
@@ -789,11 +790,16 @@ export function IdeaDeepDive({ ideaId }: Props) {
                 {editedIdea.name || "Idea Details"}
               </h2>
               <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getConvictionColor(
+                className={`relative group inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getConvictionColor(
                   editedIdea.conviction
                 )}`}
               >
                 {editedIdea.conviction || "Undetermined"}
+                {editedIdea.conviction_rationale && (
+                  <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2 text-xs text-white bg-accent-3 rounded-md shadow-lg z-10 border border-accent-2 text-center">
+                    {editedIdea.conviction_rationale}
+                  </div>
+                )}
               </span>
             </div>
             <p className="text-gray-400">
