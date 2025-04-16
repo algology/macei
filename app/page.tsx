@@ -905,7 +905,7 @@ export default function Home() {
       },
       {
         key: "sources",
-        title: "Sources Being Analyzed",
+        title: "Sources Being Analysed",
         icon: <Globe className="w-4 h-4" />,
         condition: urlsBeingProcessed.length > 0,
         step: "analyzing",
