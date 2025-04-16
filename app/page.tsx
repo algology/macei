@@ -167,7 +167,7 @@ export default function Home() {
       setChatHistory((prev) => [
         ...prev,
         { role: "user", content: query },
-        { role: "assistant", content: "Analyzing your idea..." },
+        { role: "assistant", content: "Analysing your idea..." },
       ]);
 
       // Clear the input
@@ -188,7 +188,7 @@ export default function Home() {
 
       // 1. First get idea attributes
       setAnalysisThinking(
-        "Analyzing idea and generating key attributes to monitor..."
+        "Analysing idea and generating key attributes to monitor..."
       );
       const attributesResult = await processIdeaAttributes(query, false);
 
@@ -309,7 +309,7 @@ export default function Home() {
         newHistory[newHistory.length - 1] = {
           role: "assistant",
           content:
-            "I encountered an error while analyzing your idea. Please try again.",
+            "I encountered an error while analysing your idea. Please try again.",
         };
         return newHistory;
       });
@@ -349,7 +349,7 @@ export default function Home() {
           const newHistory = [...prev];
           newHistory[newHistory.length - 1] = {
             role: "assistant",
-            content: `I've analyzed your idea and identified key attributes to monitor for "${message}".`,
+            content: `I've analysed your idea and identified key attributes to monitor for "${message}".`,
           };
           return newHistory;
         });
@@ -463,7 +463,7 @@ export default function Home() {
       // Update analysis thinking about reading the articles
       setAnalysisThinking(
         (prev) =>
-          prev + `\n\nReading and analyzing ${allUrls.length} sources...`
+          prev + `\n\nReading and analysing ${allUrls.length} sources...`
       );
 
       // Initialize all URLs as "reading" status
@@ -511,7 +511,7 @@ export default function Home() {
                 (prev) =>
                   prev +
                   `\n${willFail ? "✗" : "✓"} ${
-                    willFail ? "Failed to analyze" : "Analyzed"
+                    willFail ? "Failed to analyse" : "Analysed"
                   } source: ${tempUrls[i].domain}`
               );
 
@@ -563,7 +563,7 @@ export default function Home() {
         // No URLs found
         setUrlsBeingProcessed([]);
         setAnalysisThinking(
-          (prev) => prev + "\n\nNo specific sources found to analyze."
+          (prev) => prev + "\n\nNo specific sources found to analyse."
         );
         // No need to set state to complete or show signup here, handleSendMessage does it.
       }
@@ -674,7 +674,7 @@ export default function Home() {
           "Increasing competition from established players",
           attributes[2]
             ? `Navigating complex ${attributes[2]} landscape`
-            : "Need for specialized talent",
+            : "Need for specialised talent",
           "Evolving regulatory requirements",
         ],
         // Add search metadata
@@ -696,7 +696,7 @@ export default function Home() {
       setAnalysisThinking(
         (prev) =>
           prev +
-          `\n\nBriefing generation complete. Analyzed ${briefingData.searchMeta.dataPoints} data points to create comprehensive report.`
+          `\n\nBriefing generation complete. Analysed ${briefingData.searchMeta.dataPoints} data points to create comprehensive report.`
       );
 
       // When completed, update the UI if this is a direct call
@@ -819,7 +819,7 @@ export default function Home() {
           "Increasing competition from established players",
           attributes[2]
             ? `Navigating complex ${attributes[2]} landscape`
-            : "Need for specialized talent",
+            : "Need for specialised talent",
           "Evolving regulatory requirements",
         ],
         // Add search metadata
@@ -1035,15 +1035,11 @@ export default function Home() {
                             href={urlStatus.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="py-1.5 px-2.5 rounded-lg bg-accent-1/20 hover:bg-accent-1/30 transition-colors duration-300 border border-transparent"
-                            style={
+                            className={`py-1.5 px-2.5 rounded-lg bg-accent-1/20 hover:bg-accent-1/30 transition-colors duration-300 border border-transparent ${
                               urlStatus.status === "reading"
-                                ? {
-                                    borderColor: "rgba(52, 211, 153, 0.1)",
-                                    background: "rgba(52, 211, 153, 0.05)",
-                                  }
-                                : {}
-                            }
+                                ? "border-green-500/20"
+                                : ""
+                            }`}
                           >
                             <div className="flex items-center gap-2">
                               {renderFavicon(
@@ -1163,10 +1159,10 @@ export default function Home() {
                   Innovator&apos;s Dilemma
                 </span>
               </h1>
-              <p className="text-xl md:text-2xl text-gray-400 max-w-2xl mb-12 leading-relaxed">
-                AI-powered market intelligence that helps enterprises validate
-                new ideas and discover hidden opportunities before your
-                competitors do.
+              <p className="text-xl md:text-2xl text-grey-400 max-w-2xl mb-12 leading-relaxed">
+                Your AI co-founder that monitors market trends and validates new
+                opportunities. Macy helps you stay ahead of competitors and make
+                data-driven decisions about your next big idea.
               </p>
               <div className="flex flex-col sm:flex-row gap-6 items-center">
                 <a
@@ -1197,10 +1193,10 @@ export default function Home() {
                   ASK MACY
                 </span>
               </div>
-              <h2 className="text-4xl font-bold mb-4">
+              <h2 className="text-4xl font-medium mb-4">
                 What business idea are you exploring?
               </h2>
-              <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              <p className="text-xl text-grey-400 max-w-2xl mx-auto">
                 Tell Macy about your idea and get instant insights, market
                 signals, and a briefing note.
               </p>
@@ -1218,7 +1214,7 @@ export default function Home() {
                   {chatHistory.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                       <MessageCircle className="w-12 h-12 text-gray-600 mb-4" />
-                      <p className="text-gray-400">
+                      <p className="text-grey-400">
                         Ask about a business idea to get started
                       </p>
                       <div className="grid grid-cols-1 gap-2 mt-6 w-full max-w-xs">
@@ -1229,7 +1225,7 @@ export default function Home() {
                             );
                             setTimeout(() => handleSendMessage(), 100);
                           }}
-                          className="text-left text-sm bg-accent-1/50 hover:bg-accent-1 py-2 px-3 rounded-lg border border-accent-2"
+                          className="text-left text-sm bg-accent-1/30 hover:bg-accent-1/50 py-2 px-3 rounded-lg border border-accent-2/50 text-gray-300"
                         >
                           Tell me about sustainable farming technology
                         </button>
@@ -1240,7 +1236,7 @@ export default function Home() {
                             );
                             setTimeout(() => handleSendMessage(), 100);
                           }}
-                          className="text-left text-sm bg-accent-1/50 hover:bg-accent-1 py-2 px-3 rounded-lg border border-accent-2"
+                          className="text-left text-sm bg-accent-1/30 hover:bg-accent-1/50 py-2 px-3 rounded-lg border border-accent-2/50 text-gray-300"
                         >
                           I want to build an AI-powered fitness coaching app
                         </button>
@@ -1251,7 +1247,7 @@ export default function Home() {
                             );
                             setTimeout(() => handleSendMessage(), 100);
                           }}
-                          className="text-left text-sm bg-accent-1/50 hover:bg-accent-1 py-2 px-3 rounded-lg border border-accent-2"
+                          className="text-left text-sm bg-accent-1/30 hover:bg-accent-1/50 py-2 px-3 rounded-lg border border-accent-2/50 text-gray-300"
                         >
                           Generate a briefing on renewable energy storage
                         </button>
@@ -1299,7 +1295,7 @@ export default function Home() {
                   ) : isProcessing ? (
                     <div className="flex items-center justify-center text-sm text-gray-400">
                       <LoadingSpinner className="w-4 h-4 mr-2" />
-                      Analyzing idea...
+                      Analysing idea...
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
@@ -1311,21 +1307,21 @@ export default function Home() {
                           e.key === "Enter" && handleSendMessage()
                         }
                         placeholder="Describe your business idea..."
-                        className="flex-1 bg-accent-1/50 border border-accent-2 rounded-full px-4 py-3 focus:outline-none focus:border-green-500 text-white"
+                        className="flex-1 bg-white/90 border border-gray-400/50 rounded-xl px-4 py-2.5 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-black placeholder-gray-500 shadow-sm"
                       />
                       <button
                         onClick={handleSendMessage}
                         disabled={isProcessing}
-                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                        className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
                           isProcessing
-                            ? "bg-gray-700 text-gray-400"
+                            ? "bg-gray-400 text-gray-600"
                             : "bg-green-500 text-black hover:bg-green-400"
-                        } transition-colors`}
+                        } transition-colors active:scale-[0.97]`}
                       >
                         {isProcessing ? (
-                          <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
                         ) : (
-                          <Send className="w-5 h-5" />
+                          <Send className="w-4 h-4" />
                         )}
                       </button>
                     </div>
@@ -1382,7 +1378,7 @@ export default function Home() {
                                   : isCompleted
                                   ? "bg-black/20 opacity-70"
                                   : "bg-black/10"
-                              } hover:bg-accent-1/50 transition-colors duration-300`}
+                              } hover:bg-accent-1/50 transition-colours duration-300`}
                             >
                               <div className="flex items-center gap-2 w-8">
                                 {isReading && (
@@ -1437,7 +1433,7 @@ export default function Home() {
                                 {isReading
                                   ? "Reading..."
                                   : isCompleted
-                                  ? "Analyzed"
+                                  ? "Analysed"
                                   : "Pending"}
                               </div>
                             </a>
@@ -1453,7 +1449,7 @@ export default function Home() {
                           </div>
                           <div className="flex justify-between mt-2 text-xs text-gray-400">
                             <span>Generating insights</span>
-                            <span>Finalizing briefing</span>
+                            <span>Finalising briefing</span>
                           </div>
                         </div>
                       )}
@@ -1487,7 +1483,7 @@ export default function Home() {
                     <h3 className="text-xl font-bold mb-2">
                       Business Intelligence Preview
                     </h3>
-                    <p className="text-gray-400 max-w-md">
+                    <p className="text-grey-400 max-w-md">
                       Ask Macy about your business idea to see market signals,
                       key attributes to monitor, or get a detailed briefing
                       note.
@@ -1503,7 +1499,7 @@ export default function Home() {
         <section className="border-y border-accent-2 bg-background/30 backdrop-blur-[2px]">
           <div className="max-w-7xl mx-auto px-4 py-16">
             <div className="flex flex-col items-center text-center">
-              <p className="text-sm text-gray-400 mb-8">
+              <p className="text-sm text-grey-400 mb-8">
                 TRUSTED BY INNOVATIVE TEAM AT
               </p>
               <div className="flex justify-center items-center gap-12">
@@ -1535,8 +1531,8 @@ export default function Home() {
                   Turn Market Signals into
                   <span className="gradient-text"> Strategic Advantage</span>
                 </h2>
-                <p className="text-xl text-gray-400 leading-relaxed">
-                  Our AI-powered platform continuously analyzes market signals,
+                <p className="text-xl text-grey-400 leading-relaxed">
+                  The Macy AI agent continuously analyses market signals,
                   research papers, and industry trends to help you validate
                   ideas with confidence and discover new opportunities before
                   they become obvious.
@@ -1560,7 +1556,7 @@ export default function Home() {
                   Validate Ideas Fast
                 </span>
               </h2>
-              <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              <p className="text-xl text-grey-400 max-w-2xl mx-auto">
                 Our platform combines AI-powered analysis with human expertise
                 to help you make confident decisions about new opportunities.
               </p>
@@ -1601,7 +1597,7 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-2xl p-8 hover:border-green-500/50 transition-colors">
+    <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-2xl p-8 hover:border-green-500/50 transition-colours">
       <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-6 text-green-500">
         {icon}
       </div>
