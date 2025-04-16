@@ -92,6 +92,7 @@ export function CustomDashboard() {
             auto_briefing_enabled,
             signals,
             conviction,
+            conviction_rationale,
             mission:missions(
               id,
               name,
@@ -143,6 +144,7 @@ export function CustomDashboard() {
                 auto_briefing_enabled: idea.auto_briefing_enabled,
                 signals: idea.signals,
                 conviction: idea.conviction,
+                conviction_rationale: idea.conviction_rationale,
               });
             }
           });
@@ -550,7 +552,7 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                       {/* Conviction badge */}
                                       {idea.conviction && (
                                         <span
-                                          className={`px-2 py-0.5 rounded-full text-xs ${getConvictionColor(
+                                          className={`relative group px-2 py-0.5 rounded-full text-xs ${getConvictionColor(
                                             idea.conviction
                                           )}`}
                                         >
@@ -558,6 +560,12 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                             Conviction:
                                           </span>
                                           {idea.conviction}
+                                          {/* Tooltip for rationale */}
+                                          {idea.conviction_rationale && (
+                                            <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2 text-xs text-white bg-accent-3 rounded-md shadow-lg z-10 border border-accent-2 text-center">
+                                              {idea.conviction_rationale}
+                                            </div>
+                                          )}
                                         </span>
                                       )}
 

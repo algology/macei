@@ -212,7 +212,8 @@ THE RESPONSE MUST BE A VALID JSON OBJECT WITH THIS EXACT STRUCTURE:
     "Another concrete next step that would advance this idea",
     "Research suggestion based on identified gaps"
   ],
-  "conviction": "Compelling" (or one of: "Conditional", "Postponed", "Unfeasible")
+  "conviction": "Compelling" (or one of: "Conditional", "Postponed", "Unfeasible"),
+  "conviction_rationale": "string explaining the conviction based on signals/context (1-2 sentences)"
 }
 `;
 }
@@ -248,47 +249,23 @@ IMPORTANT BRIEFING GUIDELINES:
      * Use relevant emojis for other categories
    - Include working URLs to the original sources
    - IMPORTANT: ONLY use URLs that come from the provided context or market signals
-   - IMPORTANT: Ensure any content from emails or user submissions uses the 📧 emoji
 
 3. KEY ATTRIBUTES SECTION:
-   - Note: The key attributes will be taken from the idea's existing attributes, so whatever you put here will be ignored
-   - Just include some placeholder values
+   - Extract 5 key attributes or characteristics that define the idea or the market landscape based on the provided context.
 
 4. SUGGESTED SIGNALS SECTION:
-   - This section is VERY IMPORTANT
-   - Based on your analysis of the market data, suggest 5-8 SPECIFIC new market signals that would be valuable to track
-   - These should be concrete, specific terms (NOT generic categories like "technology trends")
-   - Each signal should be directly relevant to the idea and current market developments
-   - DO NOT use placeholders - suggest real, meaningful signals based on gaps in the current market research
-   - Examples: "carbon capture efficiency improvements", "corporate ESG investment trends", "renewable energy storage costs"
+   - Provide 5 relevant signal keywords or phrases that would be useful for tracking future developments related to this idea.
 
 5. NEXT STEPS SECTION:
-   - Provide 3-5 specific, actionable next steps based on the market signals
-   - Include concrete recommendations for how to move forward with the idea
-   - These should be tactical, specific actions that can be taken immediately
-   - Examples: "Conduct competitor analysis of XYZ company's recent product launch", "Research patent #12345 for potential licensing opportunities", "Contact industry expert Dr. Smith for collaboration on specific use case"
-   - Each next step should directly relate to insights from the market signals analyzed
+   - Suggest 3 concrete, actionable next steps based on the insights gathered. Focus on actions that advance the idea or address knowledge gaps.
 
-6. IDEA CONVICTION SECTION:
-   - Based on your comprehensive analysis of all available market signals and data, assess the overall conviction level for this idea
-   - Choose EXACTLY ONE of these values: "Compelling", "Conditional", "Postponed", or "Unfeasible"
-   - Here's what each value means:
-     * "Compelling" - The idea shows strong potential with clear market validation and few significant obstacles
-     * "Conditional" - The idea has merit but faces important challenges that need to be addressed 
-     * "Postponed" - The market timing isn't right, despite the idea having potential merit
-     * "Unfeasible" - The idea faces fundamental challenges that make it difficult to succeed in the current market
+6. CONVICTION SECTION:
+   - Assess the current viability and potential of the idea based *only* on the provided context.
+   - Choose ONE conviction level: "Compelling", "Conditional", "Postponed", or "Unfeasible".
+   - **Provide a brief (1-2 sentence) rationale in the 'conviction_rationale' field explaining WHY you chose that conviction level. Reference specific points from the context/signals.**
 
 ${createJsonStructurePrompt()}
-
-OUTPUT REQUIREMENTS:
-1. ONLY output valid JSON - no markdown, no explanations
-2. Ensure all URLs in the details section are real URLs from the provided context
-3. Use appropriate thematic emojis instead of flag emojis
-4. The details section should contain exactly 5 items, each with an authentic source URL from the actual market signals
-5. The suggested_signals section must contain 5-8 meaningful, specific market signals to track (not placeholders)
-6. For any emailed content or user-submitted information, ensure the emoji is 📧
-7. The next_steps section must contain 3-5 concrete, actionable recommendations
-8. INCLUDE the conviction field in your response with EXACTLY one of the allowed values: "Compelling", "Conditional", "Postponed", "Unfeasible"`;
+`;
 }
 
 // Helper function to prepare URL content in a more structured format
@@ -1480,14 +1457,17 @@ export async function POST(request: Request) {
 
         const { error: updateError } = await supabase
           .from("ideas")
-          .update({ conviction: conviction })
+          .update({
+            conviction: conviction,
+            conviction_rationale: parsedBriefing.conviction_rationale,
+          })
           .eq("id", ideaId);
 
         if (updateError) {
           console.error("Error updating idea conviction:", updateError);
           // Continue with the process even if updating conviction fails
         } else {
-          console.log("Successfully updated idea conviction");
+          console.log("Successfully updated idea conviction and rationale");
         }
       } else {
         console.warn("No valid conviction value provided by LLM:", conviction);
@@ -1794,7 +1774,10 @@ export async function POST(request: Request) {
 
           const { error: updateError } = await supabase
             .from("ideas")
-            .update({ conviction: conviction })
+            .update({
+              conviction: conviction,
+              conviction_rationale: parsedFallback.conviction_rationale,
+            })
             .eq("id", ideaId);
 
           if (updateError) {
