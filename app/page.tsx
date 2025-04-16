@@ -949,7 +949,7 @@ export default function Home() {
           return (
             <div
               key={section.key}
-              className={`bg-gray-900 rounded-lg border border-accent-2 transition-all duration-300 ease-in-out ${
+              className={`bg-accent-1 rounded-lg border border-accent-2 transition-all duration-300 ease-in-out ${
                 isComplete && !isExpanded ? "opacity-60" : "opacity-100"
               }`}
             >
@@ -987,7 +987,7 @@ export default function Home() {
                     : "max-h-0 opacity-0"
                 }`}
               >
-                <div className="p-4 border-t border-accent-2 bg-gray-900">
+                <div className="p-4 border-t border-accent-2 bg-accent-1 rounded-b-lg">
                   {section.key === "attributes" && (
                     <div className="flex flex-wrap gap-2">
                       {previewData.attributes.map(
@@ -1035,7 +1035,7 @@ export default function Home() {
                             href={urlStatus.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`py-1.5 px-2.5 rounded-lg bg-accent-1/20 hover:bg-accent-1/30 transition-colors duration-300 border border-transparent ${
+                            className={`py-1.5 px-2.5 rounded-lg bg-accent-1/20 hover:bg-accent-1/30 transition-colours duration-300 border border-transparent ${
                               urlStatus.status === "reading"
                                 ? "border-green-500/20"
                                 : ""
@@ -1604,7 +1604,7 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-2xl p-8 hover:border-green-500/50 transition-colours">
+    <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-2xl p-8 hover:border-green-500/50 transition-colors">
       <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-6 text-green-500">
         {icon}
       </div>
