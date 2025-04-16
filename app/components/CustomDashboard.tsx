@@ -709,7 +709,7 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                             )}
                                         </div>
                                       ) : (
-                                        <div className="bg-gray-900 rounded-lg p-4 border border-accent-2 shadow-sm text-center">
+                                        <div className="bg-accent-1 rounded-lg p-4 border border-accent-2 shadow-sm text-center">
                                           <span className="text-xs text-gray-500">
                                             No briefings yet for this idea
                                           </span>
