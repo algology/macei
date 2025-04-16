@@ -949,7 +949,7 @@ export default function Home() {
           return (
             <div
               key={section.key}
-              className={`bg-accent-1/30 rounded-lg border border-accent-2 transition-all duration-300 ease-in-out ${
+              className={`bg-gray-900 rounded-lg border border-accent-2 transition-all duration-300 ease-in-out ${
                 isComplete && !isExpanded ? "opacity-60" : "opacity-100"
               }`}
             >
@@ -987,7 +987,7 @@ export default function Home() {
                     : "max-h-0 opacity-0"
                 }`}
               >
-                <div className="p-4 border-t border-accent-2">
+                <div className="p-4 border-t border-accent-2 bg-gray-900">
                   {section.key === "attributes" && (
                     <div className="flex flex-wrap gap-2">
                       {previewData.attributes.map(
@@ -1110,7 +1110,7 @@ export default function Home() {
                         moves, and new opportunities for this idea.
                       </p>
                       <button
-                        onClick={() => router.push("/signup")}
+                        onClick={() => router.push("/login")}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 border border-green-900 rounded-lg hover:bg-green-500/30 transition-colors"
                       >
                         Sign Up for Full Briefings & Idea Conviction
@@ -1204,292 +1204,299 @@ export default function Home() {
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
               {/* Chat Interface */}
-              <div className="lg:col-span-2 flex flex-col bg-accent-1/30 backdrop-blur-sm border border-accent-2 rounded-2xl h-[600px]">
-                <div className="p-4 border-b border-accent-2">
-                  <h3 className="font-medium">Conversation with Macy</h3>
-                </div>
+              <div className="lg:col-span-2 relative">
+                <div className="absolute -inset-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 blur-3xl -z-10" />
+                <div className="z-10 flex flex-col bg-[#0a0a0a] border border-accent-2 rounded-2xl h-[600px] overflow-hidden">
+                  <div className="p-4 border-b border-accent-2">
+                    <h3 className="font-medium">Conversation with Macy</h3>
+                  </div>
 
-                {/* Chat Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {chatHistory.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                      <MessageCircle className="w-12 h-12 text-gray-600 mb-4" />
-                      <p className="text-grey-400">
-                        Ask about a business idea to get started
-                      </p>
-                      <div className="grid grid-cols-1 gap-2 mt-6 w-full max-w-xs">
-                        <button
-                          onClick={() => {
-                            setQuery(
-                              "Tell me about sustainable farming technology"
-                            );
-                            setTimeout(() => handleSendMessage(), 100);
-                          }}
-                          className="text-left text-sm bg-accent-1/30 hover:bg-accent-1/50 py-2 px-3 rounded-lg border border-accent-2/50 text-gray-300"
-                        >
-                          Tell me about sustainable farming technology
-                        </button>
-                        <button
-                          onClick={() => {
-                            setQuery(
-                              "I want to build an AI-powered fitness coaching app"
-                            );
-                            setTimeout(() => handleSendMessage(), 100);
-                          }}
-                          className="text-left text-sm bg-accent-1/30 hover:bg-accent-1/50 py-2 px-3 rounded-lg border border-accent-2/50 text-gray-300"
-                        >
-                          I want to build an AI-powered fitness coaching app
-                        </button>
-                        <button
-                          onClick={() => {
-                            setQuery(
-                              "Generate a briefing on renewable energy storage"
-                            );
-                            setTimeout(() => handleSendMessage(), 100);
-                          }}
-                          className="text-left text-sm bg-accent-1/30 hover:bg-accent-1/50 py-2 px-3 rounded-lg border border-accent-2/50 text-gray-300"
-                        >
-                          Generate a briefing on renewable energy storage
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    chatHistory.map((message, index) => (
-                      <div
-                        key={index}
-                        className={`flex ${
-                          message.role === "user"
-                            ? "justify-end"
-                            : "justify-start"
-                        }`}
-                      >
-                        <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                            message.role === "user"
-                              ? "bg-green-500 text-black rounded-tr-none"
-                              : "bg-accent-1 text-white rounded-tl-none"
-                          }`}
-                        >
-                          {message.content}
+                  {/* Chat Messages */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {chatHistory.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center">
+                        <MessageCircle className="w-12 h-12 text-gray-600 mb-4" />
+                        <p className="text-grey-400">
+                          Ask about a business idea to get started
+                        </p>
+                        <div className="grid grid-cols-1 gap-2 mt-6 w-full max-w-xs">
+                          <button
+                            onClick={() => {
+                              setQuery(
+                                "Tell me about sustainable farming technology"
+                              );
+                              setTimeout(() => handleSendMessage(), 100);
+                            }}
+                            className="text-left text-sm bg-accent-1/40 hover:bg-accent-1/60 py-2.5 px-4 rounded-lg border border-accent-2/60 text-grey-300 hover:text-white transition-all duration-200"
+                          >
+                            Tell me about sustainable farming technology
+                          </button>
+                          <button
+                            onClick={() => {
+                              setQuery(
+                                "I want to build an AI-powered fitness coaching app"
+                              );
+                              setTimeout(() => handleSendMessage(), 100);
+                            }}
+                            className="text-left text-sm bg-accent-1/40 hover:bg-accent-1/60 py-2.5 px-4 rounded-lg border border-accent-2/60 text-grey-300 hover:text-white transition-all duration-200"
+                          >
+                            I want to build an AI-powered fitness coaching app
+                          </button>
+                          <button
+                            onClick={() => {
+                              setQuery(
+                                "Generate a briefing on renewable energy storage"
+                              );
+                              setTimeout(() => handleSendMessage(), 100);
+                            }}
+                            className="text-left text-sm bg-accent-1/40 hover:bg-accent-1/60 py-2.5 px-4 rounded-lg border border-accent-2/60 text-grey-300 hover:text-white transition-all duration-200"
+                          >
+                            Generate a briefing on renewable energy storage
+                          </button>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                    ) : (
+                      chatHistory.map((message, index) => (
+                        <div
+                          key={index}
+                          className={`flex ${
+                            message.role === "user"
+                              ? "justify-end"
+                              : "justify-start"
+                          }`}
+                        >
+                          <div
+                            className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                              message.role === "user"
+                                ? "bg-green-500 text-black rounded-tr-none"
+                                : "bg-accent-1 text-white rounded-tl-none"
+                            }`}
+                          >
+                            {message.content}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
 
-                {/* Input Area */}
-                <div className="p-4 border-t border-accent-2">
-                  {previewData && showSignupPrompt ? (
-                    <div className="flex flex-col space-y-3 text-center">
-                      <p className="text-sm text-gray-300">
-                        Sign up to get full analysis and weekly updates:
-                      </p>
-                      <button
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 border border-green-900 rounded-lg hover:bg-green-500/30 transition-colors"
-                        onClick={() => router.push("/signup")}
-                      >
-                        Sign Up for Full Access
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : isProcessing ? (
-                    <div className="flex items-center justify-center text-sm text-gray-400">
-                      <LoadingSpinner className="w-4 h-4 mr-2" />
-                      Analysing idea...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && handleSendMessage()
-                        }
-                        placeholder="Describe your business idea..."
-                        className="flex-1 bg-white/90 border border-gray-400/50 rounded-xl px-4 py-2.5 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-black placeholder-gray-500 shadow-sm"
-                      />
-                      <button
-                        onClick={handleSendMessage}
-                        disabled={isProcessing}
-                        className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
-                          isProcessing
-                            ? "bg-gray-400 text-gray-600"
-                            : "bg-green-500 text-black hover:bg-green-400"
-                        } transition-colors active:scale-[0.97]`}
-                      >
-                        {isProcessing ? (
-                          <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Send className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  )}
+                  {/* Input Area */}
+                  <div className="p-4 border-t border-accent-2">
+                    {previewData && showSignupPrompt ? (
+                      <div className="flex flex-col space-y-3 text-center">
+                        <p className="text-sm text-gray-300">
+                          Sign up to get full analysis and weekly updates:
+                        </p>
+                        <button
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 border border-green-900 rounded-lg hover:bg-green-500/30 transition-colors"
+                          onClick={() => router.push("/login")}
+                        >
+                          Sign Up for Full Access
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : isProcessing ? (
+                      <div className="flex items-center justify-center text-sm text-gray-400">
+                        <LoadingSpinner className="w-4 h-4 mr-2" />
+                        Analysing idea...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={query}
+                          onChange={(e) => setQuery(e.target.value)}
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && handleSendMessage()
+                          }
+                          placeholder="Describe your business idea..."
+                          className="flex-1 bg-white/90 border border-gray-400/50 rounded-xl px-4 py-2.5 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-black placeholder-gray-500 shadow-sm"
+                        />
+                        <button
+                          onClick={handleSendMessage}
+                          disabled={isProcessing}
+                          className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
+                            isProcessing
+                              ? "bg-gray-400 text-gray-600"
+                              : "bg-green-500 text-black hover:bg-green-400"
+                          } transition-colors active:scale-[0.97]`}
+                        >
+                          {isProcessing ? (
+                            <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Send className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Preview Panel */}
-              <div className="lg:col-span-3 bg-accent-1/30 backdrop-blur-sm border border-accent-2 rounded-2xl p-6 h-[600px] overflow-y-auto">
-                {previewData ? (
-                  renderPreview()
-                ) : readingProgress.status !== "idle" ? (
-                  <div className="space-y-6">
-                    {/* Reading Progress Visualization */}
-                    <div className="bg-accent-1/30 p-4 rounded-lg border border-accent-2">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm text-gray-400 uppercase">
-                          Analysing Market Data
-                        </h4>
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                          {readingProgress.status === "reading"
-                            ? "Reading articles..."
-                            : readingProgress.status === "analyzing"
-                            ? "Synthesizing data..."
-                            : "Processing..."}
-                        </div>
-                      </div>
-
-                      <div className="mt-4 space-y-3">
-                        {readingProgress.urls.map((url, index) => {
-                          // Extract domain for favicon
-                          let domain = "";
-                          try {
-                            const urlObj = new URL(url);
-                            domain = urlObj.hostname;
-                          } catch (e) {
-                            console.error("Error parsing URL:", e);
-                          }
-
-                          const isReading = url === readingProgress.currentUrl;
-                          const isCompleted =
-                            readingProgress.completedUrls.includes(url);
-
-                          return (
-                            <a
-                              key={index}
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`flex items-center gap-3 p-2 rounded-lg ${
-                                isReading
-                                  ? "bg-green-500/10 border border-green-500/20"
-                                  : isCompleted
-                                  ? "bg-black/20 opacity-70"
-                                  : "bg-black/10"
-                              } hover:bg-accent-1/50 transition-colours duration-300`}
-                            >
-                              <div className="flex items-center gap-2 w-8">
-                                {isReading && (
-                                  <div className="w-4 h-4 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
-                                )}
-                                {isCompleted && (
-                                  <div className="w-4 h-4 text-green-500">
-                                    ✓
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 flex-1">
-                                {domain && (
-                                  <div className="relative flex-none">
-                                    <div className="relative overflow-hidden rounded-full">
-                                      <div className="rounded-inherit absolute inset-0 bg-white"></div>
-                                      <img
-                                        src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
-                                        alt=""
-                                        className={`relative block w-4 h-4 z-10 ${
-                                          isReading ? "animate-pulse" : ""
-                                        }`}
-                                        onError={(e) => {
-                                          // If favicon fails to load, show fallback
-                                          const target =
-                                            e.target as HTMLImageElement;
-                                          target.style.display = "none";
-                                          target.nextElementSibling?.classList.remove(
-                                            "hidden"
-                                          );
-                                        }}
-                                      />
-                                      {/* Fallback icon for when favicon fails to load */}
-                                      <div className="absolute inset-0 bg-gray-500 text-white items-center justify-center  flex">
-                                        <Globe className="w-3 h-3" />
-                                      </div>
-                                      <div className="rounded-inherit absolute inset-0 border border-[rgba(0,0,0,0.1)] dark:border-transparent"></div>
-                                    </div>
-                                  </div>
-                                )}
-                                <span
-                                  className={`text-xs font-mono ${
-                                    isReading
-                                      ? "text-green-400 font-medium"
-                                      : "text-gray-300"
-                                  }`}
-                                >
-                                  {domain || url}
-                                </span>
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {isReading
-                                  ? "Reading..."
-                                  : isCompleted
-                                  ? "Analysed"
-                                  : "Pending"}
-                              </div>
-                            </a>
-                          );
-                        })}
-                      </div>
-
-                      {/* Analysis Progress */}
-                      {readingProgress.status === "analyzing" && (
-                        <div className="mt-6">
-                          <div className="relative w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-green-500 rounded-full w-full animate-pulse"></div>
+              <div className="lg:col-span-3 relative">
+                <div className="absolute -inset-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 blur-3xl -z-10" />
+                <div className="z-10 bg-[#0a0a0a] border border-accent-2 rounded-2xl p-6 h-[600px] overflow-y-auto">
+                  {previewData ? (
+                    renderPreview()
+                  ) : readingProgress.status !== "idle" ? (
+                    <div className="space-y-6">
+                      {/* Reading Progress Visualization */}
+                      <div className="bg-accent-1/30 p-4 rounded-lg border border-accent-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm text-gray-400 uppercase">
+                            Analysing Market Data
+                          </h4>
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                            {readingProgress.status === "reading"
+                              ? "Reading articles..."
+                              : readingProgress.status === "analyzing"
+                              ? "Synthesizing data..."
+                              : "Processing..."}
                           </div>
-                          <div className="flex justify-between mt-2 text-xs text-gray-400">
-                            <span>Generating insights</span>
-                            <span>Finalising briefing</span>
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                          {readingProgress.urls.map((url, index) => {
+                            // Extract domain for favicon
+                            let domain = "";
+                            try {
+                              const urlObj = new URL(url);
+                              domain = urlObj.hostname;
+                            } catch (e) {
+                              console.error("Error parsing URL:", e);
+                            }
+
+                            const isReading =
+                              url === readingProgress.currentUrl;
+                            const isCompleted =
+                              readingProgress.completedUrls.includes(url);
+
+                            return (
+                              <a
+                                key={index}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`flex items-center gap-3 p-2 rounded-lg ${
+                                  isReading
+                                    ? "bg-green-500/10 border border-green-500/20"
+                                    : isCompleted
+                                    ? "bg-black/20 opacity-70"
+                                    : "bg-black/10"
+                                } hover:bg-accent-1/50 transition-colours duration-300`}
+                              >
+                                <div className="flex items-center gap-2 w-8">
+                                  {isReading && (
+                                    <div className="w-4 h-4 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+                                  )}
+                                  {isCompleted && (
+                                    <div className="w-4 h-4 text-green-500">
+                                      ✓
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 flex-1">
+                                  {domain && (
+                                    <div className="relative flex-none">
+                                      <div className="relative overflow-hidden rounded-full">
+                                        <div className="rounded-inherit absolute inset-0 bg-white"></div>
+                                        <img
+                                          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+                                          alt=""
+                                          className={`relative block w-4 h-4 z-10 ${
+                                            isReading ? "animate-pulse" : ""
+                                          }`}
+                                          onError={(e) => {
+                                            // If favicon fails to load, show fallback
+                                            const target =
+                                              e.target as HTMLImageElement;
+                                            target.style.display = "none";
+                                            target.nextElementSibling?.classList.remove(
+                                              "hidden"
+                                            );
+                                          }}
+                                        />
+                                        {/* Fallback icon for when favicon fails to load */}
+                                        <div className="absolute inset-0 bg-gray-500 text-white items-center justify-center  flex">
+                                          <Globe className="w-3 h-3" />
+                                        </div>
+                                        <div className="rounded-inherit absolute inset-0 border border-[rgba(0,0,0,0.1)] dark:border-transparent"></div>
+                                      </div>
+                                    </div>
+                                  )}
+                                  <span
+                                    className={`text-xs font-mono ${
+                                      isReading
+                                        ? "text-green-400 font-medium"
+                                        : "text-gray-300"
+                                    }`}
+                                  >
+                                    {domain || url}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  {isReading
+                                    ? "Reading..."
+                                    : isCompleted
+                                    ? "Analysed"
+                                    : "Pending"}
+                                </div>
+                              </a>
+                            );
+                          })}
+                        </div>
+
+                        {/* Analysis Progress */}
+                        {readingProgress.status === "analyzing" && (
+                          <div className="mt-6">
+                            <div className="relative w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                              <div className="h-full bg-green-500 rounded-full w-full animate-pulse"></div>
+                            </div>
+                            <div className="flex justify-between mt-2 text-xs text-gray-400">
+                              <span>Generating insights</span>
+                              <span>Finalising briefing</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Analysis Thinking */}
+                      {analysisThinking && (
+                        <div className="bg-accent-1/30 p-4 rounded-lg border border-accent-2">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-sm text-gray-400 uppercase">
+                              Analysis Process
+                            </h4>
+                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                              Processing...
+                            </div>
+                          </div>
+                          <div className="bg-black/30 p-3 rounded-lg">
+                            <pre className="text-xs text-gray-400 whitespace-pre-wrap font-mono">
+                              {analysisThinking}
+                            </pre>
                           </div>
                         </div>
                       )}
                     </div>
-
-                    {/* Analysis Thinking */}
-                    {analysisThinking && (
-                      <div className="bg-accent-1/30 p-4 rounded-lg border border-accent-2">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-sm text-gray-400 uppercase">
-                            Analysis Process
-                          </h4>
-                          <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                            Processing...
-                          </div>
-                        </div>
-                        <div className="bg-black/30 p-3 rounded-lg">
-                          <pre className="text-xs text-gray-400 whitespace-pre-wrap font-mono">
-                            {analysisThinking}
-                          </pre>
-                        </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-6 text-green-500">
+                        <Brain className="w-8 h-8" />
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-6 text-green-500">
-                      <Brain className="w-8 h-8" />
+                      <h3 className="text-xl font-bold mb-2">
+                        Business Intelligence Preview
+                      </h3>
+                      <p className="text-grey-400 max-w-md">
+                        Ask Macy about your business idea to see market signals,
+                        key attributes to monitor, or get a detailed briefing
+                        note.
+                      </p>
                     </div>
-                    <h3 className="text-xl font-bold mb-2">
-                      Business Intelligence Preview
-                    </h3>
-                    <p className="text-grey-400 max-w-md">
-                      Ask Macy about your business idea to see market signals,
-                      key attributes to monitor, or get a detailed briefing
-                      note.
-                    </p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>
