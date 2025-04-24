@@ -2,29 +2,31 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { Check } from "lucide-react";
+import { Organization, Mission } from "@/app/components/types";
+
+const getConvictionColor = (conviction?: string | null) => {
+  switch (conviction) {
+    case "Compelling":
+      return "bg-green-500/20 text-green-400 border-green-900";
+    case "Conditional":
+      return "bg-yellow-500/20 text-yellow-400 border-yellow-900";
+    case "Postponed":
+      return "bg-purple-500/20 text-purple-400 border-purple-900";
+    case "Unfeasible":
+      return "bg-red-500/20 text-red-400 border-red-900";
+    default: // Handles null, undefined, or other values
+      return "bg-gray-500/20 text-gray-400 border-gray-900";
+  }
+};
 
 interface Props {
   organizationId: string;
 }
 
-interface OrganizationDetails {
-  id: number;
-  name: string;
-  created_at: string;
-  description?: string;
-  user_id: string;
-  missions?: {
-    id: number;
-    name: string;
-  }[];
-}
-
 export function OrganizationDeepDive({ organizationId }: Props) {
-  const [organization, setOrganization] = useState<OrganizationDetails | null>(
-    null
-  );
+  const [organization, setOrganization] = useState<Organization | null>(null);
   const [editedOrganization, setEditedOrganization] =
-    useState<OrganizationDetails | null>(null);
+    useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
@@ -42,7 +44,9 @@ export function OrganizationDeepDive({ organizationId }: Props) {
           *,
           missions (
             id,
-            name
+            name,
+            description,
+            ideas (id, conviction)
           )
         `
         )
@@ -68,6 +72,9 @@ export function OrganizationDeepDive({ organizationId }: Props) {
       const orgToUpdate = {
         name: editedOrganization.name,
         description: editedOrganization.description,
+        website_url: editedOrganization.website_url,
+        industry: editedOrganization.industry,
+        target_market: editedOrganization.target_market,
       };
 
       const { error } = await supabase
@@ -145,20 +152,137 @@ export function OrganizationDeepDive({ organizationId }: Props) {
               placeholder="Enter organization description..."
             />
           </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Website URL</label>
+            <input
+              type="url"
+              value={editedOrganization.website_url || ""}
+              onChange={(e) =>
+                setEditedOrganization({
+                  ...editedOrganization,
+                  website_url: e.target.value,
+                })
+              }
+              className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md"
+              placeholder="https://example.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Industry</label>
+            <input
+              type="text"
+              value={editedOrganization.industry || ""}
+              onChange={(e) =>
+                setEditedOrganization({
+                  ...editedOrganization,
+                  industry: e.target.value,
+                })
+              }
+              className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md"
+              placeholder="e.g., Technology, Healthcare"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Target Market</label>
+            <input
+              type="text"
+              value={editedOrganization.target_market || ""}
+              onChange={(e) =>
+                setEditedOrganization({
+                  ...editedOrganization,
+                  target_market: e.target.value,
+                })
+              }
+              className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md"
+              placeholder="e.g., Small Businesses, Consumers"
+            />
+          </div>
         </div>
 
         {organization.missions && organization.missions.length > 0 && (
           <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4">Missions</h3>
-            <div className="space-y-2">
-              {organization.missions.map((mission) => (
-                <div
-                  key={mission.id}
-                  className="flex items-center justify-between p-3 bg-accent-1/30 rounded-lg border border-accent-2"
-                >
-                  <span>{mission.name}</span>
-                </div>
-              ))}
+            <h3 className="text-lg font-semibold mb-4 text-accent-contrast">Missions</h3>
+            <div className="space-y-3">
+              {organization.missions.map((mission: Mission) => {
+                const convictionCounts: { [key: string]: number } = {
+                  Compelling: 0,
+                  Conditional: 0,
+                  Postponed: 0,
+                  Unfeasible: 0,
+                  Undetermined: 0, // For null/undefined conviction
+                };
+
+                (mission.ideas || []).forEach((idea) => {
+                  const conviction = idea.conviction || "Undetermined";
+                  if (convictionCounts.hasOwnProperty(conviction)) {
+                    convictionCounts[conviction]++;
+                  } else {
+                    // Should not happen if conviction values are consistent, but handle just in case
+                    convictionCounts["Undetermined"]++;
+                  }
+                });
+
+                // Filter out levels with 0 counts
+                const convictionLevelsToShow = Object.entries(convictionCounts)
+                  .filter(([level, count]) => count > 0)
+                  .sort(([levelA], [levelB]) => {
+                    // Optional: Define a sort order if needed
+                    const order = [
+                      "Compelling",
+                      "Conditional",
+                      "Postponed",
+                      "Unfeasible",
+                      "Undetermined",
+                    ];
+                    return order.indexOf(levelA) - order.indexOf(levelB);
+                  });
+
+                return (
+                  <div
+                    key={mission.id}
+                    className="flex items-start justify-between p-3 bg-accent-1/30 rounded-lg border border-accent-2 transition-colors hover:bg-accent-1/50"
+                  >
+                    {/* Left side: Name and Description */}
+                    <div className="flex-grow mr-4">
+                      <span className="font-medium text-accent-contrast-dark">
+                        {mission.name}
+                      </span>
+                      {mission.description && (
+                        <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                          {mission.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Right side: Conviction breakdown badges */}
+                    <div className="flex-shrink-0 flex flex-wrap gap-1.5 items-center justify-end self-center">
+                      {convictionLevelsToShow.length > 0 ? (
+                        convictionLevelsToShow.map(([level, count]) => (
+                          <span
+                            key={level}
+                            title={`${count} ${level} ${count === 1 ? 'idea' : 'ideas'}`}
+                            // Make badges slightly wider to accommodate text
+                            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] border ${getConvictionColor(level === "Undetermined" ? null : level)}`}
+                          >
+                            <span className="font-medium">{count}</span>
+                            {/* Add the level text */}
+                            <span className="whitespace-nowrap">
+                              {level === "Undetermined" ? "TBD" : level}
+                              {/* Add Idea/Ideas */}
+                              {` ${count === 1 ? 'Idea' : 'Ideas'}`}
+                            </span>
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-500 italic">No ideas</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

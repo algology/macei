@@ -16,10 +16,12 @@ import {
   Bell,
   BellOff,
   ChevronUp,
+  Settings,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Idea, Mission } from "./types";
 import { KnowledgeBaseChat } from "./KnowledgeBaseChat";
+import Link from "next/link";
 
 type MissionData = {
   id: string | number;
@@ -435,11 +437,18 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
             return Array.from(orgMap.values()).map((org) => (
               <div key={org.id} className="mb-10">
                 {/* Organization Header */}
-                <div className="flex items-center mb-4 relative">
+                <div className="flex items-center justify-between mb-4 relative">
                   <div className="w-10 h-10 rounded-full bg-accent-1/80 border-2 border-accent-2 flex items-center justify-center text-white font-medium mr-3 relative">
                     {org.name.substring(0, 1).toUpperCase()}
                   </div>
                   <h3 className="text-xl font-bold text-white">{org.name}</h3>
+                  <Link
+                    href={`/dashboard/org/${org.id}/edit`}
+                    className="text-gray-400 hover:text-white transition-colors"
+                    title={`Edit ${org.name}`}
+                  >
+                    <Settings className="w-5 h-5" />
+                  </Link>
                 </div>
 
                 {/* Missions under this organization */}

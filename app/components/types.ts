@@ -37,7 +37,8 @@ export type Mission = {
   name: string;
   organization_id: number;
   created_at: string;
-  ideas?: { count: number }[];
+  description?: string;
+  ideas?: { id: number; conviction?: string | null }[];
 };
 
 export type Idea = {
