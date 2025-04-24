@@ -21,6 +21,7 @@ interface MissionDetails {
     id: number;
     name: string;
     status: string;
+    conviction?: string;
   }[];
 }
 
@@ -51,7 +52,8 @@ export function MissionDeepDive({ missionId }: Props) {
           ideas (
             id,
             name,
-            status
+            status,
+            conviction
           )
         `
         )
@@ -96,6 +98,36 @@ export function MissionDeepDive({ missionId }: Props) {
       setSaving(false);
     }
   }
+
+  // Function to get the appropriate color classes based on status
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "validated":
+        return "bg-green-500/20 text-green-400 border-green-900";
+      case "in review":
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-900";
+      case "ideation":
+        return "bg-blue-500/20 text-blue-400 border-blue-900";
+      default:
+        return "bg-gray-500/20 text-gray-400 border-gray-900";
+    }
+  };
+
+  // Function to get the appropriate color classes based on conviction
+  const getConvictionColor = (conviction?: string | null) => {
+    switch (conviction) {
+      case "Compelling":
+        return "bg-green-500/20 text-green-400 border-green-900";
+      case "Conditional":
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-900";
+      case "Postponed":
+        return "bg-purple-500/20 text-purple-400 border-purple-900";
+      case "Unfeasible":
+        return "bg-red-500/20 text-red-400 border-red-900";
+      default: // Handles null, undefined, or other values
+        return "bg-gray-500/20 text-gray-400 border-gray-900";
+    }
+  };
 
   const hasChanges = JSON.stringify(mission) !== JSON.stringify(editedMission);
 
@@ -173,7 +205,14 @@ export function MissionDeepDive({ missionId }: Props) {
                   className="flex items-center justify-between p-3 bg-accent-1/30 rounded-lg border border-accent-2"
                 >
                   <span>{idea.name}</span>
-                  <span className="text-sm text-gray-400">{idea.status}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-1 rounded-full border ${getStatusColor(idea.status)}`}>
+                      {idea.status}
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded-full border ${getConvictionColor(idea.conviction)}`}>
+                      {idea.conviction || "Undetermined"}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
