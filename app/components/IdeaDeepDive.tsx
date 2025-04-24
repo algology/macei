@@ -23,6 +23,8 @@ import {
   AlertCircle,
   Trash2,
   Settings,
+  Edit,
+  Maximize2,
 } from "lucide-react";
 import { AIAnalysisResult, DeepAnalysisResult, IdeaAttribute } from "./types";
 import { WithContext as ReactTags, Tag } from "react-tag-input";
@@ -101,6 +103,60 @@ const getConvictionColor = (conviction?: string) => {
   }
 };
 
+interface SummaryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  summary: string;
+  onSave: (newSummary: string) => void;
+}
+
+function SummaryModal({ isOpen, onClose, summary, onSave }: SummaryModalProps) {
+  const [editedSummary, setEditedSummary] = useState(summary || "");
+
+  const handleSave = () => {
+    onSave(editedSummary);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center ">
+      <div className="bg-background border border-accent-2 rounded-xl p-6 w-[90%] max-w-3xl max-h-[90vh] flex flex-col shadow-lg">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold">Edit Summary</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-300 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <textarea
+          value={editedSummary}
+          onChange={(e) => setEditedSummary(e.target.value)}
+          className="w-full flex-grow px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all duration-200 min-h-[300px]"
+          placeholder="Describe your idea..."
+        />
+        <div className="flex justify-end gap-3 mt-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-md text-sm border border-accent-2 hover:bg-accent-2/50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 rounded-md text-sm bg-green-500 text-black font-medium hover:bg-green-400 transition-colors"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function IdeaDeepDive({ ideaId }: Props) {
   const [idea, setIdea] = useState<IdeaDetails | null>(null);
   const [editedIdea, setEditedIdea] = useState<IdeaDetails | null>(null);
@@ -127,6 +183,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
   const [savingInsight, setSavingInsight] = useState(false);
   const [newSignalText, setNewSignalText] = useState("");
   const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
 
   const KeyCodes = {
     comma: 188,
@@ -990,24 +1047,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
                       </div>
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">
-                      Summary
-                    </label>
-                    <textarea
-                      value={editedIdea.summary || ""}
-                      onChange={(e) =>
-                        setEditedIdea({
-                          ...editedIdea,
-                          summary: e.target.value,
-                        })
-                      }
-                      rows={4}
-                      className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-2 focus:ring-green-500/20 transition-all duration-200 resize-none"
-                      placeholder="Describe your idea..."
-                    />
-                  </div>
                 </div>
 
                 <div className="bg-accent-1/50 border border-accent-2 rounded-xl p-6">
@@ -1021,6 +1060,29 @@ export function IdeaDeepDive({ ideaId }: Props) {
               </div>
 
               <div className="space-y-6">
+                <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6 transition-all duration-200 hover:bg-accent-1/60 hover:shadow-lg hover:shadow-accent-1/20">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm text-gray-400">
+                      Summary
+                    </label>
+                    <button
+                      onClick={() => setIsSummaryModalOpen(true)}
+                      className="text-gray-400 hover:text-green-400 transition-colors flex items-center gap-1"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span className="text-xs">Edit</span>
+                    </button>
+                  </div>
+                  <div 
+                    className="w-full min-h-[150px] px-3 py-2 bg-accent-1 border border-accent-2 rounded-md overflow-auto whitespace-pre-wrap cursor-pointer"
+                    onClick={() => setIsSummaryModalOpen(true)}
+                  >
+                    {editedIdea.summary || (
+                      <span className="text-gray-500 italic">Click to add a summary of your idea...</span>
+                    )}
+                  </div>
+                </div>
+
                 <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
                   <label className="block text-sm text-gray-400 mb-1">
                     Idea Attributes
@@ -1795,6 +1857,21 @@ export function IdeaDeepDive({ ideaId }: Props) {
 
       {/* Feedback Widget */}
       <FeedbackWidget ideaId={Number(ideaId)} variant="floating" />
+
+      {/* Summary Modal */}
+      {editedIdea && (
+        <SummaryModal
+          isOpen={isSummaryModalOpen}
+          onClose={() => setIsSummaryModalOpen(false)}
+          summary={editedIdea.summary || ""}
+          onSave={(newSummary: string) => {
+            setEditedIdea({
+              ...editedIdea,
+              summary: newSummary,
+            });
+          }}
+        />
+      )}
 
       {/* Expanded Knowledge Base Chat */}
       {isChatExpanded && (

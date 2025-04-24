@@ -195,160 +195,200 @@ export function IdeaKnowledgeBase({ ideaId, onDocumentAdded }: Props) {
   };
 
   return (
-    <div className="space-y-4" data-component="knowledge-base">
-      <div className="flex items-center justify-between">
+    <div
+      data-component="knowledge-base"
+      className="space-y-4"
+    >
+      <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Knowledge Base</h3>
-        <div className="flex items-center gap-4">
-          <div className="flex rounded-lg border border-accent-2 overflow-hidden">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`px-3 py-1.5 text-sm ${
-                activeTab === "all"
-                  ? "bg-accent-1 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-accent-1/50"
-              }`}
-            >
-              All ({documents.length + marketSignals.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("documents")}
-              className={`px-3 py-1.5 text-sm border-l border-accent-2 ${
-                activeTab === "documents"
-                  ? "bg-accent-1 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-accent-1/50"
-              }`}
-            >
-              Documents ({documents.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("signals")}
-              className={`px-3 py-1.5 text-sm border-l border-accent-2 ${
-                activeTab === "signals"
-                  ? "bg-accent-1 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-accent-1/50"
-              }`}
-            >
-              Market Signals ({marketSignals.length})
-            </button>
-          </div>
-          <label className="px-4 py-2 bg-accent-1/50 border border-accent-2 rounded-lg hover:bg-accent-1 transition-colors cursor-pointer flex items-center gap-2">
-            <Upload className="w-4 h-4" />
-            <span>{isUploading ? "Uploading..." : "Upload Document"}</span>
+        <div className="flex items-center gap-2">
+          <div className="relative">
             <input
               type="file"
-              className="hidden"
+              id="file-upload"
               onChange={handleFileUpload}
-              accept=".pdf,.doc,.docx,.txt"
-              disabled={isUploading}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
-          </label>
+            <label
+              htmlFor="file-upload"
+              className="cursor-pointer bg-accent-1/50 hover:bg-accent-1/70 border border-accent-2 rounded-md px-3 py-1.5 text-sm flex items-center gap-2 transition-colors"
+            >
+              {isUploading ? (
+                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              Upload Document
+            </label>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-2">
-        {(activeTab === "all" || activeTab === "documents") &&
-          documents.map((doc) => (
-            <div
-              key={doc.id}
-              className="flex items-center justify-between p-3 bg-accent-1/50 border border-accent-2 rounded-lg"
-            >
-              <div className="flex items-center gap-2">
-                <File className="w-4 h-4 text-gray-400" />
-                <a
-                  href={doc.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm hover:text-green-400 transition-colors"
-                >
-                  {doc.name}
-                </a>
-              </div>
-              <div className="flex items-center gap-2">
-                <DocumentPreview
-                  url={doc.url}
-                  name={doc.name}
-                  type={doc.url.split(".").pop() || ""}
-                />
-                <button
-                  onClick={() => handleDeleteDocument(doc.id, doc.url)}
-                  className="text-gray-400 hover:text-red-400 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+      <div className="flex space-x-2 mb-4">
+        <button
+          onClick={() => setActiveTab("all")}
+          className={`px-2 py-1 text-xs rounded-md transition-colors ${
+            activeTab === "all"
+              ? "bg-green-500/20 text-green-400 border border-green-900"
+              : "bg-accent-1/50 text-gray-400 border border-accent-2 hover:bg-accent-1/70"
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setActiveTab("documents")}
+          className={`px-2 py-1 text-xs rounded-md transition-colors ${
+            activeTab === "documents"
+              ? "bg-green-500/20 text-green-400 border border-green-900"
+              : "bg-accent-1/50 text-gray-400 border border-accent-2 hover:bg-accent-1/70"
+          }`}
+        >
+          Documents
+        </button>
+        <button
+          onClick={() => setActiveTab("signals")}
+          className={`px-2 py-1 text-xs rounded-md transition-colors ${
+            activeTab === "signals"
+              ? "bg-green-500/20 text-green-400 border border-green-900"
+              : "bg-accent-1/50 text-gray-400 border border-accent-2 hover:bg-accent-1/70"
+          }`}
+        >
+          Market Signals
+        </button>
+      </div>
 
-        {(activeTab === "all" || activeTab === "signals") &&
-          marketSignals.map((signal) => (
-            <div
-              key={signal.id}
-              className="flex items-center justify-between p-3 bg-accent-1/50 border border-accent-2 rounded-lg"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  {getSignalIcon(signal.source_type)}
-                  <a
-                    href={signal.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm hover:text-green-400 transition-colors"
-                  >
-                    {signal.title}
-                  </a>
-                </div>
-                {signal.metadata?.is_user_submitted &&
-                signal.content.length > 200 ? (
-                  <div className="text-sm text-gray-400">
-                    <p>
-                      {expandedSignals[signal.id]
-                        ? signal.content
-                        : signal.content.substring(0, 200) + "..."}
-                    </p>
-                    <button
-                      onClick={() => toggleExpandSignal(signal.id)}
-                      className="flex items-center gap-1 mt-1 text-blue-400 hover:text-blue-300 transition-colors"
+      <div className="space-y-3">
+        {/* Documents Section */}
+        {(activeTab === "all" || activeTab === "documents") && documents.length > 0 && (
+          <div className="bg-accent-1/30 border border-accent-2 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-gray-300 mb-2">Documents</h4>
+            <div className="space-y-2">
+              {documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between p-2 bg-accent-1/50 border border-accent-2 rounded-md hover:bg-accent-1/70 transition-colors"
+                >
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <File className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                    <a
+                      href={doc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm hover:text-green-400 transition-colors truncate"
                     >
-                      {expandedSignals[signal.id] ? (
-                        <>
-                          <EyeOff className="w-3 h-3" />
-                          <span className="text-xs">Show less</span>
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-3 h-3" />
-                          <span className="text-xs">Show more</span>
-                        </>
-                      )}
+                      {doc.name}
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DocumentPreview
+                      url={doc.url}
+                      name={doc.name}
+                      type={doc.url.split(".").pop() || ""}
+                    />
+                    <button
+                      onClick={() => handleDeleteDocument(doc.id, doc.url)}
+                      className="text-gray-400 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-400">{signal.content}</p>
-                )}
-                <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                  <span>{signal.source_name}</span>
-                  <span>•</span>
-                  <span>
-                    {new Date(signal.publication_date).toLocaleDateString()}
-                  </span>
-                  <span>•</span>
-                  <span>Relevance: {signal.relevance_score}%</span>
                 </div>
-              </div>
-              <button
-                onClick={() => handleDeleteSignal(signal.id)}
-                className="ml-4 text-gray-400 hover:text-red-400 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              ))}
             </div>
-          ))}
+          </div>
+        )}
 
+        {/* Market Signals Section */}
+        {(activeTab === "all" || activeTab === "signals") && marketSignals.length > 0 && (
+          <div className="bg-accent-1/30 border border-accent-2 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-gray-300 mb-2">Market Signals</h4>
+            <div className="space-y-2">
+              {marketSignals.map((signal) => (
+                <div
+                  key={signal.id}
+                  className="p-3 bg-accent-1/50 border border-accent-2 rounded-md hover:bg-accent-1/70 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="bg-accent-1/70 p-1 rounded-md">
+                        {getSignalIcon(signal.source_type)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <a
+                            href={signal.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium hover:text-green-400 transition-colors"
+                          >
+                            {signal.title}
+                          </a>
+                          <button
+                            onClick={() => handleDeleteSignal(signal.id)}
+                            className="ml-2 text-gray-400 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                          <span className="bg-accent-2/50 px-1.5 py-0.5 rounded-full">
+                            {signal.source_type === "news" ? "News" : 
+                             signal.source_type === "academic" ? "Academic" : 
+                             signal.source_type === "patent" ? "Patent" : "Other"}
+                          </span>
+                          <span>{signal.source_name}</span>
+                          <span>•</span>
+                          <span>
+                            {new Date(signal.publication_date).toLocaleDateString()}
+                          </span>
+                          <span>•</span>
+                          <span className="bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full">
+                            {signal.relevance_score}% Relevance
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {signal.metadata?.is_user_submitted &&
+                    signal.content.length > 200 ? (
+                      <div className="text-sm text-gray-400 mt-2 pl-7">
+                        <p>
+                          {expandedSignals[signal.id]
+                            ? signal.content
+                            : signal.content.substring(0, 200) + "..."}
+                        </p>
+                        <button
+                          onClick={() => toggleExpandSignal(signal.id)}
+                          className="flex items-center gap-1 mt-1 text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          {expandedSignals[signal.id] ? (
+                            <>
+                              <EyeOff className="w-3 h-3" />
+                              <span className="text-xs">Show less</span>
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="w-3 h-3" />
+                              <span className="text-xs">Show more</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400 mt-2 pl-7">{signal.content}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty States */}
         {((activeTab === "all" &&
           documents.length + marketSignals.length === 0) ||
           (activeTab === "documents" && documents.length === 0) ||
           (activeTab === "signals" && marketSignals.length === 0)) && (
-          <div className="text-center text-gray-400 py-8">
+          <div className="text-center text-gray-400 py-8 bg-accent-1/30 border border-accent-2 rounded-lg">
             {activeTab === "documents"
               ? "No documents uploaded yet"
               : activeTab === "signals"
