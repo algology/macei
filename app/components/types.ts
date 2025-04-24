@@ -2,7 +2,7 @@ export interface Resource {
   id: number;
   name: string;
   created_at: string;
-  ideas?: Array<{ count: number }>;
+  ideas?: Array<{ id: number; conviction?: string | null }>;
   organization_id?: number;
   organization?: {
     id: number;

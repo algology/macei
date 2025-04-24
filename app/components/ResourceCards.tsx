@@ -57,7 +57,7 @@ export function ResourceCards<T extends Resource>({
     } else if (config.tableName === "missions") {
       query = supabase
         .from(config.tableName)
-        .select("*, organization:organizations(*), ideas:ideas(count)")
+        .select("*, organization:organizations(*), ideas:ideas(id, conviction)")
         .eq("organization_id", config.foreignKey?.value)
         .order("created_at", { ascending: false });
     }
@@ -163,7 +163,7 @@ export function ResourceCards<T extends Resource>({
     }
   };
 
-  const handleCreateResource = async (e: React.FormEvent) => {
+  async function handleCreateResource(e: React.FormEvent) {
     e.preventDefault();
     setIsCreating(true);
 
@@ -269,7 +269,7 @@ export function ResourceCards<T extends Resource>({
                       {resource.name}
                       {config.tableName === "missions" && (
                         <span className="ml-2 text-sm text-gray-400">
-                          {resource.ideas?.[0]?.count || 0} ideas
+                          {resource.ideas?.length || 0} ideas
                         </span>
                       )}
                     </h3>
