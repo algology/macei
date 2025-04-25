@@ -17,6 +17,7 @@ import {
   BellOff,
   ChevronUp,
   Settings,
+  Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Idea, Mission } from "./types";
@@ -48,6 +49,7 @@ interface OrganizationWithMissionsAndIdeas {
   id: string | number;
   name: string;
   missions: MissionWithIdeas[] | null;
+  organization_members: { count: number }[];
 }
 
 type MissionData = {
@@ -59,6 +61,14 @@ type MissionData = {
   };
   ideas?: any[];
 };
+
+// Define structure for the data used in rendering grouped by org
+interface OrgRenderData {
+  id: string | number;
+  name: string;
+  memberCount: number;
+  missions: MissionData[];
+}
 
 export function CustomDashboard() {
   const [ideas, setIdeas] = useState<any[]>([]);
@@ -131,6 +141,9 @@ export function CustomDashboard() {
                 conviction,
                 conviction_rationale
               )
+            ),
+            organization_members (
+              count
             )
           `);
 
@@ -368,31 +381,57 @@ export function CustomDashboard() {
       ) : (
         <div className="space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-accent-2 scrollbar-track-transparent pr-1 flex-1">
           {(function () {
-            const orgMap = new Map();
+            const orgMap = new Map<string | number, OrgRenderData>();
 
-            ideas.forEach((mission: MissionData) => {
-              const orgId = mission.organization?.id || "unknown";
-              const orgName =
-                mission.organization?.name || "Unknown Organization";
-
-              if (!orgMap.has(orgId)) {
-                orgMap.set(orgId, {
-                  id: orgId,
-                  name: orgName,
+            // Populate the map directly from orgData to include member count
+            orgs.forEach(org => {
+              if (!orgMap.has(org.id)) {
+                orgMap.set(org.id, {
+                  id: org.id,
+                  name: org.name,
+                  memberCount: org.organization_members?.[0]?.count ?? 0,
                   missions: [],
                 });
               }
+              const currentOrgEntry = orgMap.get(org.id)!;
 
-              orgMap.get(orgId).missions.push(mission);
+              // Add missions belonging to this org
+              org.missions?.forEach(mission => {
+                if (mission.ideas && mission.ideas.length > 0) {
+                  currentOrgEntry.missions.push({
+                    id: mission.id,
+                    name: mission.name,
+                    // Include organization info within mission data if needed elsewhere
+                    organization: { id: org.id, name: org.name },
+                    ideas: mission.ideas,
+                  });
+                }
+              });
+              // Sort missions within the organization if needed (e.g., alphabetically)
+              currentOrgEntry.missions.sort((a, b) => a.name.localeCompare(b.name));
             });
 
-            return Array.from(orgMap.values()).map((org) => (
+            // Now map over the values from our structured map
+            return Array.from(orgMap.values()).map((org: OrgRenderData) => (
               <div key={org.id} className="mb-10">
                 <div className="flex items-center justify-between mb-4 relative">
-                  <div className="w-10 h-10 rounded-full bg-accent-1/80 border-2 border-accent-2 flex items-center justify-center text-white font-medium mr-3 relative">
-                    {org.name.substring(0, 1).toUpperCase()}
+                  <div className="flex items-center flex-1 mr-4">
+                    <div className="w-10 h-10 rounded-full bg-accent-1/80 border-2 border-accent-2 flex items-center justify-center text-white font-medium mr-3 relative shrink-0">
+                      {org.name.substring(0, 1).toUpperCase()}
+                    </div>
+                    <h3 className="text-xl font-bold text-white flex items-center">
+                      <span className="truncate">{org.name}</span>
+                      {/* Use the memberCount stored in the org data */} 
+                      {org.memberCount > 1 && (
+                        <span title="Shared Organization">
+                          <Users
+                            className="ml-2 h-4 w-4 text-gray-500 inline-block shrink-0"
+                            aria-label="Shared Organization"
+                          />
+                        </span>
+                      )}
+                    </h3>
                   </div>
-                  <h3 className="text-xl font-bold text-white">{org.name}</h3>
                   <Link
                     href={`/dashboard/org/${org.id}/edit`}
                     className="text-gray-400 hover:text-white transition-colors"
