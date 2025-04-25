@@ -23,6 +23,33 @@ import { Idea, Mission } from "./types";
 import { KnowledgeBaseChat } from "./KnowledgeBaseChat";
 import Link from "next/link";
 
+// Define the expected structure from the Supabase query
+interface IdeaData {
+  id: number;
+  name: string;
+  category: string;
+  status: string;
+  summary: string;
+  created_at: string;
+  mission_id: string | number;
+  auto_briefing_enabled: boolean;
+  signals: string | null;
+  conviction: string | null;
+  conviction_rationale: string | null;
+}
+
+interface MissionWithIdeas {
+  id: string | number;
+  name: string;
+  ideas: IdeaData[];
+}
+
+interface OrganizationWithMissionsAndIdeas {
+  id: string | number;
+  name: string;
+  missions: MissionWithIdeas[] | null;
+}
+
 type MissionData = {
   id: string | number;
   name: string;
@@ -35,11 +62,12 @@ type MissionData = {
 
 export function CustomDashboard() {
   const [ideas, setIdeas] = useState<any[]>([]);
-  const [briefings, setBriefings] = useState<any[]>([]);
+  const [briefings, setBriefings] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [collapsedMissions, setCollapsedMissions] = useState<
     Set<string | number>
   >(new Set());
+  const [orgs, setOrgs] = useState<OrganizationWithMissionsAndIdeas[]>([]);
 
   // Chat related state - simplified
   const [isChatExpanded, setIsChatExpanded] = useState(false);
@@ -65,226 +93,147 @@ export function CustomDashboard() {
 
   useEffect(() => {
     async function fetchData() {
+      setLoading(true); // Start loading
       try {
-        // Get current user
+        // Get current user session (needed for briefings fetch later)
         const {
           data: { session },
+          error: sessionError,
         } = await supabase.auth.getSession();
 
-        if (!session) {
-          console.error("No active session found");
+        if (sessionError || !session) {
+          console.error("No active session found:", sessionError);
+          setLoading(false);
+          return;
+        }
+        const userId = session.user.id; // Keep userId for potential future use or logging
+        console.log("Fetching dashboard data for user ID:", userId);
+
+        // Fetch organizations with missions and ideas, relying on RLS on organizations
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .select(`
+            id,
+            name,
+            missions (
+              id,
+              name,
+              ideas (
+                id,
+                name,
+                category,
+                status,
+                summary,
+                created_at,
+                mission_id,
+                auto_briefing_enabled,
+                signals,
+                conviction,
+                conviction_rationale
+              )
+            )
+          `);
+
+        if (orgError) {
+          console.error("Error fetching organizations and related data:", orgError);
+          setIdeas([]);
+          setBriefings({});
+          setLoading(false);
           return;
         }
 
-        const userId = session.user.id;
-        console.log("Fetching data for user ID:", userId);
+        console.log("Organization data received:", orgData?.length || 0);
 
-        // Get all ideas directly owned by the user with their related missions
-        const { data: userIdeas, error: ideasError } = await supabase
-          .from("ideas")
-          .select(
-            `
-            id,
-            name,
-            category,
-            status,
-            summary,
-            created_at,
-            mission_id,
-            auto_briefing_enabled,
-            signals,
-            conviction,
-            conviction_rationale,
-            mission:missions(
-              id,
-              name,
-              organization:organizations(id, name)
-            )
-          `
-          )
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false });
+        // Process the orgData to build missionMap and collect idea IDs
+        const missionMap = new Map<string | number, MissionData>();
+        const accessibleIdeaIds: number[] = [];
+        let allIdeasText = "";
 
-        if (ideasError) {
-          console.error("Error fetching user ideas:", ideasError);
-        } else {
-          console.log("User ideas found:", userIdeas?.length || 0);
+        orgData?.forEach((org) => {
+          if (!org.missions) return;
 
-          // Debug log the first idea to understand structure
-          if (userIdeas && userIdeas.length > 0) {
-            console.log(
-              "Sample idea structure:",
-              JSON.stringify(userIdeas[0], null, 2)
-            );
-          }
+          org.missions.forEach((mission) => {
+            if (!mission.ideas || mission.ideas.length === 0) return;
 
-          // Group ideas by mission - use type assertion for any to bypass strict checking
-          const missionMap = new Map<string | number, any>();
-
-          userIdeas?.forEach((idea: any) => {
-            if (idea.mission) {
-              const missionId = idea.mission.id;
-
-              if (!missionMap.has(missionId)) {
-                missionMap.set(missionId, {
-                  id: missionId,
-                  name: idea.mission.name,
-                  organization: idea.mission.organization,
-                  ideas: [],
-                });
-              }
-
-              // Add idea to this mission's ideas array
-              missionMap.get(missionId).ideas.push({
-                id: idea.id,
-                name: idea.name,
-                category: idea.category,
-                status: idea.status,
-                summary: idea.summary,
-                created_at: idea.created_at,
-                mission_id: idea.mission_id,
-                auto_briefing_enabled: idea.auto_briefing_enabled,
-                signals: idea.signals,
-                conviction: idea.conviction,
-                conviction_rationale: idea.conviction_rationale,
+            const missionId = mission.id;
+            if (!missionMap.has(missionId)) {
+              missionMap.set(missionId, {
+                id: missionId,
+                name: mission.name,
+                organization: { id: org.id, name: org.name },
+                ideas: [],
               });
             }
+
+            const currentMission = missionMap.get(missionId)!;
+
+            mission.ideas.forEach((idea) => {
+              accessibleIdeaIds.push(idea.id);
+              currentMission.ideas?.push(idea);
+              allIdeasText += `Idea: ${idea.name} (ID: ${idea.id}, Mission: ${
+                mission.name
+              }, Org: ${org.name})\nStatus: ${idea.status}\nSummary: ${
+                idea.summary
+              }\nConviction: ${idea.conviction || "N/A"}\n---\n`;
+            });
+            currentMission.ideas?.sort(
+              (a, b) =>
+                new Date(b.created_at).getTime() -
+                new Date(a.created_at).getTime()
+            );
           });
+        });
 
-          const missions = Array.from(missionMap.values());
-          console.log("Grouped missions:", missions.length);
-          setIdeas(missions);
-
-          // If no ideas, skip fetching briefings
-          if (!userIdeas || userIdeas.length === 0) {
-            setBriefings([]);
-            setLoading(false);
-            return;
+        // Convert map values to array and sort missions by name (or org name then mission name)
+        const sortedMissions = Array.from(missionMap.values()).sort((a, b) => {
+          if (a.organization.name !== b.organization.name) {
+            return a.organization.name.localeCompare(b.organization.name);
           }
+          return a.name.localeCompare(b.name);
+        });
 
-          // Get idea IDs for briefings query
-          const ideaIds = userIdeas.map((idea) => idea.id);
+        console.log("Processed Missions:", sortedMissions.length);
+        setIdeas(sortedMissions);
+        setAllIdeasData(allIdeasText);
+        setOrgs(orgData || []);
 
-          // Approach:
-          // 1. First get all distinct idea_ids from briefings
-          // 2. For each idea_id, get the most recent briefing
-          // 3. Combine results
-
-          // Get all briefing idea_ids
-          const { data: briefingIdeaIds, error: ideaIdError } = await supabase
+        // --- Fetch Briefings based on accessible Idea IDs ---
+        if (accessibleIdeaIds.length > 0) {
+          const { data: briefingData, error: briefingError } = await supabase
             .from("briefings")
-            .select("idea_id")
-            .in("idea_id", ideaIds)
-            .order("created_at", { ascending: false });
+            .select(
+              `
+              *,
+              idea:ideas(id, name)
+            `
+            )
+            .in("idea_id", accessibleIdeaIds)
+            .order("date_from", { ascending: false });
 
-          if (ideaIdError) {
-            console.error("Error fetching briefing idea IDs:", ideaIdError);
-            setBriefings([]);
+          if (briefingError) {
+            console.error("Error fetching briefings:", briefingError);
+            setBriefings({});
           } else {
-            // Get unique idea IDs that have briefings
-            const uniqueIdeaIds = Array.from(
-              new Set(briefingIdeaIds.map((b: any) => b.idea_id))
-            );
-            console.log("Ideas with briefings:", uniqueIdeaIds.length);
-
-            // For each idea, fetch its latest briefing
-            const latestBriefings = [];
-
-            for (const ideaId of uniqueIdeaIds) {
-              const { data: ideaBriefings, error: briefingError } =
-                await supabase
-                  .from("briefings")
-                  .select(
-                    `
-                  id,
-                  idea_id,
-                  summary,
-                  date_from,
-                  date_to,
-                  created_at,
-                  key_attributes,
-                  next_steps,
-                  idea:ideas(
-                    name, 
-                    mission_id, 
-                    mission:missions(
-                      name, 
-                      organization_id, 
-                      organization:organizations(name)
-                    )
-                  )
-                `
-                  )
-                  .eq("idea_id", ideaId)
-                  .order("created_at", { ascending: false })
-                  .limit(1);
-
-              if (briefingError) {
-                console.error(
-                  `Error fetching briefing for idea ${ideaId}:`,
-                  briefingError
-                );
-              } else if (ideaBriefings && ideaBriefings.length > 0) {
-                latestBriefings.push(ideaBriefings[0]);
+            console.log("Briefings found:", briefingData?.length || 0);
+            const groupedBriefings = briefingData?.reduce((acc, briefing) => {
+              const ideaId = briefing.idea_id;
+              if (!acc[ideaId]) {
+                acc[ideaId] = [];
               }
-            }
+              acc[ideaId].push(briefing);
+              return acc;
+            }, {} as Record<string, any[]>);
 
-            console.log("Latest briefings found:", latestBriefings.length);
-            setBriefings(latestBriefings);
-
-            // Debug which ideas have briefings and which don't
-            const ideasWithBriefings = new Set(uniqueIdeaIds);
-            const ideasWithoutBriefings = ideaIds.filter(
-              (id) => !ideasWithBriefings.has(id)
-            );
-            console.log("Ideas without briefings:", ideasWithoutBriefings);
-
-            // Create context string for the chat
-            if (userIdeas && userIdeas.length > 0) {
-              // Create a string of all ideas and their data for the knowledge base chat
-              const ideasContext = userIdeas
-                .map((idea: any) => {
-                  return `Idea: ${idea.name}
-Status: ${idea.status || "ideation"}
-Summary: ${idea.summary || "No summary available"}
-Mission: ${idea.mission?.name || "N/A"}
-Organization: ${idea.mission?.organization?.name || "N/A"}
----`;
-                })
-                .join("\n\n");
-
-              // Add briefings data to the context if available
-              let briefingsContext = "";
-              if (latestBriefings && latestBriefings.length > 0) {
-                briefingsContext =
-                  "\n\n### Recent Briefings:\n\n" +
-                  latestBriefings
-                    .map((briefing: any) => {
-                      return `Briefing for Idea: ${
-                        briefing.idea?.name || "Unknown Idea"
-                      }
-Summary: ${briefing.summary || "No summary available"}
-Date Created: ${new Date(briefing.created_at).toLocaleDateString()}
-Key Attributes: ${
-                        briefing.key_attributes
-                          ? briefing.key_attributes.join(", ")
-                          : "None"
-                      }
-Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
----`;
-                    })
-                    .join("\n\n");
-              } else {
-                briefingsContext =
-                  "\n\n### Recent Briefings:\n\nNo recent briefings found.";
-              }
-
-              setAllIdeasData(ideasContext + briefingsContext);
-            }
+            setBriefings(groupedBriefings || {});
           }
+        } else {
+          console.log("No accessible ideas found, skipping briefing fetch.");
+          setBriefings({});
         }
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error("Unexpected error fetching dashboard data:", error);
+        setIdeas([]);
+        setBriefings({});
       } finally {
         setLoading(false);
       }
@@ -336,25 +285,21 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
     if (!signals) return [];
 
     try {
-      // Try parsing as JSON array
       if (signals.trim().startsWith("[") || signals.trim().startsWith("{")) {
         const parsed = JSON.parse(signals);
 
         if (Array.isArray(parsed)) {
           return parsed;
         } else if (typeof parsed === "object" && parsed !== null) {
-          // Handle object with categories
           return Object.values(parsed).flat() as string[];
         }
       }
 
-      // Handle comma-separated string
       return signals
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
     } catch (error) {
-      // If parsing fails, try as comma-separated string
       return signals
         .split(",")
         .map((s) => s.trim())
@@ -363,12 +308,9 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
   };
 
   const handleCreateIdea = () => {
-    // First check if the user has any organizations
     if (ideas.length > 0 && ideas[0].organization) {
-      // Navigate to the first organization's page
       router.push(`/dashboard/org/${ideas[0].organization.id}`);
     } else {
-      // If no organizations, go to dashboard to create one first
       router.push("/dashboard");
     }
   };
@@ -385,7 +327,6 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
         ideaId,
       });
 
-      // Fallback to direct idea page
       router.push(`/dashboard/ideas/${ideaId}`);
       return;
     }
@@ -404,20 +345,31 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
             <span>Loading ideas and briefings...</span>
           </div>
         </div>
-      ) : ideas.length === 0 ? (
+      ) : orgs.length === 0 ? (
         <div className="text-gray-400 h-60 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <span>No ideas found</span>
-          </div>
+          <span>
+            No organizations found. Create one or ask an owner to invite you.
+          </span>
+        </div>
+      ) : ideas.length === 0 ? (
+        <div className="space-y-6 overflow-y-auto pr-1 flex-1">
+          {orgs.map((org) => (
+            <div key={org.id} className="mb-10">
+              <div className="flex items-center justify-between mb-4 relative">
+                <div className="w-10 h-10 rounded-full bg-accent-1/80 border-2 border-accent-2 flex items-center justify-center text-white font-medium mr-3">
+                  {org.name.substring(0, 1).toUpperCase()}
+                </div>
+                <h3 className="text-xl font-bold text-white">{org.name}</h3>
+              </div>
+              <div className="text-gray-400 px-5">No missions or ideas yet</div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-accent-2 scrollbar-track-transparent pr-1 flex-1">
-          {/* Group missions by organization first */}
           {(function () {
-            // Create organization map
             const orgMap = new Map();
 
-            // Group missions by organization
             ideas.forEach((mission: MissionData) => {
               const orgId = mission.organization?.id || "unknown";
               const orgName =
@@ -436,7 +388,6 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
 
             return Array.from(orgMap.values()).map((org) => (
               <div key={org.id} className="mb-10">
-                {/* Organization Header */}
                 <div className="flex items-center justify-between mb-4 relative">
                   <div className="w-10 h-10 rounded-full bg-accent-1/80 border-2 border-accent-2 flex items-center justify-center text-white font-medium mr-3 relative">
                     {org.name.substring(0, 1).toUpperCase()}
@@ -451,9 +402,7 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                   </Link>
                 </div>
 
-                {/* Missions under this organization */}
                 <div className="pl-5 space-y-6 relative">
-                  {/* Vertical connecting line for all missions under this org - centered on the org avatar */}
                   <div className="absolute w-[1px] bg-gray-600/50 h-full left-5 top-0"></div>
 
                   {org.missions.map((mission: MissionData) => (
@@ -461,13 +410,11 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                       key={mission.id}
                       className="rounded-lg p-4 bg-accent-1/40 relative"
                     >
-                      {/* Horizontal connection line from vertical line to mission circle */}
                       <div
                         className="absolute h-[1px] bg-gray-600/50 w-[15px] top-8"
                         style={{ left: "1px" }}
                       ></div>
 
-                      {/* Mission header */}
                       <div
                         className="flex items-center justify-between cursor-pointer"
                         onClick={(e) => toggleMissionCollapse(mission.id, e)}
@@ -486,7 +433,6 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                           </div>
                         </div>
 
-                        {/* Collapse/expand toggle */}
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-400">
                             {mission.ideas?.length || 0} ideas
@@ -499,20 +445,15 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                         </div>
                       </div>
 
-                      {/* Ideas list with nested briefings and next steps */}
                       {mission.ideas &&
                       mission.ideas.length > 0 &&
                       !collapsedMissions.has(mission.id) ? (
                         <div className="pl-4 mt-4 relative">
-                          {/* Vertical connecting line for all ideas under this mission - centered on mission avatar */}
                           <div className="absolute w-[1px] bg-gray-600/50 h-full" />
 
                           <div className="space-y-4 ml-4">
                             {mission.ideas.map((idea: any) => {
-                              // Find the latest briefing for this idea
-                              const latestBriefing = briefings.find(
-                                (b) => b.idea_id === idea.id
-                              );
+                              const latestBriefing = briefings[idea.id]?.[0];
 
                               return (
                                 <div
@@ -526,13 +467,11 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                     )
                                   }
                                 >
-                                  {/* Horizontal connecting line from vertical line to idea circle */}
                                   <div
                                     className="absolute h-[1px] bg-gray-600/50 w-[15px] top-7"
                                     style={{ left: "-15px" }}
                                   ></div>
 
-                                  {/* Idea header and basic info */}
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center flex-wrap gap-2">
                                       <div
@@ -558,7 +497,6 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                         {idea.status || "ideation"}
                                       </span>
 
-                                      {/* Conviction badge */}
                                       {idea.conviction && (
                                         <span
                                           className={`relative group px-2 py-0.5 rounded-full text-xs ${getConvictionColor(
@@ -569,7 +507,6 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                             Conviction:
                                           </span>
                                           {idea.conviction}
-                                          {/* Tooltip for rationale */}
                                           {idea.conviction_rationale && (
                                             <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2 text-xs text-white bg-accent-3 rounded-md shadow-lg z-10 border border-accent-2 text-center">
                                               {idea.conviction_rationale}
@@ -578,26 +515,15 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                         </span>
                                       )}
 
-                                      {/* Auto-briefing indicator */}
-                                      <span
-                                        title={
-                                          idea.auto_briefing_enabled === false
-                                            ? "Automatic briefings disabled"
-                                            : "Automatic briefings enabled"
-                                        }
-                                      >
-                                        {idea.auto_briefing_enabled ===
-                                        false ? (
-                                          <BellOff className="w-3.5 h-3.5 text-gray-400" />
-                                        ) : (
-                                          <Bell className="w-3.5 h-3.5 text-blue-400" />
-                                        )}
-                                      </span>
+                                      {idea.auto_briefing_enabled === false ? (
+                                        <BellOff className="w-3.5 h-3.5 text-gray-400" />
+                                      ) : (
+                                        <Bell className="w-3.5 h-3.5 text-blue-400" />
+                                      )}
                                     </div>
                                     <ChevronRight className="w-4 h-4 text-gray-400" />
                                   </div>
 
-                                  {/* Idea description and metadata */}
                                   <div className="pl-8 mt-2">
                                     {idea.summary && (
                                       <p className="text-sm text-gray-300 mt-1 mb-2">
@@ -624,7 +550,6 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                       )}
                                     </div>
 
-                                    {/* Display all idea attributes */}
                                     {idea.signals &&
                                       parseIdeaAttributes(idea.signals).length >
                                         0 && (
@@ -647,9 +572,7 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                         </div>
                                       )}
 
-                                    {/* Briefing section */}
                                     <div className="mb-3">
-                                      {/* Latest briefing if available */}
                                       {latestBriefing ? (
                                         <div className="bg-accent-1 rounded-lg p-4 border border-accent-2 shadow-sm">
                                           <div className="flex items-center justify-between mb-3">
@@ -681,7 +604,6 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
                                               "No summary available"}
                                           </p>
 
-                                          {/* Next steps if available */}
                                           {latestBriefing.next_steps &&
                                             Array.isArray(
                                               latestBriefing.next_steps
@@ -759,7 +681,6 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
         </div>
       )}
 
-      {/* Chat Button - Fixed position */}
       <button
         onClick={() => setIsChatExpanded(!isChatExpanded)}
         className="fixed bottom-6 right-20 z-50 w-12 h-12 rounded-full bg-green-500/20 text-green-400 border border-green-900 flex items-center justify-center shadow-lg hover:bg-green-500/30 transition-colors"
@@ -769,7 +690,6 @@ Next Steps: ${briefing.next_steps ? briefing.next_steps.join(", ") : "None"}
         <MessageSquare className="w-5 h-5" />
       </button>
 
-      {/* Expanded Knowledge Base Chat - Styled like in IdeaDeepDive */}
       {isChatExpanded && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] sm:w-[600px] md:w-[720px] lg:w-[800px] xl:w-[1000px] 2xl:w-[1200px] max-w-[1400px] bg-accent-1/95 backdrop-blur-md border border-accent-2 rounded-xl h-[500px] shadow-lg shadow-accent-1/20 z-50 transition-all duration-300 ease-in-out">
           <div

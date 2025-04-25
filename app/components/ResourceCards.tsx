@@ -47,23 +47,69 @@ export function ResourceCards<T extends Resource>({
   }, [config]);
 
   async function fetchResources() {
-    let query = supabase.from(config.tableName).select("*");
+    setLoading(true);
+    let query;
 
     if (config.tableName === "organizations") {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+        console.error("Error fetching session or user not logged in:", sessionError);
+        setResources([]);
+        setLoading(false);
+        return;
+      }
+      const userId = sessionData.session.user.id;
+
       query = supabase
-        .from(config.tableName)
-        .select("*, missions(*)")
-        .order("created_at", { ascending: false });
-    } else if (config.tableName === "missions") {
+        .from('organization_members')
+        .select(`
+          role,
+          organizations!inner (
+            *,
+            missions (*)
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { foreignTable: 'organizations', ascending: false });
+
+      const { data: memberData, error: memberError } = await query;
+
+      if (memberError) {
+        console.error("Error fetching organization memberships:", memberError);
+        setResources([]);
+      } else {
+        // Extract the organization data from the membership results
+        // Cast to unknown first to satisfy TypeScript when dealing with complex query results
+        const orgData = memberData?.map(member => member.organizations).filter(org => org !== null) as unknown as T[] ?? [];
+        setResources(orgData);
+      }
+    } else if (config.tableName === "missions" && config.foreignKey?.value) {
       query = supabase
         .from(config.tableName)
         .select("*, organization:organizations(*), ideas:ideas(id, conviction)")
-        .eq("organization_id", config.foreignKey?.value)
+        .eq("organization_id", config.foreignKey.value)
         .order("created_at", { ascending: false });
+
+      const { data: missionData, error: missionError } = await query;
+      if (missionError) {
+        console.error(`Error fetching missions for org ${config.foreignKey.value}:`, missionError);
+        setResources([]);
+      } else {
+        setResources((missionData as T[]) || []);
+      }
+    } else {
+      console.warn(`ResourceCards: Unhandled tableName '${config.tableName}' or missing foreignKey. Fetching all.`);
+      query = supabase.from(config.tableName).select('*').order("created_at", { ascending: false });
+
+      const { data: otherData, error: otherError } = await query;
+      if (otherError) {
+        console.error(`Error fetching ${config.tableName}:`, otherError);
+        setResources([]);
+      } else {
+        setResources((otherData as T[]) || []);
+      }
     }
 
-    const { data } = await query;
-    setResources(data || []);
     setLoading(false);
   }
 

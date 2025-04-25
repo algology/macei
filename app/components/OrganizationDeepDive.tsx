@@ -1,8 +1,23 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from '@/lib/supabase'; // Import the configured client instance
 import { LoadingSpinner } from "./LoadingSpinner";
 import { Check } from "lucide-react";
-import { Organization, Mission } from "@/app/components/types";
+import { Organization as OrganizationType, Mission, Profile } from "@/app/components/types";
+import { User } from "@supabase/supabase-js"; 
+import { MoreVertical, Trash2, UserCog } from 'lucide-react'; 
+
+// TODO: Generate database types using `npx supabase gen types typescript --project-id <your-project-id> --schema public > lib/database.types.ts`
+
+type MemberRole = 'owner' | 'editor' | 'viewer'; // Consider moving to types.ts if used elsewhere
+
+// Define a more specific type for the combined member data
+// Using 'any' for now until Database types are generated
+type OrganizationMemberWithProfile = any & { 
+  profiles: Profile | null; // Explicitly add profiles type
+  // Add users if needed later, fetched separately
+};
 
 const getConvictionColor = (conviction?: string | null) => {
   switch (conviction) {
@@ -14,7 +29,7 @@ const getConvictionColor = (conviction?: string | null) => {
       return "bg-purple-500/20 text-purple-400 border-purple-900";
     case "Unfeasible":
       return "bg-red-500/20 text-red-400 border-red-900";
-    default: // Handles null, undefined, or other values
+    default:
       return "bg-gray-500/20 text-gray-400 border-gray-900";
   }
 };
@@ -24,44 +39,125 @@ interface Props {
 }
 
 export function OrganizationDeepDive({ organizationId }: Props) {
-  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [organization, setOrganization] = useState<OrganizationType | null>(null);
   const [editedOrganization, setEditedOrganization] =
-    useState<Organization | null>(null);
+    useState<OrganizationType | null>(null);
+  const [members, setMembers] = useState<OrganizationMemberWithProfile[]>([]);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null); 
+  const [inviteEmail, setInviteEmail] = useState(""); // State for invite email input
+  const [isInviting, setIsInviting] = useState(false); // State for invitation loading
+  const [managingMemberId, setManagingMemberId] = useState<string | null>(null); // Track which member's dropdown is open
 
   useEffect(() => {
-    fetchOrganization();
+    const fetchUser = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        setCurrentUser(user);
+    };
+    fetchUser();
+
+    fetchOrganizationAndMembers(); 
   }, [organizationId]);
 
-  async function fetchOrganization() {
-    try {
-      const { data, error } = await supabase
-        .from("organizations")
-        .select(
-          `
-          *,
-          missions (
-            id,
-            name,
-            description,
-            ideas (id, conviction)
-          )
-        `
-        )
-        .eq("id", organizationId)
-        .single();
-
-      if (error) throw error;
-      setOrganization(data);
-      setEditedOrganization(data);
-    } catch (error) {
-      console.error("Error fetching organization:", error);
-    } finally {
-      setLoading(false);
+  async function fetchOrganizationAndMembers() {
+    setLoading(true);
+    if (!organizationId) {
+        console.error("Organization ID is missing.");
+        setLoading(false);
+        return;
     }
-  }
+    try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) throw new Error("User not authenticated");
+
+        // 1. Fetch Organization Details
+        const orgPromise = supabase
+            .from("organizations")
+            .select(
+              `
+              *,
+              missions (
+                id,
+                name,
+                description,
+                ideas (id, conviction)
+              )
+            `
+            )
+            .eq("id", organizationId)
+            .single();
+
+        // 2. Fetch Member IDs and Roles
+        const membersBasePromise = supabase
+            .from('organization_members')
+            .select('user_id, role') // Only fetch user_id and role initially
+            .eq('organization_id', organizationId);
+
+        // 3. Fetch Current User's Role
+        const currentUserRolePromise = supabase
+            .from('organization_members')
+            .select('role')
+            .eq('organization_id', organizationId)
+            .eq('user_id', authUser.id)
+            .maybeSingle();
+
+        // Await initial fetches
+        const [
+            { data: orgData, error: orgError },
+            { data: membersBaseData, error: membersBaseError },
+            { data: roleData, error: roleError }
+        ] = await Promise.all([orgPromise, membersBasePromise, currentUserRolePromise]);
+
+        if (orgError) throw orgError;
+        if (membersBaseError) {
+            console.error("Error fetching base members data:", membersBaseError);
+            throw membersBaseError;
+        }
+        if (roleError) throw roleError;
+
+        setOrganization(orgData);
+        setEditedOrganization(orgData);
+        setCurrentUserRole(roleData?.role || null);
+
+        // 4. Fetch Profiles using Member IDs if members exist
+        let profilesData: Profile[] | null = [];
+        const memberUserIds = membersBaseData?.map(m => m.user_id) || [];
+
+        if (memberUserIds.length > 0) {
+            const { data: fetchedProfilesData, error: profilesError } = await supabase
+                .from('profiles') // Fetch from profiles table
+                .select('*') // Select all profile fields
+                .in('id', memberUserIds); // Where profile ID matches member user_ids
+
+            if (profilesError) {
+                console.error("Error fetching profiles:", profilesError);
+                // Decide how to handle profile fetch error - maybe proceed without profiles?
+                profilesData = []; // Set to empty array on error
+            } else {
+                profilesData = fetchedProfilesData as Profile[];
+            }
+        }
+
+        // 5. Combine Member base data with Profile data
+        const combinedMembers = (membersBaseData || []).map(memberBase => {
+            const profile = profilesData?.find(p => p.id === memberBase.user_id) || null;
+            return {
+                ...memberBase,
+                profiles: profile // Add the found profile (or null)
+            };
+        });
+
+        setMembers(combinedMembers as OrganizationMemberWithProfile[]);
+
+    } catch (error) {
+        console.error("Error fetching organization data:", error);
+    } finally {
+        setLoading(false);
+    }
+}
 
   async function handleSave() {
     if (!organization || !editedOrganization) return;
@@ -95,12 +191,112 @@ export function OrganizationDeepDive({ organizationId }: Props) {
     }
   }
 
+  async function handleInviteMember() {
+    if (!inviteEmail || !organizationId || !canManageMembers) return;
+
+    setIsInviting(true);
+    try {
+      const trimmedEmail = inviteEmail.trim();
+      const res = await fetch('/api/organization-members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organization_id: organizationId, email: trimmedEmail, role: 'viewer' }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || `HTTP ${res.status}`);
+      }
+      alert(`User ${trimmedEmail} invited successfully as a viewer.`);
+      setInviteEmail('');
+      fetchOrganizationAndMembers();
+    } catch (error) {
+      console.error('Error inviting member:', error);
+      alert(`Failed to invite member. ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsInviting(false);
+    }
+  }
+
+  async function handleUpdateMemberRole(userId: string, newRole: MemberRole) {
+      if (!canManageMembers || !organizationId || userId === currentUser?.id) {
+          console.warn("Permission denied or invalid operation for updating role.");
+          setManagingMemberId(null); // Close dropdown
+          return; // Prevent owners/editors editing themselves via this basic handler for now
+      }
+
+      // Add basic confirmation
+      const confirmation = window.confirm(`Are you sure you want to change this member's role to ${newRole}?`);
+      if (!confirmation) {
+          setManagingMemberId(null); // Close dropdown if cancelled
+          return;
+      }
+
+      console.log(`Attempting: Update user ${userId} to role ${newRole} in org ${organizationId}`);
+      try {
+          const { error } = await supabase
+            .from('organization_members')
+            .update({ role: newRole })
+            .eq('organization_id', organizationId)
+            .eq('user_id', userId);
+
+          if (error) throw error;
+
+          // Success: Refresh list, close dropdown, show feedback
+          alert(`Member role updated to ${newRole}.`);
+          fetchOrganizationAndMembers(); // Refresh
+
+      } catch (error) {
+           console.error("Error updating member role:", error);
+           alert(`Failed to update role. Error: ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+           setManagingMemberId(null); // Ensure dropdown closes
+      }
+  }
+
+  async function handleRemoveMember(userId: string, userEmail: string | undefined) {
+       if (!canManageMembers || !organizationId || userId === currentUser?.id) {
+          console.warn("Permission denied or invalid operation for removing member.");
+           setManagingMemberId(null); // Close dropdown
+          return; // Prevent self-removal here
+      }
+
+      // Confirmation dialog
+      const confirmation = window.confirm(`Are you sure you want to remove ${userEmail || 'this user'} from the organization? This action cannot be undone.`);
+      if (!confirmation) {
+          setManagingMemberId(null); // Close dropdown if cancelled
+          return;
+      }
+
+      console.log(`Attempting: Remove user ${userId} from org ${organizationId}`);
+      try {
+          const { error } = await supabase
+            .from('organization_members')
+            .delete()
+            .eq('organization_id', organizationId)
+            .eq('user_id', userId);
+
+          if (error) throw error;
+
+          // Success: Refresh list, close dropdown, show feedback
+          alert(`${userEmail || 'Member'} removed successfully.`);
+          fetchOrganizationAndMembers(); // Refresh
+
+      } catch (error) {
+          console.error("Error removing member:", error);
+          alert(`Failed to remove member. Error: ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+           setManagingMemberId(null); // Ensure dropdown closes
+      }
+  }
+
   const hasChanges =
     JSON.stringify(organization) !== JSON.stringify(editedOrganization);
 
   if (loading) return <LoadingSpinner />;
   if (!organization || !editedOrganization)
     return <div>Organization not found</div>;
+
+  const canManageMembers = currentUserRole === 'owner' || currentUserRole === 'editor';
 
   return (
     <div className="space-y-8">
@@ -212,7 +408,7 @@ export function OrganizationDeepDive({ organizationId }: Props) {
                   Conditional: 0,
                   Postponed: 0,
                   Unfeasible: 0,
-                  Undetermined: 0, // For null/undefined conviction
+                  Undetermined: 0, 
                 };
 
                 (mission.ideas || []).forEach((idea) => {
@@ -220,16 +416,13 @@ export function OrganizationDeepDive({ organizationId }: Props) {
                   if (convictionCounts.hasOwnProperty(conviction)) {
                     convictionCounts[conviction]++;
                   } else {
-                    // Should not happen if conviction values are consistent, but handle just in case
                     convictionCounts["Undetermined"]++;
                   }
                 });
 
-                // Filter out levels with 0 counts
                 const convictionLevelsToShow = Object.entries(convictionCounts)
                   .filter(([level, count]) => count > 0)
                   .sort(([levelA], [levelB]) => {
-                    // Optional: Define a sort order if needed
                     const order = [
                       "Compelling",
                       "Conditional",
@@ -245,7 +438,6 @@ export function OrganizationDeepDive({ organizationId }: Props) {
                     key={mission.id}
                     className="flex items-start justify-between p-3 bg-accent-1/30 rounded-lg border border-accent-2 transition-colors hover:bg-accent-1/50"
                   >
-                    {/* Left side: Name and Description */}
                     <div className="flex-grow mr-4">
                       <span className="font-medium text-accent-contrast-dark">
                         {mission.name}
@@ -257,21 +449,17 @@ export function OrganizationDeepDive({ organizationId }: Props) {
                       )}
                     </div>
 
-                    {/* Right side: Conviction breakdown badges */}
                     <div className="flex-shrink-0 flex flex-wrap gap-1.5 items-center justify-end self-center">
                       {convictionLevelsToShow.length > 0 ? (
                         convictionLevelsToShow.map(([level, count]) => (
                           <span
                             key={level}
                             title={`${count} ${level} ${count === 1 ? 'idea' : 'ideas'}`}
-                            // Make badges slightly wider to accommodate text
                             className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] border ${getConvictionColor(level === "Undetermined" ? null : level)}`}
                           >
                             <span className="font-medium">{count}</span>
-                            {/* Add the level text */}
                             <span className="whitespace-nowrap">
                               {level === "Undetermined" ? "TBD" : level}
-                              {/* Add Idea/Ideas */}
                               {` ${count === 1 ? 'Idea' : 'Ideas'}`}
                             </span>
                           </span>
@@ -286,6 +474,114 @@ export function OrganizationDeepDive({ organizationId }: Props) {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold">Members</h3>
+        {canManageMembers && (
+          <div className="p-4 bg-accent-1/50 border border-accent-2 rounded-lg space-y-3">
+            <label className="block text-sm text-gray-400 mb-1">Invite New Member</label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="Enter user email"
+                className="flex-grow px-3 py-2 bg-accent-1 border border-accent-2 rounded-md text-sm disabled:opacity-50"
+                disabled={isInviting}
+              />
+              <button
+                onClick={handleInviteMember}
+                disabled={!inviteEmail.trim() || isInviting} // Disable if email is empty or inviting
+                className={`px-3 py-2 w-[80px] h-[38px] rounded-md text-sm flex items-center justify-center transition-colors ${ // Fixed width for button
+                  !inviteEmail.trim() || isInviting
+                  ? 'bg-gray-500/20 text-gray-400 border border-gray-800 cursor-not-allowed'
+                  : 'bg-blue-500/20 text-blue-300 border border-blue-900 hover:bg-blue-500/30'
+                }`}
+              >
+                {isInviting ? <LoadingSpinner className="w-4 h-4"/> : 'Invite'}
+              </button>
+            </div>
+            {/* Note: Assumes 'profiles' table has an 'email' column accessible via RLS. */}
+            {/* Consider using an RPC function for robustness. */}
+          </div>
+        )}
+        <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6 space-y-4">
+          {members.length === 0 ? (
+            <p className="text-gray-400">No members found for this organization.</p>
+          ) : (
+            <ul className="space-y-3">
+              {members.map((member) => (
+                <li key={member.user_id} className="flex justify-between items-center p-3 bg-accent-1 rounded-md border border-accent-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-sm overflow-hidden">
+                      {member.profiles?.avatar_url ? (
+                        <img src={member.profiles.avatar_url} alt={member.profiles.full_name || 'Avatar'} className="w-full h-full object-cover" />
+                      ) : (
+                        member.profiles?.full_name?.charAt(0) || '?'
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">
+                        {member.profiles?.full_name || 'No Name Provided'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-900 capitalize">
+                      {member.role}
+                    </span>
+                    {canManageMembers && member.user_id !== currentUser?.id && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setManagingMemberId(managingMemberId === member.user_id ? null : member.user_id)}
+                          className="text-gray-400 hover:text-white p-1 rounded hover:bg-accent-2"
+                          aria-label={`Manage ${member.profiles?.full_name || 'Member'}`}
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                        {/* Basic Dropdown */}
+                        {managingMemberId === member.user_id && (
+                          <div className="absolute right-0 mt-2 w-48 bg-accent-2 border border-accent-3 rounded-md shadow-lg z-10 py-1">
+                            <div className="px-3 py-1 text-xs text-gray-400 border-b border-accent-3 mb-1">Change Role</div>
+                            {['owner', 'editor', 'viewer'].map((role) => (
+                              <button
+                                key={role}
+                                onClick={() => handleUpdateMemberRole(member.user_id, role as MemberRole)}
+                                disabled={member.role === role} // Disable current role
+                                className={`w-full text-left px-3 py-1 text-sm flex items-center gap-2 ${
+                                  member.role === role
+                                  ? 'text-gray-500 cursor-not-allowed'
+                                  : 'text-gray-300 hover:bg-accent-1 hover:text-white'
+                                }`}
+                              >
+                                <UserCog size={14} className="opacity-70"/>
+                                <span className="capitalize">{role}</span>
+                                {member.role === role && <Check size={14} className="ml-auto text-green-500"/>}
+                              </button>
+                            ))}
+                            <div className="border-t border-accent-3 mt-1 pt-1">
+                              <button
+                                onClick={() => handleRemoveMember(member.user_id, member.profiles?.full_name || 'Member')}
+                                className="w-full text-left px-3 py-1 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2"
+                              >
+                                <Trash2 size={14} className="opacity-70"/>
+                                Remove Member
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {member.user_id === currentUser?.id && (
+                      <span className="text-xs text-green-400">(You)</span>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       {showSaved && (

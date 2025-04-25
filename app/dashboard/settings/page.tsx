@@ -156,6 +156,28 @@ export default function SettingsPage() {
         <section className="mb-12">
           <h2 className="text-lg font-semibold mb-4">Profile</h2>
           <div className="space-y-6 bg-accent-1/50 border border-accent-2 rounded-lg p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <p className="text-sm">{user.email}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">User ID</label>
+                <p className="text-sm">{user.id}</p>
+              </div>
+              {user.created_at && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Member since</label>
+                  <p className="text-sm">{new Date(user.created_at).toLocaleDateString()}</p>
+                </div>
+              )}
+              {user.last_sign_in_at && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Last sign-in</label>
+                  <p className="text-sm">{new Date(user.last_sign_in_at).toLocaleString()}</p>
+                </div>
+              )}
+            </div>
             {/* Avatar Upload */}
             <div className="flex items-center gap-6">
               <div className="relative">

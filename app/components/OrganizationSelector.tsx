@@ -1,3 +1,5 @@
+"use client";
+
 import * as Popover from "@radix-ui/react-popover";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Building2, Plus, ChevronDown, X, Target } from "lucide-react";
@@ -50,25 +52,25 @@ export function OrganizationSelector({ onSelect, selectedOrg }: Props) {
 
       if (!session) return;
 
-      const { data, error } = await supabase
-        .from("organizations")
-        .insert([
-          {
-            name: newOrgName,
-            user_id: session.user.id,
-          },
-        ])
-        .select()
-        .single();
+      const res = await fetch('/api/organizations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newOrgName, user_id: session.user.id }),
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
 
       setOrganizations([...organizations, data]);
-      setNewOrgName("");
+      setNewOrgName('');
       setIsDialogOpen(false);
       onSelect(data);
     } catch (error) {
-      console.error("Error creating organization:", error);
+      console.error('Error creating organization:', error);
     } finally {
       setIsCreating(false);
     }
