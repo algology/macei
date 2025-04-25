@@ -547,7 +547,7 @@ export function CustomDashboard() {
                                           </span>
                                           {idea.conviction}
                                           {idea.conviction_rationale && (
-                                            <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2 text-xs text-white bg-accent-3 rounded-md shadow-lg z-10 border border-accent-2 text-center">
+                                            <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2 text-xs text-white bg-gray-950 rounded-md shadow-lg z-10 border border-accent-2 text-center">
                                               {idea.conviction_rationale}
                                             </div>
                                           )}
