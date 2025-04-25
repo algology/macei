@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from '@/lib/supabase'; // Import the configured client instance
 import { LoadingSpinner } from "./LoadingSpinner";
-import { Check } from "lucide-react";
+import { Check, AlertTriangle } from "lucide-react";
 import { Organization as OrganizationType, Mission, Profile } from "@/app/components/types";
 import { User } from "@supabase/supabase-js"; 
 import { MoreVertical, Trash2, UserCog } from 'lucide-react'; 
+import { useRouter } from 'next/navigation';
 
 // TODO: Generate database types using `npx supabase gen types typescript --project-id <your-project-id> --schema public > lib/database.types.ts`
 
@@ -51,6 +52,8 @@ export function OrganizationDeepDive({ organizationId }: Props) {
   const [inviteEmail, setInviteEmail] = useState(""); // State for invite email input
   const [isInviting, setIsInviting] = useState(false); // State for invitation loading
   const [managingMemberId, setManagingMemberId] = useState<string | null>(null); // Track which member's dropdown is open
+  const [isDeleting, setIsDeleting] = useState(false); // State for deletion loading
+  const router = useRouter(); // Initialize router
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -287,6 +290,55 @@ export function OrganizationDeepDive({ organizationId }: Props) {
       } finally {
            setManagingMemberId(null); // Ensure dropdown closes
       }
+  }
+
+  async function handleDeleteOrganization() {
+    if (!organization || currentUserRole !== 'owner' || isDeleting) {
+      return;
+    }
+
+    const confirm1 = window.confirm(
+      `DANGER ZONE: Are you absolutely sure you want to delete the organization "${organization.name}"? This action is irreversible and will delete all associated missions and ideas.`
+    );
+
+    if (!confirm1) return;
+
+    const confirm2 = prompt(
+      `To confirm deletion, please type the organization name: "${organization.name}"`
+    );
+
+    if (confirm2 !== organization.name) {
+      alert("Organization name did not match. Deletion cancelled.");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      console.log(`Attempting to delete organization: ${organization.id} (${organization.name})`);
+      
+      // --- Deletion Logic --- 
+      // IMPORTANT: This is a basic direct delete. 
+      // For production, using a Supabase Edge Function (RPC) is highly recommended 
+      // to handle cascading deletes (missions, ideas, members, etc.) within a transaction.
+      const { error } = await supabase
+        .from('organizations')
+        .delete()
+        .eq('id', organization.id);
+
+      if (error) {
+        throw error;
+      }
+
+      alert(`Organization "${organization.name}" deleted successfully.`);
+      router.push('/dashboard'); // Redirect after successful deletion
+      // Consider router.refresh() if staying on a page that needs updated data
+
+    } catch (error) {
+      console.error("Error deleting organization:", error);
+      alert(`Failed to delete organization. Error: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   const hasChanges =
@@ -583,6 +635,34 @@ export function OrganizationDeepDive({ organizationId }: Props) {
           )}
         </div>
       </div>
+
+      {/* Danger Zone - Only visible to owners */} 
+      {currentUserRole === 'owner' && (
+        <div className="mt-12 pt-8 border-t border-red-900/50">
+          <h3 className="text-xl font-semibold text-red-400 mb-4 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5" /> Danger Zone
+          </h3>
+          <div className="bg-red-900/20 border border-red-900/60 rounded-lg p-6 space-y-4">
+            <div>
+              <h4 className="font-medium text-red-300">Delete this organization</h4>
+              <p className="text-sm text-red-400/80 mt-1 mb-3">
+                Once you delete an organization, there is no going back. All associated data, including missions and ideas, will be permanently deleted. Please be certain.
+              </p>
+              <button
+                onClick={handleDeleteOrganization}
+                disabled={isDeleting}
+                className={`px-4 py-2 rounded-md text-sm flex items-center justify-center gap-2 w-full sm:w-auto transition-colors ${ 
+                  isDeleting
+                  ? 'bg-gray-500/20 text-gray-400 border border-gray-800 cursor-not-allowed'
+                  : 'bg-red-500/20 text-red-300 border border-red-900 hover:bg-red-500/30 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-background outline-none'
+                }`}
+              >
+                {isDeleting ? <LoadingSpinner className="w-4 h-4"/> : 'Delete Organization'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showSaved && (
         <div className="fixed bottom-4 right-4 bg-green-900 text-green-400 px-4 py-2 rounded-md border border-green-900 flex items-center gap-2">
