@@ -106,7 +106,7 @@ export function Header() {
               </Popover>
 
               <Link
-                href="/pricing"
+                href="/blog"
                 className="text-sm hover:text-gray-300 transition-colors"
               >
                 Blog
