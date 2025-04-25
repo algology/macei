@@ -542,17 +542,17 @@ export function OrganizationDeepDive({ organizationId }: Props) {
                         </button>
                         {/* Basic Dropdown */}
                         {managingMemberId === member.user_id && (
-                          <div className="absolute right-0 mt-2 w-48 bg-accent-2 border border-accent-3 rounded-md shadow-lg z-10 py-1">
-                            <div className="px-3 py-1 text-xs text-gray-400 border-b border-accent-3 mb-1">Change Role</div>
+                          <div className="absolute right-0 mt-2 w-48 bg-background border border-accent-2 rounded-lg shadow-lg z-10 p-1 animate-in fade-in-0 zoom-in-95">
+                            <div className="px-2 py-1.5 text-xs text-gray-400 border-b border-accent-2 mb-1">Change Role</div>
                             {['owner', 'editor', 'viewer'].map((role) => (
                               <button
                                 key={role}
                                 onClick={() => handleUpdateMemberRole(member.user_id, role as MemberRole)}
                                 disabled={member.role === role} // Disable current role
-                                className={`w-full text-left px-3 py-1 text-sm flex items-center gap-2 ${
+                                className={`w-full text-left px-2 py-1.5 text-sm flex items-center gap-2 rounded-md outline-none cursor-pointer ${
                                   member.role === role
                                   ? 'text-gray-500 cursor-not-allowed'
-                                  : 'text-gray-300 hover:bg-accent-1 hover:text-white'
+                                  : 'text-gray-400 hover:bg-accent-1 hover:text-gray-300'
                                 }`}
                               >
                                 <UserCog size={14} className="opacity-70"/>
@@ -560,10 +560,10 @@ export function OrganizationDeepDive({ organizationId }: Props) {
                                 {member.role === role && <Check size={14} className="ml-auto text-green-500"/>}
                               </button>
                             ))}
-                            <div className="border-t border-accent-3 mt-1 pt-1">
+                            <div className="border-t border-accent-2 mt-1 pt-1">
                               <button
                                 onClick={() => handleRemoveMember(member.user_id, member.profiles?.full_name || 'Member')}
-                                className="w-full text-left px-3 py-1 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2"
+                                className="w-full text-left px-2 py-1.5 text-sm flex items-center gap-2 text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-md outline-none cursor-pointer"
                               >
                                 <Trash2 size={14} className="opacity-70"/>
                                 Remove Member
