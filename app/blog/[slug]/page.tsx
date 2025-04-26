@@ -1,19 +1,15 @@
+"use client";
+
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { useParams } from "next/navigation";
 
-export function generateStaticParams() {
-  return [{ slug: "hello-world" }];
-}
+export default function BlogPost() {
+  const params = useParams();
+  const slug = params.slug as string;
 
-export default function BlogPost({
-  params,
-  searchParams,
-}: {
-  params: { slug: string };
-  searchParams?: Record<string, string | string[]>;
-}) {
-  if (params.slug !== "hello-world") notFound();
+  if (slug !== "hello-world") notFound();
 
   return (
     <main className="container mx-auto px-4 py-4 md:py-8 xl:py-10 sm:px-16 xl:px-20">
