@@ -81,7 +81,7 @@ export function Header() {
                   leaveTo="opacity-0 translate-y-1"
                 >
                   <PopoverPanel className="absolute left-1/2 z-10 mt-6 w-screen max-w-sm -translate-x-1/2 transform px-4">
-                    <div className="overflow-hidden rounded-2xl bg-background/40 backdrop-blur-xl border border-accent-2 shadow-lg">
+                    <div className="overflow-hidden rounded-2xl bg-background backdrop-blur-xl border border-accent-2 shadow-lg">
                       <div className="p-4">
                         {features.map((item) => (
                           <div
@@ -116,6 +116,12 @@ export function Header() {
                 className="text-sm hover:text-gray-300 transition-colors"
               >
                 About
+              </Link>
+              <Link
+                href="/careers"
+                className="text-sm hover:text-gray-300 transition-colors"
+              >
+                Careers
               </Link>
             </nav>
 
