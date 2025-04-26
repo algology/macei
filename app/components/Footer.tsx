@@ -24,7 +24,8 @@ const footerLinks = {
 
 export function Footer() {
   return (
-    <footer className="border-t border-accent-2 bg-background/50 backdrop-blur-sm">
+    <footer className="bg-background/50 backdrop-blur-sm">
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-accent-2 to-transparent"></div>
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {Object.entries(footerLinks).map(([category, links]) => (
