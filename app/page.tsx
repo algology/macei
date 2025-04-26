@@ -34,6 +34,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { LoadingSpinner } from "./components/LoadingSpinner";
+import { AnimatedBeam } from "@/components/magicui/animated-beam";
+import HeroBeamAnimation from "@/components/homepage/HeroBeamAnimation";
 
 export default function Home() {
   const router = useRouter();
@@ -1180,11 +1182,108 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Conversation Interface Section */}
+        {/* Social Proof Section */}
+        <section className="border-y border-accent-2 bg-background/30 backdrop-blur-[2px]">
+          <div className="max-w-7xl mx-auto px-4 py-16">
+            <div className="flex flex-col items-center text-center">
+              <p className="text-sm text-grey-400 mb-8">
+                TRUSTED BY INNOVATIVE TEAM AT
+              </p>
+              <div className="flex justify-center items-center gap-12">
+                <Image
+                  src="/11point2logo.png"
+                  alt="11point2 Logo"
+                  width={180}
+                  height={60}
+                  className="opacity-60 hover:opacity-100 hover:scale-105 transition-all duration-300 grayscale"
+                  style={{ height: "auto" }}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Value Proposition Section ("Why Macy") */}
+        <section className="py-32 bg-background/20">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
+              <div>
+                <div className="inline-flex items-center px-4 py-2 rounded-full bg-accent-1/50 border border-accent-2 mb-4">
+                  <Brain className="w-4 h-4 mr-2 text-gray-400" />
+                  <span className="text-sm font-mono text-gray-400">
+                    WHY MACY
+                  </span>
+                </div>
+                <h2 className="text-4xl md:text-5xl font-bold mb-8 leading-tight">
+                  Don't Let Market Shifts
+                  <span className="gradient-text block mt-2">
+                    Leave You Behind
+                  </span>
+                </h2>
+                {/* Reworded paragraph focusing on the problem */}
+                <p className="text-xl text-grey-400 leading-relaxed">
+                  Staying truly informed is a constant battle. Market dynamics,
+                  competitor moves, emerging research, and new regulations
+                  create a flood of information that's impossible to track
+                  manually. Missing a key signal can mean losing your edge or
+                  pursuing a dead end.
+                </p>
+              </div>
+              <div className="relative w-full">
+                <HeroInstanceDashboard />
+                <div className="absolute -inset-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 blur-3xl -z-10" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* How It Works Section - Added Badge */}
+        <section className="py-32 bg-background/25 border-t border-accent-2">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+              {/* Beam Animation (Left) */}
+              <div className="relative min-h-[500px] lg:order-1">
+                <div className="absolute -inset-8 bg-gradient-to-br from-green-900/10 via-transparent to-emerald-900/10 blur-2xl rounded-full -z-10" />
+                <HeroBeamAnimation />
+              </div>
+
+              {/* Text Content (Right) - Added Badge */}
+              <div className="lg:order-2">
+                {/* Added badge back */}
+                <div className="inline-flex items-center px-4 py-2 rounded-full bg-accent-1/50 border border-accent-2 mb-4">
+                  <LayoutGrid className="w-4 h-4 mr-2 text-gray-400" />
+                  <span className="text-sm font-mono text-gray-400">
+                    HOW IT WORKS
+                  </span>
+                </div>
+                <h2 className="text-4xl md:text-5xl font-bold mb-8 leading-tight">
+                  How Macy Builds Your
+                  <span className="gradient-text block mt-2">
+                    Knowledge Co-Pilot
+                  </span>
+                </h2>
+                <p className="text-xl text-grey-400 mb-6 leading-relaxed">
+                  Macy acts like an AI co-founder, constructing a dynamic
+                  knowledge base tailored to your ideas.
+                </p>
+                <p className="text-lg text-grey-500 leading-relaxed">
+                  It continuously scans and synthesizes information from diverse
+                  sources — including real-time news feeds, the latest academic
+                  journals, patent databases, and even your private sources like
+                  emails and documents — to keep your insights fresh and
+                  relevant.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Conversation Interface Section ("Ask Macy") - Moved Here */}
         <section
           id="chat"
           className="py-20 border-y border-accent-2 bg-background/40"
         >
+          {/* ... chat interface content remains the same ... */}
           <div className="max-w-5xl mx-auto px-4">
             <div className="text-center mb-16">
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-accent-1/50 border border-accent-2 mb-4">
@@ -1334,6 +1433,7 @@ export default function Home() {
 
               {/* Preview Panel */}
               <div className="lg:col-span-3 relative">
+                {/* ... preview panel content ... */}
                 <div className="absolute -inset-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 blur-3xl -z-10" />
                 <div className="z-10 bg-[#0a0a0a] border border-accent-2 rounded-2xl p-6 h-[600px] overflow-y-auto">
                   {previewData ? (
@@ -1502,59 +1602,9 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Social Proof Section */}
-        <section className="border-y border-accent-2 bg-background/30 backdrop-blur-[2px]">
-          <div className="max-w-7xl mx-auto px-4 py-16">
-            <div className="flex flex-col items-center text-center">
-              <p className="text-sm text-grey-400 mb-8">
-                TRUSTED BY INNOVATIVE TEAM AT
-              </p>
-              <div className="flex justify-center items-center gap-12">
-                <Image
-                  src="/11point2logo.png"
-                  alt="11point2 Logo"
-                  width={180}
-                  height={60}
-                  className="opacity-60 hover:opacity-100 hover:scale-105 transition-all duration-300 grayscale"
-                  style={{ height: "auto" }}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Value Proposition Section */}
-        <section className="py-32 bg-background/20">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
-              <div>
-                <div className="inline-flex items-center px-4 py-2 rounded-full bg-accent-1/50 border border-accent-2 mb-4">
-                  <Brain className="w-4 h-4 mr-2 text-gray-400" />
-                  <span className="text-sm font-mono text-gray-400">
-                    WHY MACY
-                  </span>
-                </div>
-                <h2 className="text-4xl md:text-5xl font-bold mb-8 leading-tight">
-                  Turn Market Signals into
-                  <span className="gradient-text"> Strategic Advantage</span>
-                </h2>
-                <p className="text-xl text-grey-400 leading-relaxed">
-                  The Macy AI agent continuously analyses market signals,
-                  research papers, and industry trends to help you validate
-                  ideas with confidence and discover new opportunities before
-                  they become obvious.
-                </p>
-              </div>
-              <div className="relative w-full">
-                <HeroInstanceDashboard />
-                <div className="absolute -inset-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 blur-3xl -z-10" />
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Features Grid */}
-        <section className="py-32 bg-background/30 backdrop-blur-[2px]">
+        <section className="py-32 bg-background/30 backdrop-blur-[2px] border-t border-accent-2">
+          {/* ... features grid content ... */}
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-20">
               <h2 className="text-4xl md:text-5xl font-bold mb-8">

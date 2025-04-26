@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { hostname } from "os";
 
 const nextConfig: NextConfig = {
   eslint: {
@@ -6,6 +7,14 @@ const nextConfig: NextConfig = {
   },
   images: {
     domains: ["hmlkhbnvuhtyhytippve.supabase.co"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "www.google.com",
+        port: "",
+        pathname: "/s2/favicons**",
+      },
+    ],
   },
   /* config options here */
 };
