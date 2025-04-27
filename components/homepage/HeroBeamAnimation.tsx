@@ -4,7 +4,7 @@ import React, { forwardRef, useRef } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { AnimatedBeam } from "@/components/magicui/animated-beam";
-import { User, Slack, Users, Mail } from "lucide-react"; // Removed Scale
+import { User, Slack, Users, Mail, Database } from "lucide-react"; // Removed Scale
 
 // Circle Component Definition (Copied from beam-test/page.tsx)
 const Circle = forwardRef<
@@ -109,6 +109,7 @@ const Icons = {
   ),
   iconEmail: () => <Mail className="w-6 h-6 text-red-500" />,
   iconUsers: () => <Users className="w-6 h-6 text-blue-500" />,
+  iconDatabase: () => <Database className="w-6 h-6 text-green-500" />,
 };
 
 // Define the HeroBeamAnimation component
@@ -128,6 +129,7 @@ export default function HeroBeamAnimation() {
   const misc3Ref = useRef<HTMLDivElement>(null); // Users
   const centerRef = useRef<HTMLDivElement>(null); // Center (MACY Logo)
   const userRef = useRef<HTMLDivElement>(null); // User (Avatar)
+  const dbRef = useRef<HTMLDivElement>(null); // Database Ref
 
   return (
     <div
@@ -137,17 +139,18 @@ export default function HeroBeamAnimation() {
       )}
       ref={containerRef}
     >
-      {/* Main layout container for circles */}
-      <div className="flex size-full max-w-xl flex-row items-stretch justify-between gap-10">
+      {/* Main layout container for circles - Keep items-center */}
+      <div className="flex size-full max-w-xl flex-row items-center justify-between gap-10">
         {/* Left Column: User Icon */}
-        <div className="flex flex-col justify-center">
+        <div className="flex flex-col items-center justify-center">
           <Circle ref={userRef}>
             <Icons.avatar />
           </Circle>
         </div>
 
-        {/* Center Column: MACY Logo */}
-        <div className="flex flex-col justify-center">
+        {/* Center Column: MACY Logo ONLY */}
+        {/* Removed relative, removed absolute positioned DB icon from here */}
+        <div className="flex flex-col items-center justify-center">
           <Circle
             ref={centerRef}
             className="size-16 border-neutral-400 bg-white"
@@ -185,20 +188,31 @@ export default function HeroBeamAnimation() {
               <Icons.journalScience />
             </Circle>
           </div>
-          {/* Misc Group (Slack, Mail, Users) - Reordered Overlapping Row */}
+          {/* Misc Group (Email, Slack, Users) - Reordered Overlapping Row */}
           <div className="flex flex-row items-center">
-            <Circle ref={misc1Ref} className="z-[5]">
-              <Icons.iconSlack />
-            </Circle>
-            <Circle ref={misc2Ref} className="-ml-6 z-[4]">
+            {/* Email Icon */}
+            <Circle ref={misc2Ref} className="z-[5]">
               <Icons.iconEmail />
             </Circle>
+            {/* Slack Icon */}
+            <Circle ref={misc1Ref} className="-ml-6 z-[4]">
+              <Icons.iconSlack />
+            </Circle>
+            {/* Users Icon (remains the same) */}
             <Circle ref={misc3Ref} className="-ml-6 z-[3]">
               <Icons.iconUsers />
             </Circle>
           </div>
         </div>
       </div>
+
+      {/* Absolutely Positioned Database Icon (relative to containerRef) */}
+      <Circle
+        ref={dbRef}
+        className="absolute left-1/2 top-1/2 translate-y-24 -translate-x-1/2 animate-pulse-slow"
+      >
+        <Icons.iconDatabase />
+      </Circle>
 
       {/* Animated Beams */}
       {/* Beams from Center to the Leftmost Source Icon of each group */}
@@ -218,7 +232,7 @@ export default function HeroBeamAnimation() {
       />
       <AnimatedBeam
         containerRef={containerRef}
-        fromRef={misc1Ref} // Target the first icon in the Misc row (Slack)
+        fromRef={misc2Ref} // Target the first icon in the Misc row (now Email)
         toRef={centerRef}
         duration={3}
         reverse // Flow from center to source
@@ -243,6 +257,15 @@ export default function HeroBeamAnimation() {
         startYOffset={-10}
         endYOffset={-10}
         reverse
+      />
+
+      {/* Single Beam between Center and Database (Bottom) */}
+      <AnimatedBeam
+        containerRef={containerRef}
+        fromRef={centerRef} // Center
+        toRef={dbRef} // Database
+        duration={3}
+        // Removed curvature and offsets for a straight line
       />
     </div>
   );

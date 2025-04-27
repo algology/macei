@@ -1257,21 +1257,19 @@ export default function Home() {
                   </span>
                 </div>
                 <h2 className="text-4xl md:text-5xl font-bold mb-8 leading-tight">
-                  How Macy Builds Your
-                  <span className="gradient-text block mt-2">
-                    Knowledge Co-Pilot
+                  Build Your Own
+                  <span className="block mt-2 gradient-text">
+                    Knowledge Base
                   </span>
                 </h2>
-                <p className="text-xl text-grey-400 mb-6 leading-relaxed">
-                  Macy acts like an AI co-founder, constructing a dynamic
-                  knowledge base tailored to your ideas.
-                </p>
+
                 <p className="text-lg text-grey-500 leading-relaxed">
-                  It continuously scans and synthesizes information from diverse
-                  sources — including real-time news feeds, the latest academic
-                  journals, patent databases, and even your private sources like
-                  emails and documents — to keep your insights fresh and
-                  relevant.
+                  Macy tirelessly builds a dynamic knowledge base tailored to
+                  your ideas. It continuously scans and synthesizes information
+                  from diverse sources — including real-time news feeds, the
+                  latest academic journals, patent databases, and even your
+                  private sources like emails and documents — to keep your
+                  insights fresh and relevant.
                 </p>
               </div>
             </div>
