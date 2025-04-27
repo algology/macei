@@ -18,6 +18,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@react-three/drei": "^9.97.6",
     "@react-three/fiber": "^8.15.16",
+    "@sparticuz/chromium": "^133.0.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.48.1",
@@ -42,7 +43,7 @@
     "node-fetch": "^3.3.2",
     "node-html-parser": "^7.0.1",
     "nodemailer": "^6.10.0",
-    "puppeteer": "^24.6.0",
+    "puppeteer-core": "^24.7.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^9.0.3",
@@ -66,6 +67,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "postcss": "^8",
+    "puppeteer": "^24.7.2",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }
