@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { MorphingText } from "@/components/magicui/morphing-text";
 
 // Generate static paths for known slugs at build time
 export async function generateStaticParams() {
@@ -19,7 +20,7 @@ async function getPostData(slug: string) {
   if (slug === "hello-world") {
     // Return data only for the 'hello-world' slug
     return {
-      title: "Hello Macy",
+      title: "Hello, Macy.",
       date: "26 Apr 2025",
       readTime: "3 min read",
       imageUrl: "/images/blog/hello-world/thumb.png",
@@ -242,15 +243,28 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
         </div>
       </div>
 
-      {/* Post Image */}
-      <div className="mb-8 max-w-5xl mx-auto">
-        <Image
-          src={postData.imageUrl}
-          alt={postData.imageAlt}
-          width={1200}
-          height={600}
-          className="rounded-lg object-cover"
-        />
+      {/* Post Image / Morphing Text based on slug */}
+      <div className="mb-8 max-w-5xl mx-auto bg-accent-1 rounded-lg overflow-hidden p-8 flex items-center justify-center min-h-[10rem]">
+        {slug === "hello-world" ? (
+          // Render MorphingText for the hello-world post
+          <MorphingText
+          texts={[
+            "Stop guessing.",
+            "Start knowing.",
+            "Hello, Macy.",
+          ]}
+            className="w-full text-3xl sm:text-5xl text-center font-bold text-gray-200 p-4 leading-relaxed whitespace-pre-line" // Added whitespace-pre-line to render \n
+          />
+        ) : (
+          // Render standard image for other posts
+          <Image
+            src={postData.imageUrl}
+            alt={postData.imageAlt}
+            width={1200}
+            height={675} // Approximate 16:9 aspect ratio
+            className="object-cover w-full h-full"
+          />
+        )}
       </div>
 
       {/* Author Info */}
