@@ -102,7 +102,7 @@
   {
     "table_schema": "public",
     "table_name": "ideas",
-    "columns": "id bigint NOT NULL\nname text NOT NULL\nmission_id bigint NOT NULL\nstatus text DEFAULT 'ideation'::text\ncategory text\nimpact text\nsignals text\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())\nai_analysis text\nlast_analyzed timestamp with time zone\ndescription text\ndetailed_analysis text\nsummary text\ninsights jsonb DEFAULT '[]'::jsonb\nuser_id uuid\nauto_briefing_enabled boolean DEFAULT true"
+    "columns": "id bigint NOT NULL\nname text NOT NULL\nmission_id bigint NOT NULL\nstatus text DEFAULT 'ideation'::text\ncategory text\nimpact text\nsignals text\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())\nai_analysis text\nlast_analyzed timestamp with time zone\ndescription text\ndetailed_analysis text\nsummary text\ninsights jsonb DEFAULT '[]'::jsonb\nuser_id uuid\nauto_briefing_enabled boolean DEFAULT false\nconviction USER-DEFINED\nconviction_rationale text"
   },
   {
     "table_schema": "public",
@@ -121,6 +121,11 @@
   },
   {
     "table_schema": "public",
+    "table_name": "organization_members",
+    "columns": "organization_id bigint NOT NULL\nuser_id uuid NOT NULL\nrole USER-DEFINED NOT NULL DEFAULT 'viewer'::member_role\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())\ninvited_by uuid"
+  },
+  {
+    "table_schema": "public",
     "table_name": "organizations",
     "columns": "id bigint NOT NULL\nname text NOT NULL\nuser_id uuid NOT NULL\ncreated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())\nwebsite_url text\nindustry text\ntarget_market text\ndescription text"
   },
@@ -136,37 +141,37 @@
   },
   {
     "table_schema": "realtime",
-    "table_name": "messages_2025_04_08",
+    "table_name": "messages_2025_04_24",
     "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
   },
   {
     "table_schema": "realtime",
-    "table_name": "messages_2025_04_09",
+    "table_name": "messages_2025_04_25",
     "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
   },
   {
     "table_schema": "realtime",
-    "table_name": "messages_2025_04_10",
+    "table_name": "messages_2025_04_26",
     "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
   },
   {
     "table_schema": "realtime",
-    "table_name": "messages_2025_04_11",
+    "table_name": "messages_2025_04_27",
     "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
   },
   {
     "table_schema": "realtime",
-    "table_name": "messages_2025_04_12",
+    "table_name": "messages_2025_04_28",
     "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
   },
   {
     "table_schema": "realtime",
-    "table_name": "messages_2025_04_13",
+    "table_name": "messages_2025_04_29",
     "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
   },
   {
     "table_schema": "realtime",
-    "table_name": "messages_2025_04_14",
+    "table_name": "messages_2025_04_30",
     "columns": "topic text NOT NULL\nextension text NOT NULL\npayload jsonb\nevent text\nprivate boolean DEFAULT false\nupdated_at timestamp without time zone NOT NULL DEFAULT now()\ninserted_at timestamp without time zone NOT NULL DEFAULT now()\nid uuid NOT NULL DEFAULT gen_random_uuid()"
   },
   {
@@ -203,6 +208,11 @@
     "table_schema": "storage",
     "table_name": "s3_multipart_uploads_parts",
     "columns": "id uuid NOT NULL DEFAULT gen_random_uuid()\nupload_id text NOT NULL\nsize bigint NOT NULL DEFAULT 0\npart_number integer NOT NULL\nbucket_id text NOT NULL\nkey text NOT NULL\netag text NOT NULL\nowner_id text\nversion text NOT NULL\ncreated_at timestamp with time zone NOT NULL DEFAULT now()"
+  },
+  {
+    "table_schema": "supabase_migrations",
+    "table_name": "schema_migrations",
+    "columns": "version text NOT NULL\nstatements ARRAY\nname text\ncreated_by text\nidempotency_key text"
   },
   {
     "table_schema": "vault",
