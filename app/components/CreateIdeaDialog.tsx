@@ -58,6 +58,27 @@ export function CreateIdeaDialog({
 
       if (error) throw error;
 
+      // --- BEGIN: Trigger Hypothesis Generation ---
+      // Call the new API route asynchronously (fire-and-forget)
+      fetch('/api/generate-hypotheses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ideaId: data.id })
+      })
+      .then(response => {
+          if (!response.ok) {
+              // Log error but don't block UI
+              console.error('Hypothesis generation request failed:', response.statusText);
+          }
+          // Optionally log success or handle response
+          console.log(`Hypothesis generation triggered for idea ${data.id}`);
+      })
+      .catch(error => {
+          // Log error but don't block UI
+          console.error('Error triggering hypothesis generation:', error);
+      });
+      // --- END: Trigger Hypothesis Generation ---
+
       setCreatedIdea(data);
       setShowAttributesDialog(true);
       setNewIdeaName("");

@@ -25,6 +25,7 @@ import {
   Settings,
   Edit,
   Maximize2,
+  FlaskConical,
 } from "lucide-react";
 import { AIAnalysisResult, DeepAnalysisResult, IdeaAttribute } from "./types";
 import { WithContext as ReactTags, Tag } from "react-tag-input";
@@ -37,9 +38,53 @@ import { EmailToSignalConfig } from "./EmailToSignalConfig";
 import { FeedbackWidget } from "./FeedbackWidget";
 import { KnowledgeBaseChatIcon } from "./KnowledgeBaseChatIcon";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Props {
   ideaId: string;
+}
+
+export type HypothesisStatus = 'untested' | 'testing' | 'validated' | 'rejected' | 'ambiguous';
+export type AttributeType = 'quantitative' | 'qualitative' | 'market_data' | 'risk_factor' | 'assumption' | 'competitor_metric' | 'user_feedback' | 'expert_opinion' | 'regulatory' | 'economic';
+
+export interface IdeaAttributeData {
+  id: number;
+  name: string;
+  description?: string | null;
+  type: AttributeType;
+  source?: string | null;
+  is_measurable: boolean;
+  current_value?: any | null;
+  last_updated?: string | null;
+  created_at: string;
+}
+
+export interface HypothesisAttributeLink {
+  hypothesis_id: number;
+  attribute_id: number;
+  relevance_rationale?: string | null;
+  weight?: number | null;
+  created_at: string;
+  idea_attributes: IdeaAttributeData;
+}
+
+export type HypothesisPriority = 'high' | 'medium' | 'low' | null;
+
+export interface HypothesisData {
+  id: number;
+  idea_id: number;
+  statement: string;
+  status: HypothesisStatus;
+  priority?: HypothesisPriority;
+  created_at: string;
+  updated_at: string;
+  hypothesis_attributes: HypothesisAttributeLink[];
 }
 
 interface IdeaDetails {
@@ -157,6 +202,22 @@ function SummaryModal({ isOpen, onClose, summary, onSave }: SummaryModalProps) {
   );
 }
 
+// Helper function for priority styling
+const getPriorityClass = (priority: HypothesisPriority | undefined) => {
+    // Default to null if undefined for switch case
+    const effectivePriority = priority ?? null;
+    switch (effectivePriority) {
+        case 'high':
+            return 'bg-red-500/10 text-red-400 border-red-900/50 ring-red-500/30';
+        case 'medium':
+            return 'bg-yellow-500/10 text-yellow-400 border-yellow-900/50 ring-yellow-500/30';
+        case 'low':
+            return 'bg-blue-500/10 text-blue-400 border-blue-900/50 ring-blue-500/30';
+        default:
+            return 'bg-accent-1 text-gray-400 border-accent-2 ring-gray-500/30';
+    }
+};
+
 export function IdeaDeepDive({ ideaId }: Props) {
   const [idea, setIdea] = useState<IdeaDetails | null>(null);
   const [editedIdea, setEditedIdea] = useState<IdeaDetails | null>(null);
@@ -184,6 +245,16 @@ export function IdeaDeepDive({ ideaId }: Props) {
   const [newSignalText, setNewSignalText] = useState("");
   const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [hypothesesData, setHypothesesData] = useState<HypothesisData[]>([]);
+  const [loadingHypotheses, setLoadingHypotheses] = useState(false);
+
+  // --- State for Adding New Hypothesis ---
+  const [showAddHypothesisForm, setShowAddHypothesisForm] = useState(false);
+  const [newHypothesisStatement, setNewHypothesisStatement] = useState("");
+  const [newHypothesisPriority, setNewHypothesisPriority] = useState<HypothesisPriority>(null);
+  const [newHypothesisStatus, setNewHypothesisStatus] = useState<HypothesisStatus>('untested');
+  const [isAddingHypothesis, setIsAddingHypothesis] = useState(false);
+  // --- End New State ---
 
   const KeyCodes = {
     comma: 188,
@@ -282,6 +353,12 @@ export function IdeaDeepDive({ ideaId }: Props) {
       };
     }
   }, [ideaId]);
+
+  useEffect(() => {
+    if (activeTab === 'hypotheses' && ideaId) {
+      fetchHypotheses();
+    }
+  }, [activeTab, ideaId]);
 
   async function fetchIdea() {
     try {
@@ -479,118 +556,6 @@ export function IdeaDeepDive({ ideaId }: Props) {
     } catch (error) {
       console.error("Error downloading document:", error);
       return null;
-    }
-  }
-
-  async function triggerAIAnalysis() {
-    if (!editedIdea) return;
-
-    try {
-      setAnalyzing(true);
-
-      // First fetch the mission and organization data
-      const { data: missionData } = await supabase
-        .from("missions")
-        .select(
-          `
-          *,
-          organization:organizations(*)
-        `
-        )
-        .eq("id", editedIdea.mission_id)
-        .single();
-
-      // Fetch documents for this idea
-      const { data: documents } = await supabase
-        .from("idea_documents")
-        .select("*")
-        .eq("idea_id", editedIdea.id);
-
-      setDocuments(documents || []);
-
-      // Download and parse document contents
-      const documentContents = await Promise.all(
-        (documents || []).map(async (doc) => {
-          const content = await downloadAndParseDocument(doc.url);
-          return {
-            name: doc.name,
-            type: doc.url.split(".").pop(),
-            content: content || "Failed to load document content",
-          };
-        })
-      );
-
-      // Prepare document context string with actual content
-      const documentContext =
-        documentContents.length > 0
-          ? documentContents
-              .map(
-                (doc) =>
-                  `Document: ${doc.name}\nType: ${doc.type}\nContent:\n${doc.content}\n---`
-              )
-              .join("\n\n")
-          : "No documents available";
-
-      const response = await fetch("/api/analyze-idea", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editedIdea.name,
-          category: editedIdea.category,
-          signals: editedIdea.signals,
-          status: editedIdea.status,
-          organization: missionData?.organization?.name,
-          mission: missionData?.name,
-          mission_description: missionData?.description,
-          documents: documentContext,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      // Extract JSON from the markdown response if needed
-      let analysisJson = data.content;
-      if (data.content.includes("```json")) {
-        const jsonMatch = data.content.match(/```json\n([\s\S]*?)\n```/);
-        analysisJson = jsonMatch ? jsonMatch[1] : data.content;
-      }
-
-      // Parse the JSON to validate it
-      const parsedAnalysis = JSON.parse(analysisJson);
-
-      const updatedIdea = {
-        ...editedIdea,
-        ai_analysis: JSON.stringify(parsedAnalysis),
-        last_analyzed: new Date().toISOString(),
-      };
-
-      const { error: updateError } = await supabase
-        .from("ideas")
-        .update({
-          ai_analysis: updatedIdea.ai_analysis,
-          last_analyzed: updatedIdea.last_analyzed,
-        })
-        .eq("id", editedIdea.id);
-
-      if (updateError) throw updateError;
-
-      setEditedIdea(updatedIdea);
-      setIdea(updatedIdea);
-      setMissionData(missionData);
-      setDocuments(documents || []);
-    } catch (error) {
-      console.error("Error analyzing idea:", error);
-      alert("Failed to analyze idea. Please try again.");
-    } finally {
-      setAnalyzing(false);
     }
   }
 
@@ -816,6 +781,168 @@ export function IdeaDeepDive({ ideaId }: Props) {
     }
   }
 
+  async function fetchHypotheses() {
+    if (!ideaId) return;
+    setLoadingHypotheses(true);
+    try {
+      const { data, error } = await supabase
+        .from('hypotheses')
+        .select(`
+          *,
+          hypothesis_attributes (
+            *,
+            idea_attributes (*)
+          )
+        `)
+        .eq('idea_id', ideaId)
+        .order('priority', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error("Error fetching hypotheses:", error);
+        toast.error("Failed to load hypotheses", { description: error.message });
+        throw error;
+      }
+
+      setHypothesesData(data || []);
+
+    } catch (error) {
+      // Error already handled/logged above
+    } finally {
+      setLoadingHypotheses(false);
+    }
+  }
+
+  // --- Function to Update Hypothesis Priority (Handles new type) ---
+  async function handlePriorityChange(hypothesisId: number, newPriority: HypothesisPriority) {
+    const hypothesisIndex = hypothesesData.findIndex(h => h.id === hypothesisId);
+    if (hypothesisIndex === -1) return;
+
+    const originalPriority = hypothesesData[hypothesisIndex].priority;
+
+    // Optimistic UI update
+    const updatedHypotheses = [...hypothesesData];
+    updatedHypotheses[hypothesisIndex] = { ...updatedHypotheses[hypothesisIndex], priority: newPriority };
+    setHypothesesData(updatedHypotheses);
+
+    try {
+        // Pass the new string priority ('high', 'medium', 'low' or null)
+        const { error } = await supabase
+            .from('hypotheses')
+            .update({ priority: newPriority })
+            .eq('id', hypothesisId)
+            .select()
+            .single();
+
+        if (error) {
+            throw error;
+        }
+
+        toast.success("Hypothesis priority updated.", {
+             icon: <Check className="w-4 h-4" />,
+        });
+
+    } catch (error: any) {
+        console.error("Error updating hypothesis priority:", error);
+        toast.error("Failed to update priority", { description: error.message });
+
+        // Revert optimistic update on error
+        const revertedHypotheses = [...hypothesesData];
+        revertedHypotheses[hypothesisIndex] = { ...revertedHypotheses[hypothesisIndex], priority: originalPriority };
+        setHypothesesData(revertedHypotheses);
+    }
+  }
+ // --- End Update Function ---
+
+  // --- Function to Update Hypothesis Status ---
+  async function handleStatusChange(hypothesisId: number, newStatus: HypothesisStatus) {
+    const hypothesisIndex = hypothesesData.findIndex(h => h.id === hypothesisId);
+    if (hypothesisIndex === -1) return;
+
+    const originalStatus = hypothesesData[hypothesisIndex].status;
+
+    // Optimistic UI update
+    const updatedHypotheses = [...hypothesesData];
+    updatedHypotheses[hypothesisIndex] = { ...updatedHypotheses[hypothesisIndex], status: newStatus };
+    setHypothesesData(updatedHypotheses);
+
+    try {
+        const { error } = await supabase
+            .from('hypotheses')
+            .update({ status: newStatus })
+            .eq('id', hypothesisId)
+            .select()
+            .single();
+
+        if (error) {
+            throw error;
+        }
+
+        toast.success("Hypothesis status updated.", {
+             icon: <Check className="w-4 h-4" />,
+        });
+
+    } catch (error: any) {
+        console.error("Error updating hypothesis status:", error);
+        toast.error("Failed to update status", { description: error.message });
+
+        // Revert optimistic update on error
+        const revertedHypotheses = [...hypothesesData];
+        revertedHypotheses[hypothesisIndex] = { ...revertedHypotheses[hypothesisIndex], status: originalStatus };
+        setHypothesesData(revertedHypotheses);
+    }
+  }
+ // --- End Update Function ---
+
+  // --- Function to Add New Hypothesis ---
+  async function handleAddHypothesis() {
+    if (!newHypothesisStatement.trim() || !ideaId) return;
+
+    setIsAddingHypothesis(true);
+    try {
+        const { data: newHypothesis, error } = await supabase
+            .from('hypotheses')
+            .insert({
+                idea_id: parseInt(ideaId, 10), 
+                statement: newHypothesisStatement.trim(),
+                priority: newHypothesisPriority,
+                status: newHypothesisStatus
+            })
+            // Simplify select to just '*' 
+            .select('*') 
+            .single();
+
+        if (error) {
+            throw error;
+        }
+
+        if (newHypothesis) {
+             // Add the new hypothesis to the local state
+             // Note: Relations won't be present initially with simplified select
+             setHypothesesData(prev => [...prev, { ...newHypothesis, hypothesis_attributes: [] } as HypothesisData]);
+        
+             // Reset form
+             setShowAddHypothesisForm(false);
+             setNewHypothesisStatement('');
+             setNewHypothesisPriority(null);
+             setNewHypothesisStatus('untested');
+
+             toast.success("Hypothesis added successfully.", {
+                 icon: <Plus className="w-4 h-4" />,
+             });
+        } else {
+            throw new Error("Failed to add hypothesis - no data returned.");
+        }
+
+    } catch (error: any) {
+        console.error("Error adding hypothesis:", error);
+        toast.error("Failed to add hypothesis", { description: error.message });
+    } finally {
+        setIsAddingHypothesis(false);
+    }
+  }
+ // --- End Add Function ---
+
   const hasChanges = JSON.stringify(idea) !== JSON.stringify(editedIdea);
 
   if (loading)
@@ -972,6 +1099,20 @@ export function IdeaDeepDive({ ideaId }: Props) {
             >
               <Settings className="w-4 h-4" />
               Settings
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="hypotheses"
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors hover:text-white ${
+                activeTab === "hypotheses"
+                  ? "text-white border-b-2 border-green-500"
+                  : "text-gray-400"
+              }`}
+            >
+              <FlaskConical className="w-4 h-4" />
+              Hypotheses
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-900">
+                Beta
+              </span>
             </Tabs.Trigger>
           </Tabs.List>
 
@@ -1305,7 +1446,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
                             key={insight.id}
                             className="bg-accent-1/30 rounded-lg border border-accent-2 p-4 group"
                           >
-                            <div className="flex justify-between items-start gap-4">
+                            <div className="flex justify-between items-center gap-4">
                               <p className="text-gray-300 whitespace-pre-wrap flex-grow">
                                 {insight.content}
                               </p>
@@ -1837,6 +1978,199 @@ export function IdeaDeepDive({ ideaId }: Props) {
               </div>
             </div>
           </Tabs.Content>
+
+          <Tabs.Content value="hypotheses" className="outline-none">
+            <div className="space-y-6">
+              <div className="bg-accent-1/50 backdrop-blur-sm border border-accent-2 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-6"> {/* Increased margin */} 
+                  <h3 className="text-lg font-semibold">Key Hypotheses</h3>
+                  {!showAddHypothesisForm && ( // Only show button if form is hidden
+                    <button 
+                      onClick={() => setShowAddHypothesisForm(true)}
+                      className="px-3 py-1 text-sm bg-blue-500/20 text-blue-400 border border-blue-900 rounded-lg hover:bg-blue-500/30 transition-colors flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" /> Add Hypothesis
+                    </button>
+                  )}
+                </div>
+
+                 
+                {showAddHypothesisForm && (
+                    <div className="bg-accent-1/30 border border-accent-2 rounded-lg p-4 mb-6 space-y-3">
+                        <h4 className="text-sm font-medium text-gray-300">Add New Hypothesis</h4>
+                        <div>
+                            <label htmlFor="new-hypothesis-statement" className="block text-xs text-gray-400 mb-1">Statement</label>
+                            <textarea
+                                id="new-hypothesis-statement"
+                                value={newHypothesisStatement}
+                                onChange={(e) => setNewHypothesisStatement(e.target.value)}
+                                placeholder="Enter the hypothesis statement..."
+                                rows={3}
+                                className="w-full px-3 py-2 bg-accent-1 border border-accent-2 rounded-md focus:ring-1 focus:ring-green-500/20 transition-all duration-200 resize-none text-sm"
+                            />
+                        </div>
+                        <div className="flex items-center gap-4">
+                            {/* Priority Select */}
+                            <div className="flex flex-col items-start">
+                               <label htmlFor="new-hypothesis-priority" className="block text-xs text-gray-400 mb-1">Priority</label>
+                               <Select 
+                                 value={newHypothesisPriority ?? 'none'}
+                                 onValueChange={(value: string) => {
+                                     setNewHypothesisPriority(value === 'none' ? null : value as HypothesisPriority);
+                                 }}
+                               >
+                                 <SelectTrigger className={`w-[100px] text-xs ${getPriorityClass(newHypothesisPriority)}`} aria-label="New hypothesis priority">
+                                   <SelectValue placeholder="N/A" />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   <SelectItem value="high" className="text-red-400">High</SelectItem>
+                                   <SelectItem value="medium" className="text-yellow-400">Medium</SelectItem>
+                                   <SelectItem value="low" className="text-blue-400">Low</SelectItem>
+                                   <SelectItem value="none" className="text-gray-400">N/A</SelectItem>
+                                 </SelectContent>
+                               </Select>
+                            </div>
+                             {/* Status Select */}
+                             <div className="flex flex-col items-start">
+                                <label htmlFor="new-hypothesis-status" className="block text-xs text-gray-400 mb-1">Status</label>
+                                <Select 
+                                  value={newHypothesisStatus} 
+                                  onValueChange={(value: string) => { 
+                                      setNewHypothesisStatus(value as HypothesisStatus);
+                                  }}
+                                >
+                                  <SelectTrigger className={`w-[100px] text-xs ${getHypothesisStatusColor(newHypothesisStatus)}`} aria-label="New hypothesis status">
+                                    <SelectValue placeholder="Select..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(['untested', 'testing', 'validated', 'rejected', 'ambiguous'] as HypothesisStatus[]).map(statusValue => (
+                                      <SelectItem key={statusValue} value={statusValue} className={getHypothesisStatusColor(statusValue).replace('border', '').replace('bg-', 'hover:bg-') + ' focus:bg-accent-1'}>
+                                        {statusValue}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                             <button 
+                               onClick={() => {
+                                 setShowAddHypothesisForm(false);
+                                 setNewHypothesisStatement('');
+                                 setNewHypothesisPriority(null);
+                                 setNewHypothesisStatus('untested');
+                               }}
+                               className="px-3 py-1 rounded-md text-xs border border-accent-2 hover:bg-accent-2/50 transition-colors"
+                             >
+                               Cancel
+                             </button>
+                             <button 
+                               onClick={handleAddHypothesis} 
+                               disabled={!newHypothesisStatement.trim() || isAddingHypothesis}
+                               className="px-3 py-1 rounded-md text-xs bg-green-500 text-black font-medium hover:bg-green-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                             >
+                                {isAddingHypothesis ? <><LoadingSpinner className="w-3 h-3"/> Saving...</> : 'Save Hypothesis'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+                {/* --- End Add Hypothesis Form --- */}
+
+                {loadingHypotheses ? (
+                  <div className="text-center py-12">
+                    <LoadingSpinner className="w-6 h-6 mx-auto" />
+                    <p className="text-gray-400 mt-2">Loading hypotheses...</p>
+                  </div>
+                ) : hypothesesData.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400">
+                    No hypotheses have been generated for this idea yet.
+                    {/* TODO: Add trigger for generation? */}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {hypothesesData.map((hypothesis) => (
+                      <div key={hypothesis.id} className="bg-accent-1/30 rounded-lg border border-accent-2 p-4 group">
+                        {/* Change items-start back to items-center */}
+                        <div className="flex justify-between items-center gap-4">
+                          <p className="text-gray-200 font-medium flex-grow mr-4">{hypothesis.statement}</p>
+                          {/* Keep inner container as items-start */}
+                          <div className="flex items-start gap-4 flex-shrink-0">
+                            {/* Priority Group */} 
+                            <div className="flex flex-col items-center">
+                              <label htmlFor={`priority-${hypothesis.id}`} className="text-xs text-gray-500 mb-1">Priority</label>
+                              <Select 
+                                value={hypothesis.priority ?? 'none'} 
+                                onValueChange={(value: string) => {
+                                    handlePriorityChange(hypothesis.id, value === 'none' ? null : value as HypothesisPriority);
+                                }}
+                              >
+                                <SelectTrigger 
+                                  className={`w-[100px] text-xs ${getPriorityClass(hypothesis.priority)}`}
+                                  aria-label={`Priority: ${hypothesis.priority || 'Not set'}`}
+                                >
+                                  <SelectValue placeholder="N/A" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="high" className="text-red-400">High</SelectItem>
+                                  <SelectItem value="medium" className="text-yellow-400">Medium</SelectItem>
+                                  <SelectItem value="low" className="text-blue-400">Low</SelectItem>
+                                  <SelectItem value="none" className="text-gray-400">N/A</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            {/* Status Group */}
+                            <div className="flex flex-col items-center">
+                               <span className="text-xs text-gray-500 mb-1">Status</span>
+                               <Select 
+                                  value={hypothesis.status} 
+                                  onValueChange={(value: string) => { // Supabase ENUMs usually map to strings
+                                      handleStatusChange(hypothesis.id, value as HypothesisStatus);
+                                  }}
+                                >
+                                  <SelectTrigger 
+                                    className={`w-[110px] text-xs ${getHypothesisStatusColor(hypothesis.status)}`}
+                                    aria-label={`Status: ${hypothesis.status}`}
+                                  >
+                                    <SelectValue placeholder="Select..." /> { /* Placeholder if needed */}
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {/* Map over possible statuses */}
+                                    {(['untested', 'testing', 'validated', 'rejected', 'ambiguous'] as HypothesisStatus[]).map(statusValue => (
+                                      <SelectItem 
+                                        key={statusValue} 
+                                        value={statusValue} 
+                                        className={getHypothesisStatusColor(statusValue).replace('border', '').replace('bg-', 'hover:bg-') + ' focus:bg-accent-1'} // Apply color styling to items
+                                      >
+                                        {statusValue}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                            </div>
+                          </div>
+                        </div>
+                        {/* Display Linked Attributes */}
+                        {hypothesis.hypothesis_attributes && hypothesis.hypothesis_attributes.length > 0 && (
+                           <div className="mt-2 pt-2 border-t border-accent-2/50">
+                             <h4 className="text-xs text-gray-500 uppercase mb-2">Supporting Attributes</h4>
+                             <div className="flex flex-wrap gap-2">
+                               {hypothesis.hypothesis_attributes.map(link => (
+                                 <div key={link.attribute_id} className="bg-accent-1/50 border border-accent-2/80 rounded px-2 py-1 text-xs text-gray-300" title={link.idea_attributes.description || link.idea_attributes.name}>
+                                   {link.idea_attributes.name}
+                                 </div>
+                               ))}
+                             </div>
+                           </div>
+                         )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* We can add more sections later, e.g., for managing attributes globally */}
+            </div>
+          </Tabs.Content>
         </Tabs.Root>
 
         {showSaved && (
@@ -1899,3 +2233,19 @@ export function IdeaDeepDive({ ideaId }: Props) {
     </div>
   );
 }
+
+const getHypothesisStatusColor = (status: HypothesisStatus) => {
+  switch (status) {
+    case "validated":
+      return "bg-green-500/20 text-green-400 border-green-900";
+    case "testing":
+      return "bg-blue-500/20 text-blue-400 border-blue-900";
+    case "rejected":
+      return "bg-red-500/20 text-red-400 border-red-900";
+    case "ambiguous":
+      return "bg-yellow-500/20 text-yellow-400 border-yellow-900";
+    case "untested":
+    default:
+      return "bg-gray-500/20 text-gray-400 border-gray-800";
+  }
+};

@@ -18,11 +18,14 @@ import {
   ChevronUp,
   Settings,
   Users,
+  MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Idea, Mission } from "./types";
 import { KnowledgeBaseChat } from "./KnowledgeBaseChat";
 import Link from "next/link";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 // Define the expected structure from the Supabase query
 interface IdeaData {
@@ -349,6 +352,79 @@ export function CustomDashboard() {
     );
   };
 
+  async function handleDeleteIdea(ideaId: number) {
+    // Confirmation dialog
+    if (!window.confirm("Are you sure you want to delete this idea and all its associated briefings? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      console.log(`Attempting to delete idea ${ideaId} and its briefings.`);
+      // First delete all briefings associated with this idea
+      const { error: briefingsError } = await supabase
+        .from("briefings")
+        .delete()
+        .eq("idea_id", ideaId);
+
+      if (briefingsError) {
+        console.error(`Error deleting briefings for idea ${ideaId}:`, briefingsError);
+        throw briefingsError;
+      }
+      console.log(`Successfully deleted briefings for idea ${ideaId}.`);
+
+
+      // Then delete the idea
+      const { error: ideaError } = await supabase
+        .from("ideas")
+        .delete()
+        .eq("id", ideaId);
+
+      if (ideaError) {
+        console.error(`Error deleting idea ${ideaId}:`, ideaError);
+        throw ideaError;
+      }
+      console.log(`Successfully deleted idea ${ideaId}.`);
+
+
+      // Update state:
+      // 1. Remove the idea from the 'ideas' state (which is structured by mission)
+      const updatedIdeas = ideas.map(mission => ({
+        ...mission,
+        ideas: mission.ideas?.filter((idea: IdeaData) => idea.id !== ideaId) || [],
+      })).filter(mission => mission.ideas.length > 0); // Remove missions if they become empty
+      setIdeas(updatedIdeas);
+
+      // 2. Remove the idea from the 'orgs' state
+      const updatedOrgs = orgs.map(org => ({
+        ...org,
+        missions: org.missions?.map(mission => ({
+          ...mission,
+          ideas: mission.ideas?.filter((idea: IdeaData) => idea.id !== ideaId) || [],
+        })).filter(mission => mission.ideas.length > 0) || null, // Remove missions if they become empty
+      }));
+      setOrgs(updatedOrgs);
+
+      // 3. Remove briefings for the deleted idea
+      const updatedBriefings = { ...briefings };
+      delete updatedBriefings[ideaId];
+      setBriefings(updatedBriefings);
+
+      // 4. Update the allIdeasData string (less critical, could be regenerated)
+      // This is a simplified update; ideally, regenerate from updatedIdeas
+      const ideaNameToRemove = `Idea:.*\\(ID: ${ideaId},.*?\nStatus:.*?\nSummary:.*?\nConviction:.*?\n---\n`;
+      const regex = new RegExp(ideaNameToRemove, 'gs');
+      setAllIdeasData(allIdeasData.replace(regex, ''));
+
+
+      console.log("Successfully updated state after deletion.");
+
+    } catch (error) {
+      console.error("Failed to delete idea:", error);
+      // Consider showing a user-friendly error message (e.g., using a toast notification library)
+      alert(`Failed to delete idea: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   return (
     <div className="relative">
       {loading ? (
@@ -498,13 +574,21 @@ export function CustomDashboard() {
                                 <div
                                   key={idea.id}
                                   className="p-4 hover:bg-accent-1/50 transition-colors relative cursor-pointer"
-                                  onClick={() =>
+                                  onClick={(e) => {
+                                    // Prevent navigation if clicking on the dropdown area
+                                    if ((e.target as HTMLElement).closest('[data-radix-dropdown-menu-content]')) {
+                                      return;
+                                    }
+                                     if ((e.target as HTMLElement).closest('[data-radix-dropdown-menu-trigger]')) {
+                                        e.stopPropagation(); // Prevent nav when clicking trigger too
+                                        return;
+                                    }
                                     navigateToIdea(
                                       mission.organization?.id,
                                       mission.id,
                                       idea.id
-                                    )
-                                  }
+                                    );
+                                  }}
                                 >
                                   <div
                                     className="absolute h-[1px] bg-gray-600/50 w-[15px] top-7"
@@ -519,7 +603,7 @@ export function CustomDashboard() {
                                       >
                                         <Lightbulb className="w-3 h-3" />
                                       </div>
-                                      <h5 className="font-medium text-white flex items-center gap-2">
+                                      <h5 className="font-medium text-white flex items-center gap-2 group/title relative">
                                         <span className="text-xs text-gray-400">
                                           Idea:
                                         </span>
@@ -536,6 +620,7 @@ export function CustomDashboard() {
                                         {idea.status || "ideation"}
                                       </span>
 
+                                      {/* Conviction Badge & Tooltip */}
                                       {idea.conviction && (
                                         <span
                                           className={`relative group px-2 py-0.5 rounded-full text-xs ${getConvictionColor(
@@ -559,8 +644,39 @@ export function CustomDashboard() {
                                       ) : (
                                         <Bell className="w-3.5 h-3.5 text-blue-400" />
                                       )}
+
+                                      <DropdownMenu.Root>
+                                        <DropdownMenu.Trigger asChild>
+                                          <button
+                                            className="p-0.5 hover:bg-gray-700/50 rounded-md transition-colors ml-1"
+                                            aria-label="More options"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                                          </button>
+                                        </DropdownMenu.Trigger>
+                                        <DropdownMenu.Portal>
+                                          <DropdownMenu.Content
+                                            className="w-40 bg-background border border-accent-2 rounded-lg shadow-lg p-1 animate-in fade-in-0 zoom-in-95 z-20"
+                                            sideOffset={5}
+                                            align="end"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            <DropdownMenu.Item
+                                              onSelect={(e) => {
+                                                e.preventDefault();
+                                                handleDeleteIdea(idea.id);
+                                              }}
+                                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-accent-1 rounded-md outline-none cursor-pointer"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                              Delete Idea
+                                            </DropdownMenu.Item>
+                                          </DropdownMenu.Content>
+                                        </DropdownMenu.Portal>
+                                      </DropdownMenu.Root>
                                     </div>
-                                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                                    <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
                                   </div>
 
                                   <div className="pl-8 mt-2">
