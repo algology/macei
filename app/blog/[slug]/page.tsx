@@ -7,7 +7,7 @@ import { MorphingText } from "@/components/magicui/morphing-text";
 export async function generateStaticParams() {
   // In a real app, fetch all slugs from your data source (CMS, Markdown, DB)
   // For now, we only have one known slug:
-  const posts = [{ slug: 'hello-world' }];
+  const posts = [{ slug: "hello-world" }];
 
   return posts.map((post) => ({
     slug: post.slug,
@@ -39,9 +39,9 @@ async function getPostData(slug: string) {
           life – coding the app, designing the platform, wrestling with
           infrastructure. But the ground rules are changing.
         </p>
-        <h2>The Commoditization of Building</h2>
+        <h2>The Commoditisation of Building</h2>
         <p>
-          Software development, once a specialized art, is becoming
+          Software development, once a specialised art, is becoming
           increasingly accessible. AI coding assistants, powerful
           no-code/low-code platforms, and globally available talent mean that
           the act of <em>building</em> is faster and cheaper than ever. Got an
@@ -51,7 +51,7 @@ async function getPostData(slug: string) {
           simple description.
         </p>
         <p>
-          This democratization is exciting. It lowers the barrier to
+          This democratisation is exciting. It lowers the barrier to
           entry, allowing more potential founders to translate their
           vision into something tangible. But it also introduces a new,
           potentially more dangerous bottleneck.
@@ -83,7 +83,7 @@ async function getPostData(slug: string) {
           <li>
             <strong>Analysis Paralysis:</strong> Gathering market
             research, competitor data, and potential customer interviews
-            generated mountains of information. Synthesizing this data
+            generated mountains of information. Synthesising this data
             into actionable insights was time-consuming and prone to
             human bias. Which signals mattered? Which were noise?
           </li>
@@ -95,10 +95,10 @@ async function getPostData(slug: string) {
             <em>real</em> underlying problems customers faced.
           </li>
           <li>
-            <strong>The Intention-Behavior Chasm:</strong> Surveys and
+            <strong>The Intention-Behaviour Chasm:</strong> Surveys and
             interviews might show positive intent ("Yes, I'd use
             that!"), but translating that stated interest into actual
-            user behavior (signing up, paying, changing habits) remained
+            user behaviour (signing up, paying, changing habits) remained
             a huge leap of faith.
           </li>
         </ol>
@@ -123,11 +123,11 @@ async function getPostData(slug: string) {
             trends, competitor movements, and customer sentiment 24/7.
           </li>
           <li>
-            <strong>Is brutally objective:</strong> Analyzes data
+            <strong>Is brutally objective:</strong> Analyses data
             without emotional attachment to a specific solution.
           </li>
           <li>
-            <strong>Synthesizes at scale:</strong> Processes vast
+            <strong>Synthesises at scale:</strong> Processes vast
             amounts of information – market reports, user feedback,
             academic papers, news articles – identifying patterns and
             opportunities invisible to the human eye.
@@ -139,7 +139,7 @@ async function getPostData(slug: string) {
           </li>
           <li>
             <strong>Speaks the customer's language:</strong> Helps craft
-            unbiased questions and analyze interview transcripts for
+            unbiased questions and analyse interview transcripts for
             deeper, unstated needs.
           </li>
         </ul>
@@ -162,12 +162,12 @@ async function getPostData(slug: string) {
         <ul>
           <li>
             <strong>Discover, Not Just Validate:</strong> Go beyond
-            surface-level problems. Macy analyzes market signals and
+            surface-level problems. Macy analyses market signals and
             helps you understand the <em>real</em> pain points and
             motivations of your target audience.
           </li>
           <li>
-            <strong>Cut Through the Noise:</strong> Synthesize market
+            <strong>Cut Through the Noise:</strong> Synthesise market
             research, competitor analysis, and potential customer data
             into clear, actionable insights.
           </li>
@@ -177,7 +177,7 @@ async function getPostData(slug: string) {
             hypotheses against real-world data.
           </li>
           <li>
-            <strong>Prioritize Effectively:</strong> Understand which
+            <strong>Prioritise Effectively:</strong> Understand which
             market needs are most urgent, painful, and growing.
           </li>
           <li>
@@ -208,7 +208,11 @@ async function getPostData(slug: string) {
 }
 
 // Changed function signature to accept params as a Promise and be async
-export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
+export default async function BlogPost({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   // Await params before accessing slug
   const slug = (await params).slug;
 
@@ -248,11 +252,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
         {slug === "hello-world" ? (
           // Render MorphingText for the hello-world post
           <MorphingText
-          texts={[
-            "Stop guessing.",
-            "Start knowing.",
-            "Hello, Macy.",
-          ]}
+            texts={["Stop guessing.", "Start knowing.", "Hello, Macy."]}
             className="w-full text-3xl sm:text-5xl text-center font-bold text-gray-200 p-4 leading-relaxed whitespace-pre-line" // Added whitespace-pre-line to render \n
           />
         ) : (
@@ -289,7 +289,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
             // Render the fetched HTML content
             // NOTE: In a real app using Markdown, you'd typically parse Markdown to HTML here
             // using libraries like 'remark' and 'remark-html', then use dangerouslySetInnerHTML.
-            // Ensure proper sanitization if the source HTML isn't fully trusted.
+            // Ensure proper sanitisation if the source HTML isn't fully trusted.
             dangerouslySetInnerHTML={{ __html: postData.contentHtml }}
           />
         </div>
