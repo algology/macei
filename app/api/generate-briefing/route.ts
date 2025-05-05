@@ -19,7 +19,7 @@ function sampleSignals(signals: any[], maxPerCategory: number) {
 }
 
 // Helper function to filter and prioritize the most relevant signals
-function prioritizeSignals(signals: any[], maxTotal: number = 15) {
+function prioritizeSignalsHeuristic(signals: any[], maxTotal: number = 15) {
   if (!signals || signals.length === 0) return [];
 
   // Create a scoring function to rank signals by potential relevance
@@ -62,6 +62,127 @@ function prioritizeSignals(signals: any[], maxTotal: number = 15) {
   // Return top N signals
   return scoredSignals.slice(0, maxTotal).map((item) => item.signal);
 }
+
+// --- NEW FUNCTION: Prioritize Signals with LLM ---
+async function prioritizeSignalsWithLLM(
+  allSignals: any[],
+  idea: any,
+  hypotheses: { statement: string }[] | null,
+  maxTotal: number = 15
+): Promise<any[]> {
+  if (!allSignals || allSignals.length === 0) return [];
+
+  console.log(`[LLM Prioritization] Starting prioritization for ${allSignals.length} signals...`);
+
+  // 1. Pre-filter using heuristics (optional but recommended)
+  const preFilteredSignals = prioritizeSignalsHeuristic(allSignals, 30); // Get top 30 candidates
+  console.log(`[LLM Prioritization] Pre-filtered to ${preFilteredSignals.length} signals using heuristics.`);
+
+  if (preFilteredSignals.length <= maxTotal) {
+      console.log("[LLM Prioritization] Pre-filtered count is less than or equal to maxTotal, skipping LLM.");
+      return preFilteredSignals;
+  }
+
+  // 2. Prepare context for LLM
+  const ideaContext = `Idea Name: ${idea.name}\nDescription: ${idea.description || idea.summary || 'N/A'}`;
+  const hypothesesContext = hypotheses && hypotheses.length > 0
+      ? `Key Hypotheses:\n${hypotheses.map((h, i) => `${i + 1}. ${h.statement}`).join('\n')}`
+      : "No specific hypotheses provided.";
+
+  const signalsForLLM = preFilteredSignals.map((signal, index) => ({
+      id: index, // Use index as a simple ID for matching later
+      title: signal.title,
+      description: signal.description ? signal.description.substring(0, 200) : "N/A", // Truncate description
+      type: signal.type,
+      url: signal.url
+  }));
+
+  // 3. Construct Prompt
+  const prompt = `
+Context:
+---
+${ideaContext}
+---
+${hypothesesContext}
+---
+
+Task:
+Evaluate the following market signals based *only* on their direct relevance to the specific Idea and Key Hypotheses provided above. Assign a relevance score from 0 (not relevant) to 100 (highly relevant). Focus on signals that directly support, refute, or inform the hypotheses or the core idea.
+
+Signals to Evaluate:
+${JSON.stringify(signalsForLLM, null, 2)}
+
+Output Format:
+Return *only* a valid JSON array object containing objects for each signal, ranked from highest relevance score to lowest. Each object MUST have the following structure: { "id": number, "relevance_score": number (0-100) }. Example: [{ "id": 5, "relevance_score": 95 }, { "id": 12, "relevance_score": 80 }, ...]
+
+CRITICAL: Ensure the output is ONLY the JSON array, without any introductory text or explanations.
+`;
+
+  // 4. Call LLM with fallback
+  try {
+    console.log(`[LLM Prioritization] Calling LLM to rank ${signalsForLLM.length} signals...`);
+    const completion = await groq.chat.completions.create({
+        messages: [
+            {
+                role: "system",
+                content: "You are an expert relevance evaluator. You analyze market signals against a given business idea and hypotheses, providing a ranked JSON output based strictly on direct relevance.",
+            },
+            {
+                role: "user",
+                content: prompt,
+            },
+        ],
+        model: "llama3-8b-8192", // Use a potentially faster model for ranking
+        temperature: 0.1,
+        max_tokens: 2000, // Adjust based on expected output size
+        response_format: { type: "json_object" },
+    });
+
+    const responseContent = completion.choices[0]?.message?.content;
+    if (!responseContent) {
+        throw new Error("LLM returned empty content.");
+    }
+
+    // 5. Parse and Select
+    let rankedResults = JSON.parse(responseContent);
+
+    // Assuming the LLM might wrap the array in a root key like "ranked_signals"
+    if (!Array.isArray(rankedResults) && typeof rankedResults === 'object' && rankedResults !== null) {
+        const keys = Object.keys(rankedResults);
+        if (keys.length === 1 && Array.isArray(rankedResults[keys[0]])) {
+            rankedResults = rankedResults[keys[0]];
+        }
+    }
+
+    if (!Array.isArray(rankedResults)) {
+        throw new Error("LLM did not return a valid JSON array.");
+    }
+
+    console.log(`[LLM Prioritization] Received ${rankedResults.length} ranked results from LLM.`);
+
+    // Validate structure and sort (LLM should already sort, but double-check)
+    const validRankedIds = rankedResults
+        .filter((item: any) => typeof item === 'object' && typeof item.id === 'number' && typeof item.relevance_score === 'number')
+        .sort((a: any, b: any) => b.relevance_score - a.relevance_score)
+        .map((item: any) => item.id as number);
+
+    // Map IDs back to original preFilteredSignals
+    const finalRankedSignals = validRankedIds
+        .map(id => preFilteredSignals[id])
+        .filter(signal => signal !== undefined); // Filter out any potential index mismatches
+
+    const topSignals = finalRankedSignals.slice(0, maxTotal);
+    console.log(`[LLM Prioritization] Selected top ${topSignals.length} signals based on LLM ranking.`);
+    return topSignals;
+
+  } catch (error) {
+    console.error("[LLM Prioritization] LLM prioritization failed:", error);
+    console.log("[LLM Prioritization] Falling back to heuristic prioritization.");
+    // Fallback to original heuristic function
+    return prioritizeSignalsHeuristic(allSignals, maxTotal);
+  }
+}
+// --- END NEW FUNCTION ---
 
 // Helper function to prepare summarized signals context
 function prepareSummarizedSignalsContext(freshMarketSignals: any) {
@@ -975,11 +1096,12 @@ export async function POST(request: Request) {
         `Total fresh signals before optimization: ${allFreshSignals.length}`
       );
 
-      // Prioritize the most relevant signals
-      const prioritizedSignals = prioritizeSignals(allFreshSignals, 15);
+      // --- MODIFIED CALL: Use LLM prioritization ---
+      const prioritizedSignals = await prioritizeSignalsWithLLM(allFreshSignals, idea, hypotheses, 15);
       console.log(
         `Selected ${prioritizedSignals.length} prioritized signals based on relevance`
       );
+      // --- END MODIFIED CALL ---
 
       // Use the prioritized signals for fetching content
       allFreshSignals = prioritizedSignals;

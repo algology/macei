@@ -147,17 +147,67 @@ export function MarketSignalsSection({
   async function fetchSignals() {
     try {
       setRefreshing(true);
-      const response = await fetch("/api/fetch-market-signals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      console.log("[MarketSignals] Starting fetchSignals. Idea ID:", ideaDetails?.id);
+
+      // --- START: Fetch Hypotheses ---
+      let search_context: string | undefined;
+      let context_type: 'hypotheses' | 'signals' | undefined;
+
+      if (ideaDetails?.id) {
+          console.log("[MarketSignals] Fetching hypotheses for ID:", ideaDetails.id);
+          const { data: hypotheses, error: hypothesesError } = await supabase
+              .from('hypotheses')
+              .select('statement')
+              .eq('idea_id', ideaDetails.id);
+
+          if (hypothesesError) {
+              console.error("[MarketSignals] Error fetching hypotheses:", hypothesesError);
+          } else {
+              console.log("[MarketSignals] Hypotheses fetched:", hypotheses);
+          }
+
+          if (hypothesesError) {
+              console.error("Error fetching hypotheses for market signals:", hypothesesError);
+              // Proceed without hypotheses, fallback might happen in API if needed
+          } else if (hypotheses && hypotheses.length > 0) {
+              search_context = hypotheses.map(h => h.statement).join("\n");
+              context_type = "hypotheses";
+              console.log("[MarketSignals] Using hypotheses for context:", { search_context, context_type });
+          } else {
+               console.log("[MarketSignals] No hypotheses found.");
+               // Optionally, set context_type to signals if you want the API to know
+               // context_type = "signals";
+          }
+      } else {
+           console.log("[MarketSignals] No Idea ID found, cannot fetch hypotheses.");
+      }
+      // --- END: Fetch Hypotheses ---
+
+      // Explicitly construct the request body
+      const requestBody: { [key: string]: any } = {
           ideaName: ideaDetails.name,
           category: ideaDetails.category,
-          signals: ideaDetails.signals,
           missionName: missionData?.name,
           organizationName: missionData?.organization?.name,
           aiAnalysis: ideaDetails.ai_analysis,
-        }),
+      };
+
+      // Add hypothesis context explicitly if available
+      if (search_context) {
+          requestBody.search_context = search_context;
+      }
+      if (context_type) {
+          requestBody.context_type = context_type;
+      }
+
+      console.log("[MarketSignals] Sending request body (Explicit):", requestBody); // DEBUG: Log the explicitly built body
+
+
+      const response = await fetch("/api/fetch-market-signals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Use the dynamically constructed body
+        body: JSON.stringify(requestBody), 
       });
 
       const data = await response.json();
