@@ -1111,7 +1111,7 @@ export function IdeaDeepDive({ ideaId }: Props) {
               <FlaskConical className="w-4 h-4" />
               Hypotheses
               <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-900">
-                Beta
+                BETA
               </span>
             </Tabs.Trigger>
           </Tabs.List>

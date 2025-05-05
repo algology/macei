@@ -688,6 +688,20 @@ export async function POST(request: Request) {
 
     console.log("Fetched idea:", idea.name);
 
+    // --- START Fetch Hypotheses ---
+    const { data: hypotheses, error: hypothesesError } = await supabase
+      .from("hypotheses")
+      .select("statement")
+      .eq("idea_id", ideaId);
+
+    if (hypothesesError) {
+      console.error("Error fetching hypotheses:", hypothesesError);
+      // Non-fatal error, proceed without hypotheses
+    } else {
+      console.log(`Fetched ${hypotheses?.length || 0} hypotheses for idea ${ideaId}`);
+    }
+    // --- END Fetch Hypotheses ---
+
     // Add check for recent briefings to prevent duplicate generations
     // Check if a briefing was already generated recently to prevent duplicates
     const { data: recentBriefings, error: recentBriefingsError } =
@@ -774,6 +788,23 @@ export async function POST(request: Request) {
       // Continue with generation but log the warning
     }
 
+    // --- START Determine Search Context ---
+    let search_context: string;
+    let context_type: "hypotheses" | "signals";
+
+    if (hypotheses && hypotheses.length > 0) {
+      // Use hypotheses statements as context
+      search_context = hypotheses.map(h => h.statement).join("\\n");
+      context_type = "hypotheses";
+      console.log("Using hypotheses as search context.");
+    } else {
+      // Fallback to using the legacy signals field
+      search_context = idea.signals || ""; // Use empty string if null
+      context_type = "signals";
+      console.log("No hypotheses found, falling back to legacy signals field as search context.");
+    }
+    // --- END Determine Search Context ---
+
     // Get fresh market signals directly from the API
     console.log("Fetching fresh market signals from API...");
     let freshMarketSignals: {
@@ -801,7 +832,8 @@ export async function POST(request: Request) {
           body: JSON.stringify({
             ideaName: idea.name,
             category: idea.category,
-            signals: idea.signals,
+            search_context: search_context,
+            context_type: context_type,
             missionName: idea.mission?.name,
             organizationName: idea.mission?.organization?.name,
             aiAnalysis: idea.ai_analysis,
