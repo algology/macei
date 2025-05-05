@@ -163,3 +163,4 @@ Ensure each hypothesis is a clear statement that can potentially be tested or re
     return Response.json({ error: 'Internal server error during hypothesis generation.' }, { status: 500 });
   }
 }
+ 
