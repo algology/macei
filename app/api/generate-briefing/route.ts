@@ -132,9 +132,9 @@ CRITICAL: Ensure the output is ONLY the JSON array, without any introductory tex
                 content: prompt,
             },
         ],
-        model: "llama3-8b-8192", // Use a potentially faster model for ranking
+        model: "llama-3.3-70b-versatile", // Use a potentially faster model for ranking
         temperature: 0.1,
-        max_tokens: 2000, // Adjust based on expected output size
+        max_tokens: 20000, // Adjust based on expected output size
         response_format: { type: "json_object" },
     });
 
